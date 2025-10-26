@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="description" content="Free, fast, and private PDF & Image tools — everything runs in your browser (no uploads).">
+
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Image → PDF — Client-side</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+  <link rel="stylesheet" href="/style.css"/>
+  <meta name="color-scheme" content="light dark"/>
+  <style>
+    /* Make all three boxes equal height and keep Download vertically centered */
+    .grid-3 > .box { min-height: 260px; }
+    .download-center {
+      display:flex; flex-direction:column; justify-content:center; align-items:center;
+      text-align:center; gap:10px; height:100%;
+    }
+    /* Force Upload card to look identical: remove any special bg/border overrides */
+    #drop {
+      background: transparent !important;
+      border-style: solid !important;
+    }
+    #drop .title { color: inherit !important; } /* same heading color as others */
+
+    /* Thumbs grid inside Settings: exactly 5 per row, wraps to next line */
+    .thumbs-grid {
+      display:grid; grid-template-columns: repeat(5, minmax(0,1fr));
+      gap:12px; margin-top:14px;
+    }
+    .thumbs-grid .gitem { width:auto; }
+    .thumbs-grid .gthumb img { width:100%; height:auto; display:block; }
+  </style>
+</head>
+<body class="image-to-pdf-page">
+  <header class="site-header">
+    <div class="container bar">
+      <div class="brand"><span class="logo"></span><span>PDF &amp; Image Tools</span></div>
+      <div class="container tool-tabs-wrap">
+        <button class="tool-scroll tool-left" aria-label="Scroll left" title="Scroll left">‹</button>
+        <nav class="tool-tabs" role="navigation" aria-label="Tools">
+          <a href="/merge">Merge PDF</a>
+          <a href="/delete-pages">Delete pages</a>
+          <a href="/rotate-pages">Rotate PDF</a>
+          <a href="/reorder-pages">Reorder PDF</a>
+          <a href="/crop">Crop PDF</a>
+          <a href="/compress">Compress PDF</a>
+          <a href="/pdf-to-images">PDF → Images</a>
+          <a href="/image-to-pdf" class="active">Image → PDF</a>
+          <a href="/jpg-to-png">JPG → PNG</a>
+          <a href="/png-to-jpg">PNG → JPG</a>
+        </nav>
+        <button class="tool-scroll tool-right" aria-label="Scroll right" title="Scroll right">›</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <aside class="panel">
+        <div class="grid-3">
+
+          <!-- 1) Upload -->
+          <section id="drop" class="panel card box" aria-label="Upload Images"
+                   style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;">
+            <h2 class="title">Upload Images</h2>
+            <p class="muted" style="margin-top:-4px;">Drag &amp; drop images here</p>
+
+            <div class="row center" style="flex-wrap:wrap;gap:8px;justify-content:center;">
+              <label for="file" class="btn gradient big">Browse images</label>
+              <span class="pill" id="meta">No files</span>
+              <button class="btn ghost" id="clearBtn" disabled>Clear</button>
+            </div>
+
+            <input id="file" type="file" multiple
+                   accept="image/*,.jpg,.jpeg,.png,.webp,.avif,.heic,.heif" hidden />
+
+            <div class="small">Privacy: No uploads. Everything stays on your device.</div>
+            <div id="err" class="error" role="alert" aria-live="polite" style="display:none;"></div>
+          </section>
+
+          <!-- 2) Settings (now also shows the thumbnails grid below the controls) -->
+          <section class="panel card box" aria-label="Setting" style="text-align:center;">
+            <h2 class="title">Setting</h2>
+
+            <div class="row" style="display:flex;gap:12px;align-items:flex-end;justify-content:center;">
+              <label class="block" style="min-width:180px;">Page size
+                <select id="pageSize" class="select-lg">
+                  <option value="A4">A4 (210×297 mm)</option>
+                  <option value="Letter">Letter (8.5×11 in)</option>
+                  <option value="A5">A5 (148×210 mm)</option>
+                  <option value="Square">Square (210×210 mm)</option>
+                </select>
+              </label>
+              <label class="block" style="min-width:160px;">Orientation
+                <select id="orientation" class="select-lg">
+                  <option value="portrait">Portrait</option>
+                  <option value="landscape">Landscape</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="row" style="display:flex;gap:12px;align-items:flex-end;justify-content:center;margin-top:10px;">
+              <label class="block" style="min-width:140px;">Margins (mm)
+                <input id="margin" type="number" min="0" max="50" step="1" value="10"/>
+              </label>
+              <label class="block" style="min-width:180px;">Fit
+                <select id="fitMode" class="select-lg">
+                  <option value="contain">Contain (no crop)</option>
+                  <option value="cover">Cover (fill page)</option>
+                  <option value="width">Fit to width</option>
+                  <option value="height">Fit to height</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="block" style="max-width:480px;margin:10px auto 0;text-align:left;">
+              <div style="font-weight:600;margin-bottom:6px;">JPEG quality</div>
+              <input id="jpgQuality" type="range" min="0.5" max="1" step="0.01" value="0.92" />
+              <div class="small" id="qLabel" style="margin-top:4px;">Quality: 0.92 (higher = better &amp; larger)</div>
+            </div>
+
+            <div class="row" style="display:flex;gap:12px;align-items:center;justify-content:center;margin-top:10px;">
+              <label class="inline"><input id="pngLossless" type="checkbox"/> Use lossless for PNG</label>
+              <label class="inline">Background color
+                <input id="bgColor" type="color" value="#ffffff"/>
+              </label>
+            </div>
+
+            <div class="small" style="margin-top:10px;">Note: WEBP/AVIF/HEIC are rendered to JPEG by default. PNG can be embedded losslessly.</div>
+
+            <!-- Thumbnails live HERE now -->
+            <div id="gallery" class="gallery thumbs-grid" aria-live="polite"></div>
+          </section>
+
+          <!-- 3) Download — perfectly centered -->
+          <section class="panel card box" aria-label="Download PDF">
+            <div class="download-center">
+              <h2 class="title" style="margin-bottom:0;">Download PDF</h2>
+              <div id="status" class="small">Idle…</div>
+              <button id="buildBtn" class="btn primary-blue" disabled style="margin-top:6px;">Convert & Download</button>
+              <ul class="small" style="margin:8px 0 0;max-width:420px;text-align:left;">
+                <li>Drag thumbnails to reorder.</li>
+                <li>Click × on a card to remove.</li>
+              </ul>
+            </div>
+          </section>
+
+        </div>
+      </aside>
+
+      <!-- Title/Sub (gallery moved into Settings, so nothing extra here) -->
+      <div class="panel">
+        <h1 class="page-title" style="margin:0 0 6px 0;">Image → PDF</h1>
+        <p class="sub" style="margin-top:0;">Convert images to a single PDF locally in your browser.</p>
+
+        <section class="card" style="margin-top:12px;">
+          <h2 class="title">How it works</h2>
+          <ul class="sub">
+            <li>Drop images; we assemble them into a single PDF.</li>
+            <li>Supports common formats; advanced formats depend on browser codecs.</li>
+            <li>Set page size/margins; export when ready.</li>
+          </ul>
+          <p class="sub">Privacy: No uploads. Everything stays on your device.</p>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- Progress overlay -->
+  <div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="pTitle" aria-describedby="pText" hidden>
+    <div class="box">
+      <h4 id="pTitle">Working…</h4>
+      <div class="bar"><span id="pBar"></span></div>
+      <div id="pText" class="ptext">0%</div>
+    </div>
+  </div>
+
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+  <script>
+    const $ = s => document.querySelector(s);
+
+    // Elements
+    const drop        = $('#drop');
+    const fileInput   = $('#file');
+    const metaEl      = $('#meta');
+    const clearBtn    = $('#clearBtn');
+    const errEl       = $('#err');
+
+    const pageSizeEl    = $('#pageSize');
+    const orientationEl = $('#orientation');
+    const marginEl      = $('#margin');
+    const fitModeEl     = $('#fitMode');
+    const jpgQualityEl  = $('#jpgQuality');
+    const qLabel        = $('#qLabel');
+    const pngLosslessEl = $('#pngLossless');
+    const bgColorEl     = $('#bgColor');
+
+    const galleryEl   = $('#gallery');
+    const buildBtn    = $('#buildBtn');
+    const statusEl    = $('#status');
+
+    // Progress overlay
+    const overlay = $('#overlay'), pTitle = $('#pTitle'), pBar = $('#pBar'), pText = $('#pText');
+
+    // Active tab
+    try {
+      const path = location.pathname.replace(/\/$/,'');
+      document.querySelectorAll('.tool-tabs a').forEach(a=>{
+        const href = a.getAttribute('href');
+        if (href && path.endsWith(href)) a.classList.add('active');
+      });
+    } catch(e){}
+
+    function setDisabled(el, v){ el.disabled = !!v; el.setAttribute('aria-disabled', v ? 'true' : 'false'); }
+    function setProgress(show, title='', percent=0){
+      overlay.hidden = !show;
+      overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
+      pTitle.textContent = title || 'Working…';
+      const pct = Math.max(0, Math.min(100, Math.round(percent||0)));
+      pBar.style.width = pct + '%'; pText.textContent = pct + '%';
+    }
+    function showErr(msg){ errEl.textContent = msg || ''; errEl.style.display = msg ? 'block' : 'none'; }
+    function syncQualityUI(){ const v = parseFloat(jpgQualityEl.value || '0.92'); qLabel.textContent = 'Quality: ' + v.toFixed(2) + ' (higher = better & larger)'; }
+    jpgQualityEl.addEventListener('input', syncQualityUI); syncQualityUI();
+
+    let images = []; // [{name,type,size,kind,w,h,blob}]
+
+    function updateMeta(){
+      metaEl.textContent = images.length ? images.length + ' image' + (images.length>1?'s':'') : 'No files';
+      setDisabled(buildBtn, images.length === 0);
+      setDisabled(clearBtn, images.length === 0);
+      statusEl.textContent = images.length ? 'Ready. Adjust settings and click Create PDF.' : 'Idle…';
+    }
+
+    // ---- Gallery
+    function renderGallery(){
+      galleryEl.innerHTML='';
+      if(!images.length){
+        const empty=document.createElement('div');
+        empty.className='small';
+        empty.style.gridColumn='1/-1';
+        empty.style.textAlign='center';
+        empty.style.opacity='0.8';
+        empty.textContent='Add images to see them here. Drag to reorder; click × to remove.';
+        galleryEl.appendChild(empty);
+        return;
+      }
+      images.forEach((img,i)=>{
+        const card=document.createElement('div'); card.className='gitem'; card.draggable=true; card.dataset.idx=i;
+
+        const rm=document.createElement('button'); rm.className='rm'; rm.type='button'; rm.textContent='×';
+        rm.title='Remove this image';
+        rm.addEventListener('click', (e)=>{ e.stopPropagation(); images.splice(i,1); renderAll(); });
+
+        const box=document.createElement('div'); box.className='gthumb';
+        const im=document.createElement('img'); im.src=URL.createObjectURL(img.blob); im.alt=img.name; im.onload=()=>URL.revokeObjectURL(im.src);
+        box.appendChild(im);
+
+        const meta=document.createElement('div'); meta.className='gmeta';
+        meta.innerHTML=`<span>#${i+1}</span><span>${img.w}×${img.h}</span>`;
+
+        // DnD reorder
+        card.addEventListener('dragstart', ev => ev.dataTransfer.setData('text/plain', String(i)));
+        card.addEventListener('dragover', ev => { ev.preventDefault(); card.classList.add('drag-over'); });
+        card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+        card.addEventListener('drop', ev => {
+          ev.preventDefault(); card.classList.remove('drag-over');
+          const from = Number(ev.dataTransfer.getData('text/plain'));
+          const to   = Number(card.dataset.idx);
+          if (isNaN(from) || isNaN(to) || from===to) return;
+          const [item] = images.splice(from,1);
+          images.splice(to,0,item);
+          renderAll();
+        });
+
+        card.append(rm,box,meta);
+        galleryEl.appendChild(card);
+      });
+    }
+    function renderAll(){ renderGallery(); updateMeta(); }
+
+    // ---- Decoding helpers
+    function hexToRGBA(hex){
+      const m=hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+      if(!m) return [255,255,255,255];
+      return [parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16),255];
+    }
+    async function drawToCanvasAndExport(bitmap, preferPNG){
+      const w=bitmap.width, h=bitmap.height;
+      const [r,g,b,a]=hexToRGBA(bgColorEl.value||'#ffffff');
+      const q=Math.max(0.5,Math.min(1,parseFloat(jpgQualityEl.value)||0.92));
+      const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle=`rgba(${r},${g},${b},${a/255})`; ctx.fillRect(0,0,w,h);
+      ctx.drawImage(bitmap,0,0);
+      const blob=await new Promise(res=>canvas.toBlob(res, preferPNG?'image/png':'image/jpeg', preferPNG?undefined:q));
+      return { blob, w, h, kind: preferPNG?'png':'jpeg' };
+    }
+    function isSupportedImage(file){
+      const t=(file.type||'').toLowerCase();
+      if(t.startsWith('image/')) return true;
+      return /\.(jpe?g|png|webp|avif|heic|heif)$/i.test(file.name||'');
+    }
+    async function decodeImageToCanvasBlob(file){
+      const type=(file.type||'').toLowerCase();
+      if(type.includes('heic')||type.includes('heif')||/\.hei[c|f]$/i.test(file.name||'')){
+        const out=await window.heic2any({blob:file,toType:'image/png'});
+        const bm=await createImageBitmap(out);
+        return await drawToCanvasAndExport(bm,true);
+      }
+      try{
+        const bm=await createImageBitmap(file);
+        const preferPNG=(type.includes('png')||/\.png$/i.test(file.name||'')) && pngLosslessEl.checked;
+        return await drawToCanvasAndExport(bm, preferPNG);
+      }catch(e){
+        const url=URL.createObjectURL(file);
+        try{
+          const img=await new Promise((res,rej)=>{const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=url;});
+          const preferPNG=(/\.png$/i.test(file.name||'')||type.includes('png')) && pngLosslessEl.checked;
+          return await drawToCanvasAndExport(img, preferPNG);
+        }finally{ URL.revokeObjectURL(url); }
+      }
+    }
+
+    // ---- Add files
+    async function addFiles(fileList){
+      showErr('');
+      const incoming = Array.from(fileList || []);
+      const files = incoming.filter(f => isSupportedImage(f) && (typeof f.size!=='number' || f.size >= 0));
+      if(!files.length){ showErr('No supported images were found.'); return; }
+
+      const key = f => (f.name||'') + '|' + (typeof f.size==='number'?f.size:'');
+      const seen = new Set(images.map(i => key(i)));
+      const todo = files.filter(f => !seen.has(key(f)));
+
+      for(let i=0;i<todo.length;i++){
+        setProgress(true, 'Preparing images…', (i/todo.length)*100);
+        try{
+          const f=todo[i];
+          const {blob,w,h,kind}=await decodeImageToCanvasBlob(f);
+          images.push({name:f.name||('image_'+(images.length+1)),type:f.type||'image/*',size:f.size||0,kind,w,h,blob});
+        }catch(err){ showErr('Failed to read one image: '+(err?.message||err)); }
+      }
+      setProgress(false);
+      renderAll();
+    }
+
+    // ---- Events
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length) { addFiles(e.target.files); e.target.value=''; }
+    });
+    ['dragenter','dragover'].forEach((ev) => {
+      drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('is-dragover','dropping'); });
+    });
+    ['dragleave','drop'].forEach((ev) => {
+      drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('is-dragover','dropping'); });
+    });
+    drop.addEventListener('drop', (e) => { if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); });
+    drop.addEventListener('click', (e) => { if (!e.target.closest('button,a,label[for="file"]')) fileInput.click(); });
+    clearBtn.addEventListener('click', () => { images = []; renderAll(); });
+
+    // ---- Build PDF
+    function mmToPt(mm){ return mm*72/25.4; }
+    function getPageSizePts(){
+      let wMM=210,hMM=297; const s=pageSizeEl.value;
+      if(s==='Letter'){wMM=215.9;hMM=279.4;}
+      if(s==='A5'){wMM=148;hMM=210;}
+      if(s==='Square'){wMM=210;hMM=210;}
+      let w=mmToPt(wMM), h=mmToPt(hMM);
+      if(orientationEl.value==='landscape') [w,h]=[h,w];
+      return {w,h};
+    }
+    async function blobToUint8Array(blob){ const buf=await blob.arrayBuffer(); return new Uint8Array(buf); }
+
+    buildBtn.addEventListener('click', async ()=>{
+      if(!images.length) return;
+      try{
+        showErr(''); setProgress(true,'Building PDF…', 0);
+        setDisabled(buildBtn,true); statusEl.textContent = 'Building…';
+
+        const {w:pageW,h:pageH}=getPageSizePts();
+        const margin=mmToPt(parseFloat(marginEl.value)||0);
+        const fitMode=fitModeEl.value;
+
+        const doc=await PDFLib.PDFDocument.create();
+
+        for(let i=0;i<images.length;i++){
+          const img=images[i];
+          const embedded = (img.kind==='png')
+            ? await doc.embedPng(await blobToUint8Array(img.blob))
+            : await doc.embedJpg(await blobToUint8Array(img.blob));
+
+          const iw=embedded.width, ih=embedded.height;
+          const page=doc.addPage([pageW,pageH]);
+
+          const availW=Math.max(1,pageW-2*margin), availH=Math.max(1,pageH-2*margin);
+          const ratio=iw/ih, boxRatio=availW/availH;
+          let drawW,drawH;
+          if(fitMode==='cover'){
+            if(ratio>boxRatio){drawH=availH;drawW=drawH*ratio;}
+            else {drawW=availW;drawH=drawW/ratio;}
+          }else if(fitMode==='width'){ drawW=availW; drawH=drawW/ratio; }
+          else if(fitMode==='height'){ drawH=availH; drawW=drawH*ratio; }
+          else { // contain
+            if (ratio > boxRatio) { drawW = availW;  drawH = drawW / ratio; }
+            else { drawH = availH;  drawW = drawH / ratio; }
+          }
+          const x=margin+(availW-drawW)/2, y=margin+(availH-drawH)/2;
+          page.drawImage(embedded,{x,y,width:drawW,height:drawH});
+          setProgress(true,'Building PDF…', ((i+1)/images.length)*100);
+        }
+
+        const bytes=await doc.save({updateFieldAppearances:false});
+        const blob=new Blob([bytes],{type:'application/pdf'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a'); a.href=url;
+        const stamp = new Date().toISOString().slice(0,10);
+        const base = (images[0]?.name || 'images').replace(/\.[^.]+$/,'');
+        a.download = `${base}-to-pdf-${stamp}.pdf`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),1500);
+        statusEl.textContent = 'Done.';
+      }catch(err){
+        showErr('Build failed: '+(err?.message||err));
+        statusEl.textContent = 'Error.';
+      }
+      setDisabled(buildBtn, images.length===0); setProgress(false);
+    });
+
+    // Initial
+    updateMeta();
+  </script>
+</body>
+</html>

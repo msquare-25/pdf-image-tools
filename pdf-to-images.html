@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="description" content="Free, fast, and private PDF & Image tools — everything runs in your browser (no uploads).">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PDF → Images — Client-side</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/style.css" />
+  <script defer src="/site.js"></script>
+  <script defer src="/assets/seo.js"></script>
+  <meta name="color-scheme" content="light dark" />
+</head>
+<body class="pdf-to-images-page">
+<header class="site-header">
+  <div class="container bar">
+    <div class="brand">
+      <span class="logo"></span>
+      <span>PDF &amp; Image Tools</span>
+    </div>
+
+    <div class="container tool-tabs-wrap">
+      <button class="tool-scroll tool-left" aria-label="Scroll tools left" title="Scroll left">‹</button>
+      <nav class="tool-tabs" role="navigation" aria-label="Tools">
+        <a href="/merge">Merge PDF</a>
+        <a href="/delete-pages">Delete pages</a>
+        <a href="/rotate-pages">Rotate PDF</a>
+        <a href="/reorder-pages">Reorder PDF</a>
+        <a href="/crop">Crop PDF</a>
+        <a href="/compress">Compress PDF</a>
+        <a href="/pdf-to-images" class="active">PDF → Images</a>
+        <a href="/image-to-pdf">Image → PDF</a>
+        <a href="/jpg-to-png">JPG → PNG</a>
+        <a href="/png-to-jpg">PNG → JPG</a>
+      </nav>
+      <button class="tool-scroll tool-right" aria-label="Scroll tools right" title="Scroll right">›</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <!-- ===== 3-Box Panel (Upload → Settings → Action) ===== -->
+    <aside class="panel">
+      <div class="grid-3">
+
+        <!-- 1) Upload: plain card, centered content -->
+        <section
+          class="panel card box upload-box"
+          id="drop"
+          aria-label="Upload PDF"
+          style="text-align:center;display:flex;flex-direction:column;justify-content:center;gap:10px;border-style:solid;background:none;background-image:none;">
+          <h2 class="title">Upload PDF</h2>
+          <p class="muted" style="margin-top:-4px;">Drag &amp; drop a PDF here</p>
+
+          <div class="row" style="display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;">
+            <label for="file" class="btn gradient">Browse PDF</label>
+            <span class="pill" id="meta">No file</span>
+            <button class="btn subtle" id="clearBtn" disabled>Clear</button>
+          </div>
+
+          <input id="file" type="file" accept="application/pdf" hidden />
+          <div class="small">Everything runs in your browser (no uploads).</div>
+        </section>
+
+        <!-- 2) Settings -->
+        <section class="panel card box settings-box" aria-label="Export Settings" style="text-align:center;">
+          <h2 class="title">Setting</h2>
+
+          <!-- Format + JPG quality on one row -->
+          <div class="row" style="display:flex;gap:12px;align-items:center;justify-content:center;">
+            <label class="block" style="min-width:160px;">Format
+              <select id="fmt" class="select-lg" style="width:100%;">
+                <option value="png">PNG (lossless)</option>
+                <option value="jpg">JPG (smaller)</option>
+              </select>
+            </label>
+
+            <div class="block" style="flex:1;min-width:260px;text-align:left;">
+              <div style="font-weight:600;margin-bottom:6px;">JPG quality</div>
+              <input id="qRange" type="range" min="0.5" max="1" step="0.01" value="0.92" style="width:100%;" />
+              <div class="small" id="qLabel" style="margin-top:4px;">Quality: 0.92 (higher = better &amp; larger)</div>
+            </div>
+          </div>
+
+          <!-- DPI + Pages on one row -->
+          <div class="row" style="display:flex;gap:12px;align-items:flex-end;justify-content:center;margin-top:10px;">
+            <label class="block" style="flex:1;min-width:140px;">DPI
+              <input id="dpi" type="number" step="4" min="72" max="300" value="144" />
+            </label>
+            <label class="block" style="flex:1;min-width:180px;">Pages (e.g. 1-3,5)
+              <input id="range" type="text" placeholder="blank = all" />
+            </label>
+          </div>
+
+          <div class="small" style="margin-top:10px;">Tip: Higher DPI → bigger images &amp; larger ZIP. PNG keeps text crisp; JPG is smaller for photos/scans.</div>
+        </section>
+
+        <!-- 3) Action -->
+        <section class="panel card box action-box" aria-label="Export & Download" style="text-align:center;display:flex;flex-direction:column;justify-content:center;gap:10px;">
+          <h2 class="title">Download Image</h2>
+          <div id="status" class="small" style="margin-top:-2px;">Idle…</div>
+          <div class="row" style="display:flex;justify-content:center;margin-top:6px;">
+            <button id="exportBtn" class="btn primary-blue">Convert &amp; Download</button>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <!-- ===== Title ===== -->
+    <div class="panel">
+      <h1 class="page-title" style="margin:0 0 6px 0;">PDF → Images</h1>
+      <p class="sub" style="margin-top:0;">Export PDF pages as PNG/JPG at custom DPI — 100% client-side.</p>
+
+      <!-- (No preview/gallery rendered here) -->
+
+      <section class="card" style="margin-top:12px;">
+        <h2 class="title">How it works</h2>
+        <ul class="sub">
+          <li>Export each page as PNG or JPG.</li>
+          <li>Pick resolution/quality for output.</li>
+          <li>Batch-download in a ZIP.</li>
+        </ul>
+        <p class="sub">Privacy: No uploads. Everything stays on your device.</p>
+      </section>
+    </div>
+  </div>
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+  <!-- page script -->
+  <script>
+    const $ = (s)=>document.querySelector(s);
+
+    // Elements
+    const fileEl   = $('#file');
+    const drop     = $('#drop');
+    const metaEl   = $('#meta');
+    const clearBtn = $('#clearBtn');
+
+    const fmtEl    = $('#fmt');
+    const qRange   = $('#qRange');
+    const qLabel   = $('#qLabel');
+    const dpiEl    = $('#dpi');
+    const rangeEl  = $('#range');
+
+    const exportBtn= $('#exportBtn');
+    const statusEl = $('#status');
+
+    // State
+    let pdfDoc = null, pageCount = 0, pdfName = 'document';
+
+    // Active tab guard
+    (function ensureActiveTab(){
+      try{
+        const path = location.pathname.replace(/\/$/,'');
+        document.querySelectorAll('.tool-tabs a').forEach(a=>{
+          const href = a.getAttribute('href');
+          if(href && path.endsWith(href)) a.classList.add('active');
+        });
+      }catch(e){}
+    })();
+
+    // Quality label & disable when PNG
+    function syncQualityUI(){
+      const isJpg = fmtEl.value === 'jpg';
+      qRange.disabled = !isJpg;
+      const v = parseFloat(qRange.value || '0.92').toFixed(2);
+      qLabel.textContent = `Quality: ${v} (higher = better & larger)`;
+    }
+    qRange.addEventListener('input', syncQualityUI);
+    fmtEl.addEventListener('change', syncQualityUI);
+    syncQualityUI();
+
+    // Upload: file select
+    fileEl.addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f) handleFile(f);
+      fileEl.value = '';
+    });
+
+    // Upload: drag & drop
+    ['dragenter','dragover'].forEach(ev =>
+      drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('is-dragover'); })
+    );
+    ['dragleave','drop'].forEach(ev =>
+      drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('is-dragover'); })
+    );
+    drop.addEventListener('drop', (e) => {
+      const f = e.dataTransfer?.files?.[0];
+      if (!f) return;
+      if (f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name || '')) {
+        statusEl.textContent = 'Please drop a single PDF file.';
+        return;
+      }
+      handleFile(f);
+    });
+
+    // Clear
+    clearBtn.addEventListener('click', () => {
+      pdfDoc = null; pageCount = 0; pdfName = 'document';
+      metaEl.textContent = 'No file';
+      exportBtn.disabled = true;
+      statusEl.textContent = 'Idle…';
+      clearBtn.disabled = true;
+    });
+
+    // Open + parse PDF
+    async function handleFile(f){
+      try{
+        const bytes = new Uint8Array(await f.arrayBuffer());
+        pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
+        pageCount = pdfDoc.numPages;
+        pdfName = (f.name || 'document').replace(/\.pdf$/i,'');
+        metaEl.textContent = `${f.name} • ${pageCount} pages`;
+        exportBtn.disabled = false;
+        clearBtn.disabled = false;
+        statusEl.textContent = 'Ready. Choose options and click Convert & Download.';
+      }catch(err){
+        alert('Could not open PDF: ' + (err?.message || err));
+      }
+    }
+
+    // Parse pages input
+    function parseRanges(input, max){
+      if(!input || !input.trim()) return Array.from({length:max}, (_,i)=>i+1);
+      const out=new Set();
+      input.split(',').map(s=>s.trim()).forEach(part=>{
+        const m = part.match(/^(\d+)-(\d+)$/);
+        if(m){
+          let a=Math.max(1,Math.min(max,parseInt(m[1]))),
+              b=Math.max(1,Math.min(max,parseInt(m[2])));
+          if(a>b)[a,b]=[b,a];
+          for(let i=a;i<=b;i++) out.add(i);
+        }else{
+          const n=Math.max(1,Math.min(max,parseInt(part)));
+          if(!isNaN(n)) out.add(n);
+        }
+      });
+      return Array.from(out).sort((a,b)=>a-b);
+    }
+
+    // Render a page to Blob
+    async function renderPageToBlob(page, scale, fmt, quality){
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { alpha:false });
+      canvas.width = Math.max(1, Math.floor(viewport.width));
+      canvas.height = Math.max(1, Math.floor(viewport.height));
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const type = (fmt==='png') ? 'image/png' : 'image/jpeg';
+      const blob = await new Promise(res => canvas.toBlob(res, type, quality));
+      return { blob, width: canvas.width, height: canvas.height };
+    }
+
+    // Export flow — download only, no previews
+    exportBtn.addEventListener('click', async ()=>{
+      if(!pdfDoc) return;
+
+      const dpi = Math.max(72, Math.min(300, parseInt(dpiEl.value)||144));
+      const quality = Math.max(0.5, Math.min(1, parseFloat(qRange.value)||0.92));
+      const fmt = fmtEl.value;
+      const pages = parseRanges(rangeEl.value||'', pageCount);
+
+      exportBtn.disabled = true;
+      statusEl.textContent = `Rendering ${pages.length} page(s)…`;
+
+      const zip = new JSZip();
+
+      for(let i=0;i<pages.length;i++){
+        const pNum = pages[i];
+        const page = await pdfDoc.getPage(pNum);
+        const scale = dpi / 72;
+        const { blob } = await renderPageToBlob(page, scale, fmt, quality);
+        const ext = (fmt==='png') ? 'png' : 'jpg';
+        const arr = new Uint8Array(await blob.arrayBuffer());
+        zip.file(`${pdfName}-p${String(pNum).padStart(3,'0')}.${ext}`, arr);
+        page.cleanup();
+        await new Promise(r=>setTimeout(r,0));
+      }
+
+      statusEl.textContent = 'Packaging…';
+      const zipBlob = await zip.generateAsync({ type:'blob', compression:'DEFLATE', compressionOptions:{ level:6 } });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a'); a.href = url; a.download = `${pdfName}-${fmt}-${dpi}dpi.zip`; a.click();
+      setTimeout(()=>URL.revokeObjectURL(url), 1500);
+
+      statusEl.textContent = 'Done.';
+      exportBtn.disabled = false;
+    });
+  </script>
+</main>
+</body>
+</html>

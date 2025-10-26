@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="description" content="Free, fast, and private PDF & Image tools — everything runs in your browser (no uploads).">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rotate PDF Pages — PDF & Image Tools</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/style.css" />
+  <script defer src="/site.js"></script>
+  <meta name="color-scheme" content="light dark" />
+
+  <style>
+    /* ==== Thumbnails grid (same rhythm as Delete/Merge) ==== */
+    .thumb-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:12px}
+    @media (max-width:1280px){.thumb-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+    @media (max-width:980px){.thumb-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media (max-width:720px){.thumb-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:480px){.thumb-grid{grid-template-columns:repeat(1,minmax(0,1fr))}}
+
+    .thumb{border:1px solid var(--border);border-radius:12px;background:var(--surface-2);
+      overflow:hidden;position:relative;text-align:center;padding:6px 6px 44px;box-shadow:var(--shadow-sm)}
+    .thumb canvas{width:100%;height:auto;display:block;background:var(--surface);border-radius:8px;transition:transform .2s ease}
+    .thumb .meta{position:absolute;left:8px;right:8px;bottom:6px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted)}
+    .thumb .badge{background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-weight:800}
+    .rot{font-variant-numeric:tabular-nums}
+    .controls{display:flex;gap:8px;justify-content:center;margin-top:8px}
+    .controls .btn{padding:6px 10px;border-radius:10px}
+
+    /* Upload drop visual */
+    .dropping{outline:2px dashed var(--accent);outline-offset:6px}
+
+    /* Center the little privacy note under the Upload buttons consistently */
+    .box.upload-box.theme-center .small{display:inline-block;margin:8px auto 0;text-align:center}
+  </style>
+</head>
+<body class="rotate-page">
+
+  <header class="site-header">
+    <div class="container bar">
+      <div class="brand">
+        <span class="logo"></span>
+        <span>PDF &amp; Image Tools</span>
+      </div>
+
+      <div class="container tool-tabs-wrap">
+        <button class="tool-scroll tool-left" aria-label="Scroll left">‹</button>
+        <nav class="tool-tabs" role="navigation" aria-label="Tools">
+          <a href="/merge" data-tip="Combine multiple PDFs into one">Merge PDF</a>
+          <a href="/delete-pages" data-tip="Remove pages you don’t need">Delete pages</a>
+          <a href="/rotate-pages" class="active" data-tip="Rotate pages left/right">Rotate PDF</a>
+          <a href="/reorder-pages" data-tip="Drag &amp; reorder pages">Reorder PDF</a>
+          <a href="/crop" data-tip="Cut margins or select an area">Crop PDF</a>
+          <a href="/compress" data-tip="Reduce PDF file size">Compress PDF</a>
+          <a href="/pdf-to-images" data-tip="Export pages as PNG/JPG">PDF → Images</a>
+          <a href="/image-to-pdf" data-tip="Make a PDF from images">Image → PDF</a>
+          <a href="/jpg-to-png" data-tip="Convert JPG to PNG">JPG → PNG</a>
+          <a href="/png-to-jpg" data-tip="Convert PNG to JPG">PNG → JPG</a>
+        </nav>
+        <button class="tool-scroll tool-right" aria-label="Scroll right">›</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+
+      <!-- ===== 3 boxes ===== -->
+      <aside class="panel">
+        <div class="grid-3">
+
+          <!-- LEFT: Upload -->
+          <section class="panel card box upload-box theme-center" id="dropzone" aria-label="Upload">
+            <h2 class="title">Upload</h2>
+            <p class="muted">Drag &amp; drop your PDF or browse</p>
+
+            <label for="file" class="btn gradient big">Browse PDF</label>
+            <input id="file" type="file" accept="application/pdf" hidden />
+            <div class="pill mt-2" id="meta">No file</div>
+            <button class="btn subtle mt-1" id="clearBtn" disabled>Clear</button>
+
+            <div class="small mt-2">Everything runs in your browser (no uploads).</div>
+          </section>
+
+          <!-- CENTER: Settings + Pages -->
+          <section class="panel card box settings-box theme-center" aria-label="Setting">
+            <h2 class="title">Setting</h2>
+
+            <div class="row" style="gap:10px;align-items:flex-end;">
+              <label class="block" style="flex:1;">
+                <span class="small muted">Page ranges</span>
+                <input id="ranges" type="text" placeholder="e.g. 1,3,5-7" />
+              </label>
+              <label class="block" style="width:180px;">
+                <span class="small muted">Direction</span>
+                <select id="rangeDir" class="select-lg">
+                  <option value="-90">⟲ -90° (Left)</option>
+                  <option value="+90">⟳ +90° (Right)</option>
+                </select>
+              </label>
+              <button class="btn" id="btnApplyRanges">Apply to ranges</button>
+              <button class="btn ghost" id="btnClearRot">Clear rotations</button>
+            </div>
+
+            <div class="row mt-2" style="gap:10px;justify-content:center">
+              <button class="btn" id="btnRotateAllL">Rotate all ⟲ -90°</button>
+              <button class="btn" id="btnRotateAllR">Rotate all ⟳ +90°</button>
+            </div>
+
+            <div id="pages" class="thumb-grid"></div>
+            <div id="err" class="error" style="display:none"></div>
+          </section>
+
+          <!-- RIGHT: Download -->
+          <section class="panel card box action-box theme-center" aria-label="Download">
+            <h2 class="title">Download</h2>
+            <div id="status" class="small">Idle…</div>
+            <div class="row center mt-2" style="gap:10px">
+              <button id="btnExport" class="btn primary-blue" disabled>Download New PDF</button>
+            </div>
+          </section>
+
+        </div>
+      </aside>
+
+      <!-- ===== Title + How it works (BELOW 3 boxes) ===== -->
+      <main class="panel after-grid">
+        <h1 class="page-title">Rotate PDF Pages</h1>
+        <p class="sub">Rotate individual pages or apply bulk rotation — everything runs in your browser.</p>
+
+        <section class="card mt-3">
+          <h2 class="title">How it works</h2>
+          <ul class="sub">
+            <li>Upload your PDF and preview thumbnails in the center box.</li>
+            <li>Rotate per page with the buttons, or use ranges to rotate many pages together.</li>
+            <li>Export a new PDF (original remains untouched).</li>
+          </ul>
+          <p class="sub mt-1">Privacy: No uploads. Everything stays on your device.</p>
+        </section>
+      </main>
+
+    </div>
+
+    <!-- libs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+    <!-- page script -->
+    <script>
+      const $ = s => document.querySelector(s);
+
+      // Elements
+      const drop = $('#dropzone');
+      const fileEl = $('#file'), metaEl = $('#meta'), clearBtn = $('#clearBtn');
+      const pagesEl = $('#pages'), errEl = $('#err'), statusEl = $('#status');
+      const btnExport = $('#btnExport');
+      const btnAllL = $('#btnRotateAllL'), btnAllR = $('#btnRotateAllR');
+      const rangesEl = $('#ranges'), rangeDirEl = $('#rangeDir'), btnApplyRanges = $('#btnApplyRanges'), btnClearRot = $('#btnClearRot');
+
+      // State
+      let fileBuf = null;          // original ArrayBuffer
+      let pageCount = 0;
+      let rotations = [];          // degrees per page (0/90/180/270)
+      let origName = 'document.pdf';
+
+      // Helpers
+      function setStatus(t){ statusEl.textContent = t; }
+      function showError(t){ errEl.style.display='block'; errEl.textContent = String(t); }
+      function clearError(){ errEl.style.display='none'; errEl.textContent=''; }
+      function updateMeta(){
+        metaEl.textContent = fileBuf ? `${pageCount} pages` : 'No file';
+        btnExport.disabled = !fileBuf;
+        btnAllL.disabled = !fileBuf; btnAllR.disabled = !fileBuf;
+        btnApplyRanges.disabled = !fileBuf; btnClearRot.disabled = !fileBuf;
+      }
+
+      function parseRanges(txt){
+        const out = new Set();
+        (txt||'').split(',').map(s=>s.trim()).filter(Boolean).forEach(part=>{
+          const m = part.match(/^(\d+)\s*-\s*(\d+)$/);
+          if(m){ let a=+m[1], b=+m[2]; if(a>b)[a,b]=[b,a]; for(let i=a;i<=b;i++) out.add(i); }
+          else if(/^\d+$/.test(part)){ out.add(+part); }
+        });
+        return out;
+      }
+
+      function downloadBlob(blob, name){
+        const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click();
+        setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+      }
+
+      function outputName(base, suffix){
+        const m = base.match(/^(.*?)(\.[^.]+)?$/);
+        const stem = m?.[1] || 'document', ext = m?.[2] || '.pdf';
+        return `${stem}${suffix}${ext}`;
+      }
+
+      // Build a thumbnail card
+      function makeThumb(i, canvas){
+        const wrap = document.createElement('div'); wrap.className='thumb';
+        const meta = document.createElement('div'); meta.className='meta';
+        const left = document.createElement('div'); left.innerHTML = `<span class="badge">#${i+1}</span>`;
+        const right = document.createElement('div'); right.className='rot'; right.textContent = `${rotations[i]||0}°`;
+        meta.append(left, right);
+
+        const ctrls = document.createElement('div'); ctrls.className='controls';
+        const bL = document.createElement('button'); bL.className='btn'; bL.textContent='⟲ -90°';
+        const bR = document.createElement('button'); bR.className='btn'; bR.textContent='⟳ +90°';
+
+        function apply(){
+          const deg = rotations[i] || 0;
+          canvas.style.transform = `rotate(${deg}deg)`;
+          right.textContent = `${deg}°`;
+        }
+
+        bL.addEventListener('click', ()=>{ rotations[i] = ( (rotations[i]||0) + 270 ) % 360; apply(); });
+        bR.addEventListener('click', ()=>{ rotations[i] = ( (rotations[i]||0) +  90 ) % 360; apply(); });
+
+        ctrls.append(bL,bR);
+        wrap.append(canvas, meta, ctrls);
+        return wrap;
+      }
+
+      async function renderPages(){
+        clearError(); pagesEl.innerHTML = '';
+        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(fileBuf.slice(0)) }).promise;
+        pageCount = pdf.numPages; rotations = Array.from({length:pageCount}, ()=>0); updateMeta();
+
+        for(let i=1;i<=pageCount;i++){
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 0.22 });
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = viewport.width; canvas.height = viewport.height;
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          pagesEl.appendChild(makeThumb(i-1, canvas));
+          page.cleanup && page.cleanup();
+        }
+        pdf.cleanup && pdf.cleanup();
+        setStatus('Ready');
+      }
+
+      // File handling
+      async function handleFile(file){
+        if(!file) return;
+        origName = file.name || 'document.pdf';
+        metaEl.textContent = 'Loading…'; setStatus('Loading…');
+        fileBuf = await file.arrayBuffer();
+        await renderPages();
+        clearBtn.disabled = false; setStatus('Ready');
+      }
+
+      fileEl.addEventListener('change', e => handleFile(e.target.files?.[0]));
+      clearBtn.addEventListener('click', () => {
+        fileBuf = null; pageCount = 0; rotations = [];
+        pagesEl.innerHTML = ''; metaEl.textContent='No file'; setStatus('Idle…');
+        clearBtn.disabled = true; updateMeta(); fileEl.value = '';
+      });
+
+      // Drag & Drop
+      ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); drop.classList.add('dropping'); }));
+      ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); drop.classList.remove('dropping'); }));
+      drop.addEventListener('drop', e => handleFile(e.dataTransfer?.files?.[0]));
+
+      // Rotate all
+      function rotateAll(delta){
+        if(!fileBuf) return;
+        for(let i=0;i<rotations.length;i++) rotations[i] = (rotations[i] + delta + 360) % 360;
+        // refresh preview UI
+        pagesEl.querySelectorAll('canvas').forEach((cv, idx)=> cv.style.transform = `rotate(${rotations[idx]}deg)`);
+        pagesEl.querySelectorAll('.rot').forEach((el, idx)=> el.textContent = `${rotations[idx]}°`);
+      }
+      btnAllL.addEventListener('click', ()=>rotateAll(-90));
+      btnAllR.addEventListener('click', ()=>rotateAll(+90));
+
+      // Apply to ranges
+      btnApplyRanges.addEventListener('click', ()=>{
+        if(!fileBuf) return;
+        const set = parseRanges(rangesEl.value || '');
+        const delta = parseInt(rangeDirEl.value,10) || 0;
+        set.forEach(p=>{
+          if(p>=1 && p<=pageCount){
+            const i = p-1;
+            rotations[i] = (rotations[i] + delta + 360) % 360;
+          }
+        });
+        // refresh preview UI
+        pagesEl.querySelectorAll('canvas').forEach((cv, idx)=> cv.style.transform = `rotate(${rotations[idx]}deg)`);
+        pagesEl.querySelectorAll('.rot').forEach((el, idx)=> el.textContent = `${rotations[idx]}°`);
+      });
+
+      // Clear rotations
+      btnClearRot.addEventListener('click', ()=>{
+        rotations = Array.from({length:pageCount}, ()=>0);
+        pagesEl.querySelectorAll('canvas').forEach(cv=> cv.style.transform = 'rotate(0deg)');
+        pagesEl.querySelectorAll('.rot').forEach(el=> el.textContent = '0°');
+      });
+
+      // Build & Download (preserves any existing page rotation, adds our delta)
+      btnExport.addEventListener('click', async ()=>{
+        if(!fileBuf){ alert('Choose a PDF first.'); return; }
+        try{
+          setStatus('Building…');
+          const src = await PDFLib.PDFDocument.load(new Uint8Array(fileBuf), { ignoreEncryption:true });
+          const out = await PDFLib.PDFDocument.create();
+          const idx = Array.from({length: src.getPageCount()}, (_,i)=>i);
+          const copied = await out.copyPages(src, idx);
+
+          copied.forEach((p, i)=>{
+            const base = src.getPage(i).getRotation().angle || 0;
+            const deg = (base + (rotations[i]||0)) % 360;
+            if(deg) p.setRotation(PDFLib.degrees(deg));
+            out.addPage(p);
+          });
+
+          const bytes = await out.save({ useObjectStreams:false });
+          downloadBlob(new Blob([bytes], { type:'application/pdf' }), outputName(origName, '-rotated'));
+          setStatus('Done.');
+        }catch(e){
+          console.error(e); showError(e?.message||e); setStatus('Error.');
+        }
+      });
+    </script>
+  </main>
+</body>
+</html>

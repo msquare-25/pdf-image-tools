@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="description" content="Free, fast, and private PDF & Image tools — everything runs in your browser (no uploads).">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Delete PDF Pages — PDF & Image Tools</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/style.css" />
+  <script defer src="/site.js"></script>
+  <meta name="color-scheme" content="light dark" />
+  <style>
+    /* 5 thumbnails per row (responsive like Merge) */
+    .thumb-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:12px}
+    @media (max-width:1280px){.thumb-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+    @media (max-width:980px){.thumb-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media (max-width:720px){.thumb-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:480px){.thumb-grid{grid-template-columns:repeat(1,minmax(0,1fr))}}
+    .thumb{border:1px solid var(--border);border-radius:12px;background:var(--surface-2);overflow:hidden;position:relative;text-align:center;padding:6px 6px 34px;box-shadow:var(--shadow-sm)}
+    .thumb canvas{width:100%;height:auto;display:block;background:var(--surface);border-radius:8px}
+    .thumb .meta{position:absolute;left:8px;right:8px;bottom:6px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted)}
+    .thumb .badge{background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-weight:800}
+    .dropping{outline:2px dashed var(--primary);outline-offset:6px}
+  </style>
+</head>
+<body class="delete-page">
+
+<header class="site-header">
+  <div class="container bar">
+    <div class="brand">
+      <span class="logo"></span>
+      <span>PDF &amp; Image Tools</span>
+    </div>
+
+    <div class="container tool-tabs-wrap">
+      <button class="tool-scroll tool-left" aria-label="Scroll left">‹</button>
+      <nav class="tool-tabs" role="navigation">
+        <a href="/merge">Merge PDF</a>
+        <a href="/delete-pages" class="active">Delete pages</a>
+        <a href="/rotate-pages">Rotate PDF</a>
+        <a href="/reorder-pages">Reorder PDF</a>
+        <a href="/crop">Crop PDF</a>
+        <a href="/compress">Compress PDF</a>
+        <a href="/pdf-to-images">PDF → Images</a>
+        <a href="/image-to-pdf">Image → PDF</a>
+        <a href="/jpg-to-png">JPG → PNG</a>
+        <a href="/png-to-jpg">PNG → JPG</a>
+      </nav>
+      <button class="tool-scroll tool-right" aria-label="Scroll right">›</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <!-- ===== 3 boxes ===== -->
+    <aside class="panel">
+      <div class="grid-3">
+
+        <!-- LEFT: Upload -->
+        <section class="panel card box upload-box theme-center" id="dropzone" aria-label="Upload">
+          <h2 class="title">Upload</h2>
+          <p class="muted">Drag &amp; drop your PDF or browse</p>
+
+          <label for="file" class="btn gradient big">Browse PDF</label>
+          <input id="file" type="file" accept="application/pdf" hidden />
+          <div class="pill mt-2" id="meta">No file</div>
+          <button class="btn subtle mt-1" id="clearBtn" disabled>Clear</button>
+
+          <div class="small mt-2">Everything runs in your browser (no uploads).</div>
+        </section>
+
+        <!-- CENTER: Setting + Pages -->
+        <section class="panel card box setting-box theme-center" aria-label="Setting & Pages">
+          <h2 class="title">Setting</h2>
+
+          <div class="row" style="gap:10px;align-items:flex-end;">
+            <label class="block" style="flex:1">
+              <span class="small muted">Page ranges (to delete)</span>
+              <input id="ranges" type="text" placeholder="e.g. 1,3,5-7" />
+            </label>
+            <button class="btn" id="btnSelectRanges">Mark by ranges</button>
+            <!-- Select all removed by request -->
+            <button class="btn ghost" id="btnClear">Clear</button>
+          </div>
+
+          <details class="mt-2">
+            <summary>Advanced</summary>
+            <label class="inline mt-2">
+              <input id="forceCompat" type="checkbox" />
+              <span class="small">Compatibility mode (rebuild pages as images)</span>
+            </label>
+          </details>
+
+          <div id="pages" class="thumb-grid"></div>
+          <div id="err" class="error" style="display:none"></div>
+        </section>
+
+        <!-- RIGHT: Download -->
+        <section class="panel card box action-box theme-center" aria-label="Downlod">
+          <h2 class="title">Download</h2>
+          <progress id="prog" max="100" value="0" class="w-100"></progress>
+          <div id="status" class="small">Idle…</div>
+          <div class="row center mt-2" style="gap:10px">
+            <button id="btnExport" class="btn primary-blue" disabled>Download New PDF</button>
+            <button id="btnCancel" class="btn ghost" style="display:none">Cancel</button>
+          </div>
+        </section>
+
+      </div>
+    </aside>
+
+    <!-- ===== Title + How it works (BELOW 3 boxes) ===== -->
+    <main class="panel">
+      <h1 class="page-title">Delete PDF Pages</h1>
+      <p class="sub">Remove selected pages and save a clean PDF — everything runs in your browser.</p>
+
+      <section class="card mt-3">
+        <h2 class="title">How it works</h2>
+        <ul class="sub">
+          <li>Upload your PDF and preview thumbnails in the center box.</li>
+          <li>Select pages via checkboxes or enter ranges (e.g., 2, 5, 7-10).</li>
+          <li>Export a new PDF with those pages removed.</li>
+        </ul>
+        <p class="sub mt-1">Privacy: No uploads. Everything stays on your device.</p>
+      </section>
+    </main>
+
+  </div>
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+  <!-- page script -->
+  <script>
+    const $ = s => document.querySelector(s);
+
+    // Elements
+    const drop = $('#dropzone');
+    const fileEl = $('#file'), metaEl = $('#meta'), clearBtn = $('#clearBtn');
+    const rangesEl = $('#ranges'), btnRanges = $('#btnSelectRanges');
+    const btnClear = $('#btnClear');
+    const btnExport = $('#btnExport'), btnCancel = $('#btnCancel');
+    const forceCompatEl = $('#forceCompat');
+    const prog = $('#prog'), statusEl = $('#status');
+    const pagesEl = $('#pages'), errEl = $('#err');
+
+    // State
+    let fileBuf = null;        // keep original ArrayBuffer
+    let pageCount = 0;
+    let selected = new Set();
+    let origName = 'document.pdf';
+
+    function setStatus(t){ statusEl.textContent = t; }
+    function setProgress(done,total){ prog.value = total ? Math.round(done/total*100) : 0; }
+    function showError(t){ errEl.style.display='block'; errEl.textContent = String(t); }
+    function clearError(){ errEl.style.display='none'; errEl.textContent=''; }
+    function updateMeta(){ metaEl.textContent = fileBuf ? `${pageCount} pages • ${selected.size} selected` : 'No file'; btnExport.disabled = !fileBuf || !selected.size; }
+
+    function thumbCard(i, canvas){
+      const wrap = document.createElement('div'); wrap.className='thumb';
+      const meta = document.createElement('div'); meta.className='meta';
+      const left = document.createElement('div'); left.innerHTML = `<span class="badge">#${i}</span>`;
+      const right = document.createElement('label');
+      const cb = document.createElement('input'); cb.type='checkbox'; cb.dataset.page=i;
+      cb.addEventListener('change', e => { e.target.checked ? selected.add(i) : selected.delete(i); updateMeta(); });
+      right.append(cb, document.createTextNode(' Del'));
+      meta.append(left, right); wrap.append(canvas, meta); return wrap;
+    }
+
+    async function renderPages(){
+      clearError(); pagesEl.innerHTML = '';
+      // Give pdf.js worker a COPY so original buffer doesn't detach
+      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(fileBuf.slice(0)) }).promise;
+      pageCount = pdf.numPages; selected.clear(); updateMeta();
+
+      for(let i=1;i<=pageCount;i++){
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 0.22 });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = viewport.width; canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        pagesEl.appendChild(thumbCard(i, canvas));
+        page.cleanup && page.cleanup();
+      }
+      pdf.cleanup && pdf.cleanup();
+      setStatus('Ready');
+    }
+
+    async function handleFile(file){
+      if(!file) return;
+      origName = file.name || 'document.pdf';
+      metaEl.textContent = 'Loading…';
+      fileBuf = await file.arrayBuffer();
+      await renderPages();
+      clearBtn.disabled = false;
+      updateMeta();
+    }
+
+    fileEl.addEventListener('change', e => handleFile(e.target.files?.[0]));
+
+    // Drag & Drop
+    ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); drop.classList.add('dropping'); }));
+    ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); drop.classList.remove('dropping'); }));
+    drop.addEventListener('drop', e => handleFile(e.dataTransfer?.files?.[0]));
+
+    // Clear
+    clearBtn.addEventListener('click', () => {
+      fileBuf = null; pageCount = 0; selected.clear();
+      pagesEl.innerHTML = ''; metaEl.textContent = 'No file'; setStatus('Idle…'); setProgress(0,0);
+      clearBtn.disabled = true; btnExport.disabled = true; fileEl.value = '';
+    });
+
+    // Range helpers
+    function parseRanges(txt){
+      const out = new Set();
+      (txt||'').split(',').map(s=>s.trim()).filter(Boolean).forEach(part=>{
+        const m = part.match(/^(\d+)\s*-\s*(\d+)$/);
+        if(m){ let a=+m[1], b=+m[2]; if(a>b)[a,b]=[b,a]; for(let i=a;i<=b;i++) out.add(i); }
+        else if(/^\d+$/.test(part)){ out.add(+part); }
+      });
+      return out;
+    }
+    btnClear.addEventListener('click', () => {
+      selected.clear();
+      document.querySelectorAll('input[data-page]').forEach(cb => cb.checked = false);
+      updateMeta();
+    });
+    btnRanges.addEventListener('click', () => {
+      const set = parseRanges(rangesEl.value || '');
+      document.querySelectorAll('input[data-page]').forEach(cb => {
+        const p = +cb.dataset.page;
+        cb.checked = set.has(p);
+        if(cb.checked) selected.add(p); else selected.delete(p);
+      });
+      updateMeta();
+    });
+
+    // Build & Download
+    function outputName(base, suffix){
+      const m = base.match(/^(.*?)(\.[^.]+)?$/); const stem = m?.[1] || 'document'; const ext = (m?.[2] || '.pdf');
+      return `${stem}${suffix}${ext}`;
+    }
+    function downloadBlob(blob, name){
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+    }
+
+    async function buildFast(deleteSet){
+      const doc = await PDFLib.PDFDocument.load(new Uint8Array(fileBuf), { ignoreEncryption:true });
+      const idx=[]; for(let i=0;i<doc.getPageCount();i++) if(deleteSet.has(i+1)) idx.push(i);
+      idx.sort((a,b)=>b-a).forEach(i=>doc.removePage(i));
+      const bytes = await doc.save({ useObjectStreams:false });
+      return new Blob([bytes], { type:'application/pdf' });
+    }
+
+    async function buildCompat(keepSet){
+      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(fileBuf.slice(0)) }).promise;
+      const out = await PDFLib.PDFDocument.create();
+      const total = keepSet.size; let done = 0;
+      for(let i=1;i<=pdf.numPages;i++){
+        if(!keepSet.has(i)) continue;
+        const page = await pdf.getPage(i);
+        const vp2 = page.getViewport({ scale: 2 });
+        const base = page.getViewport({ scale: 1 });
+        const canvas = document.createElement('canvas');
+        canvas.width = vp2.width; canvas.height = vp2.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp2 }).promise;
+        const img = await out.embedJpg(canvas.toDataURL('image/jpeg',0.92));
+        const w = base.width*0.75, h = base.height*0.75;
+        const p = out.addPage([w,h]); p.drawImage(img,{x:0,y:0,width:w,height:h});
+        done++; setProgress(done,total);
+        page.cleanup && page.cleanup();
+      }
+      pdf.cleanup && pdf.cleanup();
+      const bytes = await out.save({ useObjectStreams:false });
+      return new Blob([bytes], { type:'application/pdf' });
+    }
+
+    btnExport.addEventListener('click', async () => {
+      if(!fileBuf){ alert('Choose a PDF first.'); return; }
+      if(!selected.size){ alert('Select at least one page to delete.'); return; }
+
+      clearError(); setStatus('Building…'); btnCancel.style.display='inline-flex'; btnExport.disabled=true;
+
+      try{
+        const del = new Set(selected);
+        const keep = new Set(); for(let i=1;i<=pageCount;i++) if(!del.has(i)) keep.add(i);
+        if(!keep.size){ alert('All pages selected. Nothing to keep.'); btnCancel.style.display='none'; btnExport.disabled=false; return; }
+
+        let blob=null;
+        if(!forceCompatEl.checked){
+          try{ blob = await buildFast(del); }catch(e){ console.warn('Fast remove failed, using compat.', e); }
+        }
+        if(!blob) blob = await buildCompat(keep);
+
+        downloadBlob(blob, outputName(origName,'-deleted'));
+        setStatus('Done.');
+      }catch(e){
+        showError(e?.message||e);
+        setStatus('Error.');
+      }finally{
+        btnCancel.style.display='none'; btnExport.disabled=false; setProgress(0,0);
+      }
+    });
+  </script>
+</main>
+</body>
+</html>

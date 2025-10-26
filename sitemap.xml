@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://pdf-image-tools-indol.vercel.app/</loc></url>
+
+  <url><loc>https://pdf-image-tools-indol.vercel.app/image-to-pdf</loc></url>
+  <url><loc>https://pdf-image-tools-indol.vercel.app/pdf-to-images</loc></url>
+  <url><loc>https://pdf-image-tools-indol.vercel.app/compress</loc></url>
+  <url><loc>https://pdf-image-tools-indol.vercel.app/crop</loc></url>
+  <url><loc>https://pdf-image-tools-indol.vercel.app/merge</loc></url>
+  <url><loc>https://pdf-image-tools-indol.vercel.app/delete-pages</loc></url>
+  <url><loc>https://pdf-image-tools-indol.vercel.app/reorder-pages</loc></url>
+  <url><loc>https://pdf-image-tools-indol.vercel.app/rotate-pages</loc></url>
+
+  <url><loc>https://pdf-image-tools-indol.vercel.app/png-to-jpg</loc></url>
+  <url><loc>https://pdf-image-tools-indol.vercel.app/jpg-to-png</loc></url>
+
+  <url><loc>https://pdf-image-tools-indol.vercel.app/privacy</loc></url>
+  <url><loc>https://pdf-image-tools-indol.vercel.app/terms</loc></url>
+</urlset>
