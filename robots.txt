@@ -1,4 +1,16 @@
+# Allow all search engines to crawl everything
 User-agent: *
 Allow: /
 
-Sitemap: https://pdf-image-tools-indol.vercel.app/sitemap.xml
+# Disallow internal or temporary pages (if any exist)
+Disallow: /404.html
+Disallow: /terms.html
+Disallow: /privacy.html
+
+# Point search engines to your sitemap
+Sitemap: https://pdf-image-tools-phi.vercel.app/sitemap.xml
+
+# Helpful crawling hints for Googlebot
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 2
