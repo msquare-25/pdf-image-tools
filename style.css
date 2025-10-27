@@ -762,3 +762,72 @@ footer a.small:hover {
 footer{ text-align:center; padding:24px 0 40px; }
 footer a.small{ color:#4b5563; text-decoration:none; margin:0 6px; }
 footer a.small:hover{ text-decoration:underline; }
+
+/* --- Home: compact layout to fit more above the fold --- */
+
+/* shrink the gradient header */
+.home-header{
+  padding: 18px 14px 14px;      /* was ~48/36 */
+}
+.home-header h1{
+  font-size: 1.65rem;            /* was 2rem */
+  margin: 0 0 2px;
+}
+.home-header p{
+  font-size: .95rem;             /* was 1rem */
+  opacity: .95;
+}
+
+/* tighter grid */
+.home-grid{
+  gap: 12px;                      /* was 16 */
+  max-width: 1180px;              /* little narrower so rows wrap tight */
+  padding: 0 12px;
+}
+
+/* smaller cards */
+.home .card{
+  padding: 14px;                  /* was ~18+ */
+  border-radius: 14px;            /* a bit tighter */
+  box-shadow: 0 3px 14px rgba(0,0,0,.06);
+}
+.home .card h3{
+  font-size: 1.02rem;             /* was ~1.1–1.125 */
+  margin: 2px 0 6px;
+}
+.home .card p{
+  font-size: .93rem;
+  line-height: 1.3;
+  margin: 0 0 12px;
+  color: #4b5563;
+}
+
+/* smaller “Open” button */
+.home .card .btn,
+.home .card button{
+  padding: 4px 12px;              /* was 6 x 16 */
+  font-size: .92rem;
+  border-radius: 7px;
+}
+
+/* little extra bottom breathing room for centered footer */
+.home footer{
+  padding: 18px 0 28px;
+}
+
+/* when screen is wide enough, pack a bit denser */
+@media (min-width: 1280px){
+  .home-grid{
+    gap: 12px;
+    max-width: 1220px;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); /* was 240 */
+  }
+}
+
+/* for 1366×768-ish laptops, squeeze slightly more */
+@media (max-height: 820px){
+  .home-header{ padding: 14px 12px 10px; }
+  .home .card{ padding: 12px; }
+  .home .card p{ margin-bottom: 10px; }
+  .home .card .btn{ padding: 4px 10px; }
+}
