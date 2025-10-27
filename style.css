@@ -872,3 +872,38 @@ footer a.small:hover{ text-decoration:underline; }
   /* hide left/right arrow buttons on small screens */
   .tool-scroll{ display: none !important; }
 }
+
+/* --- MOBILE FIX: hide logo + don't clip last tab --- */
+@media (max-width: 540px){
+
+  /* 1) Hide only the logo in the top bar on mobile */
+  .site-header .brand .logo{
+    display: none !important;
+  }
+
+  /* 2) Make tab strip swipe cleanly and keep last tab fully visible */
+  .tool-tabs-wrap{
+    overflow: visible !important;              /* parent should not clip */
+  }
+  .tool-tabs{
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    padding-left: 12px !important;
+    padding-right: 40px !important;           /* extra room on the right */
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 12px;
+  }
+  .tool-tabs a{
+    display: inline-block;
+    margin-right: 10px;
+    scroll-snap-align: start;
+  }
+  /* invisible spacer at the end so last tab never gets cut */
+  .tool-tabs::after{
+    content: "";
+    display: inline-block;
+    width: 40px;                               /* bump if still clipped */
+    height: 1px;
+  }
+}
