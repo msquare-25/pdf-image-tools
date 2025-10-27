@@ -625,3 +625,62 @@ select::-ms-expand{ display:none; }
   gap: 16px;
   margin-top: 14px;
 }
+
+/* --- Home page polish --- */
+
+/* Top gradient bar (already present but we center title) */
+header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 16px;
+  background: linear-gradient(135deg, #b3e5fc, #e1bee7);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1e40af; /* deep blue */
+}
+
+/* Subtitle under title */
+header p {
+  margin-top: 6px;
+  font-size: 0.95rem;
+  color: #4b5563;
+  text-align: center;
+}
+
+/* “Open” buttons eye-catching */
+.tool-card button,
+.tool-card .btn,
+.card button {
+  background-color: #7e22ce !important;  /* purple */
+  color: #fff !important;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.tool-card button:hover,
+.card button:hover {
+  background-color: #9333ea !important;  /* lighter purple hover */
+}
+
+/* Center footer links */
+footer {
+  text-align: center;
+  padding: 20px 0 40px;
+}
+footer a.small {
+  color: #4b5563;
+  text-decoration: none;
+  margin: 0 6px;
+}
+footer a.small:hover {
+  text-decoration: underline;
+}
