@@ -1,5 +1,6 @@
 {
   "cleanUrls": true,
+
   "headers": [
     {
       "source": "/(.*)",
@@ -8,6 +9,18 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "X-Frame-Options", "value": "DENY" },
         { "key": "Permissions-Policy", "value": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" }
+      ]
+    },
+    {
+      "source": "/(.*)\\.(css|js|mjs|png|jpg|jpeg|webp|gif|svg|ico|woff|woff2)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/(.*)\\.(html|xml|txt)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" }
       ]
     }
   ]
