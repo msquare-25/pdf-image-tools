@@ -872,3 +872,47 @@ footer a.small:hover{ text-decoration:underline; }
   /* hide left/right arrow buttons on small screens */
   .tool-scroll{ display: none !important; }
 }
+
+/* --- Mobile polish for top tool bar --- */
+@media (max-width: 540px){
+  /* slightly smaller logo area */
+  .brand {
+    padding: 8px 12px;
+  }
+
+  /* hide text next to logo to save space if needed */
+  .brand span:last-child {
+    display: none;
+  }
+
+  /* make tool bar slimmer and clean */
+  .tool-tabs-wrap {
+    background: linear-gradient(135deg,#b3e5fc,#e1bee7);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding: 6px 0;
+  }
+
+  .tool-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 12px;
+    padding-inline: 10px 26px; /* right gap so last item not clipped */
+  }
+
+  .tool-tabs a {
+    display: inline-block;
+    margin: 0 6px;
+    padding: 6px 10px;
+    font-size: 0.92rem;
+    scroll-snap-align: start;
+  }
+
+  .tool-tabs a:last-child {
+    margin-right: 18px;
+  }
+
+  /* hide arrows on small screens */
+  .tool-scroll { display: none !important; }
+}
