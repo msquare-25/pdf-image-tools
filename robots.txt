@@ -1,16 +1,5 @@
-# Allow all search engines to crawl everything
 User-agent: *
 Allow: /
 
-# Disallow internal or temporary pages (if any exist)
-Disallow: /404.html
-Disallow: /terms.html
-Disallow: /privacy.html
-
-# Point search engines to your sitemap
-Sitemap: https://pdf-image-tools-phi.vercel.app/sitemap.xml
-
-# Helpful crawling hints for Googlebot
-User-agent: Googlebot
-Allow: /
-Crawl-delay: 2
+# Don’t block legal pages; they help trust.
+Sitemap: https://pdfimagelab.com/sitemap.xml
