@@ -123,3 +123,41 @@
     document.documentElement.classList.add('is-home');
   }
 })();
+
+// --- Drag/Swipe to scroll the tool tabs (mobile + desktop) ---
+(function(){
+  var scroller = document.querySelector('.tool-tabs');
+  if (!scroller) return;
+
+  var isDown = false, startX = 0, startLeft = 0, moved = false;
+
+  function onDown(e){
+    // left mouse button or any touch
+    if (e.type === 'mousedown' && e.button !== 0) return;
+    isDown = true; moved = false;
+    scroller.classList.add('dragging');
+    startX = (e.touches ? e.touches[0].pageX : e.pageX);
+    startLeft = scroller.scrollLeft;
+  }
+  function onMove(e){
+    if (!isDown) return;
+    var x = (e.touches ? e.touches[0].pageX : e.pageX);
+    var dx = x - startX;
+    if (Math.abs(dx) > 2) moved = true;
+    scroller.scrollLeft = startLeft - dx;
+    // prevent page from vertically scrolling while dragging horizontally
+    if (e.cancelable) e.preventDefault();
+  }
+  function onUp(){
+    isDown = false;
+    scroller.classList.remove('dragging');
+  }
+
+  scroller.addEventListener('mousedown', onDown);
+  scroller.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+
+  scroller.addEventListener('touchstart', onDown, {passive:false});
+  scroller.addEventListener('touchmove',  onMove,  {passive:false});
+  scroller.addEventListener('touchend',   onUp);
+})();
