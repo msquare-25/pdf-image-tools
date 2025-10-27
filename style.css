@@ -684,3 +684,81 @@ footer a.small {
 footer a.small:hover {
   text-decoration: underline;
 }
+
+/* --- Home page: show only one header (logo+title) and polish --- */
+
+/* Hide the global nav/header on home */
+.home .site-header { display: none; }
+
+/* Centered gradient banner with logo + title */
+.home-header{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  gap:8px;
+  padding:48px 16px 36px;
+  background: linear-gradient(135deg, #b3e5fc, #e1bee7);
+  border-bottom: 1px solid rgba(0,0,0,.05);
+}
+.home-header .logo{
+  width:36px;
+  height:36px;
+  display:inline-block;
+  border-radius:12px;
+  /* your existing logo gradient */
+  background: radial-gradient(100% 100% at 0% 0%, #6ee7f9 0%, #6f4de6 100%);
+  box-shadow: 0 6px 18px rgba(111,77,230,.25);
+}
+.home-header .logo.xl{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+}
+.home-header h1{
+  margin: 4px 0 0;
+  font-size: 2rem;
+  font-weight: 800;
+  color:#1f2a54;
+  letter-spacing: .2px;
+}
+.home-header p{
+  margin:0;
+  font-size:1rem;
+  color:#374151;
+}
+
+/* Cards grid on home (if not already present) */
+.home-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px,1fr));
+  gap:16px;
+  margin:16px auto 0;
+  max-width: 1200px;
+  padding: 0 16px;
+}
+
+/* Purple “Open” buttons */
+.card a.btn,
+.card button,
+.tool-card button{
+  background-color:#7e22ce !important;
+  color:#fff !important;
+  border:none;
+  border-radius:8px;
+  padding:6px 16px;
+  font-weight:600;
+  cursor:pointer;
+  transition:background .2s ease, transform .08s ease;
+  text-decoration:none;
+  display:inline-block;
+}
+.card a.btn:hover,
+.card button:hover{ background-color:#9333ea !important; }
+.card a.btn:active,
+.card button:active{ transform: translateY(1px); }
+
+/* Center footer links */
+footer{ text-align:center; padding:24px 0 40px; }
+footer a.small{ color:#4b5563; text-decoration:none; margin:0 6px; }
+footer a.small:hover{ text-decoration:underline; }
