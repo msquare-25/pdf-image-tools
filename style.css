@@ -628,36 +628,34 @@ select::-ms-expand{ display:none; }
 
 /* --- Home page polish --- */
 
-/* Top gradient bar (already present but we center title) */
-header {
+/* Centered blue gradient header */
+.home-header {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 32px 16px;
+  flex-direction: column;
+  text-align: center;
+  padding: 40px 16px 32px;
   background: linear-gradient(135deg, #b3e5fc, #e1bee7);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
-
-header h1 {
+.home-header h1 {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: 700;
-  color: #1e40af; /* deep blue */
+  color: #1e3a8a;
 }
-
-/* Subtitle under title */
-header p {
+.home-header p {
   margin-top: 6px;
-  font-size: 0.95rem;
-  color: #4b5563;
-  text-align: center;
+  font-size: 1rem;
+  color: #374151;
 }
 
-/* “Open” buttons eye-catching */
-.tool-card button,
-.tool-card .btn,
-.card button {
-  background-color: #7e22ce !important;  /* purple */
+/* “Open” buttons purple */
+.card a.btn,
+.card button,
+.tool-card button {
+  background-color: #7e22ce !important;
   color: #fff !important;
   border: none;
   border-radius: 8px;
@@ -665,16 +663,18 @@ header p {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s ease;
+  text-decoration: none;
+  display: inline-block;
 }
-.tool-card button:hover,
+.card a.btn:hover,
 .card button:hover {
-  background-color: #9333ea !important;  /* lighter purple hover */
+  background-color: #9333ea !important;
 }
 
 /* Center footer links */
 footer {
   text-align: center;
-  padding: 20px 0 40px;
+  padding: 24px 0 40px;
 }
 footer a.small {
   color: #4b5563;
