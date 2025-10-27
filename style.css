@@ -872,27 +872,3 @@ footer a.small:hover{ text-decoration:underline; }
   /* hide left/right arrow buttons on small screens */
   .tool-scroll{ display: none !important; }
 }
-
-/* --- Mobile: tool tabs last item should not clip --- */
-@media (max-width: 540px){
-  .tool-tabs{
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    white-space: nowrap;
-    padding-inline: 12px 28px;   /* right side extra space */
-    scroll-snap-type: x proximity;
-    scroll-padding-inline: 12px;
-  }
-  .tool-tabs a{
-    display: inline-block;
-    margin-right: 10px;
-    scroll-snap-align: start;
-  }
-  /* invisible spacer after the last tab so text never gets cut */
-  .tool-tabs::after{
-    content: "";
-    display: inline-block;
-    width: 24px;
-    height: 1px;
-  }
-}
