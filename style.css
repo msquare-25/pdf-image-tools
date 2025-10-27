@@ -907,3 +907,7 @@ footer a.small:hover{ text-decoration:underline; }
     height: 1px;
   }
 }
+
+/* Drag-to-scroll affordance on the tool tabs */
+.tool-tabs{ cursor: grab; }
+.tool-tabs.dragging{ cursor: grabbing; }
