@@ -831,3 +831,44 @@ footer a.small:hover{ text-decoration:underline; }
   .home .card p{ margin-bottom: 10px; }
   .home .card .btn{ padding: 4px 10px; }
 }
+
+/* --- Mobile: make tool-tabs scroll cleanly and show the last item fully --- */
+@media (max-width: 540px){
+  .tool-tabs-wrap{
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    /* soft bg so tabs don’t look cut when scrolled */
+    background: linear-gradient(135deg, #b3e5fc, #e1bee7);
+    padding: 6px 0;
+  }
+
+  .tool-tabs{
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 16px;           /* keep first/last aligned nicely */
+    padding-inline: 12px 28px;             /* extra right pad to prevent clipping */
+  }
+
+  .tool-tabs a{
+    display: inline-block;
+    margin-right: 10px;
+    scroll-snap-align: start;
+  }
+
+  .tool-tabs a:last-child{
+    margin-right: 20px;                     /* extra space after last tab */
+  }
+
+  /* tiny transparent spacer at the very end (added by JS) */
+  .tool-tabs .end-spacer{
+    display: inline-block;
+    width: 24px;
+    height: 1px;
+  }
+
+  /* hide left/right arrow buttons on small screens */
+  .tool-scroll{ display: none !important; }
+}
