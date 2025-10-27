@@ -1,6 +1,6 @@
 (function () {
   // ---------- CONFIG ----------
-  const ORIGIN = "https://pdf-image-tools-indol.vercel.app";
+  const ORIGIN = "https://pdfimagelab.com";
   const OG_IMAGE = ORIGIN + "/og/default.png"; // 1200x630 banner
 
   // Route → SEO map (ALL PAGES)
