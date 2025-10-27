@@ -908,6 +908,3 @@ footer a.small:hover{ text-decoration:underline; }
   }
 }
 
-/* Drag-to-scroll affordance on the tool tabs */
-.tool-tabs{ cursor: grab; }
-.tool-tabs.dragging{ cursor: grabbing; }
