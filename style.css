@@ -618,3 +618,10 @@ select::-ms-expand{ display:none; }
   text-align: center;
 }
 
+/* Home: responsive cards grid (used on index) */
+.home-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
