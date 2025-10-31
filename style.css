@@ -910,9 +910,7 @@ footer a.small:hover{ text-decoration:underline; }
 
 /* ==== Crop page only ==== */
 .crop-wrap .stage-wrap { touch-action: none; }
-.crop-wrap .overlay-crop { pointer-events: none; }
+-.crop-wrap .overlay-crop { pointer-events: none; }
++.crop-wrap .overlay-crop { pointer-events: auto; }
 .crop-wrap .overlay-crop .rect,
-.crop-wrap .overlay-crop .handle {
-  pointer-events: auto;
-}
-
+.crop-wrap .overlay-crop .handle { pointer-events: auto; }
