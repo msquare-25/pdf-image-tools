@@ -909,14 +909,9 @@ footer a.small:hover{ text-decoration:underline; }
 }
 
 /* ===== Crop page only ===== */
-.crop-wrap .stage-wrap { 
-  touch-action: none;            /* mobile par drag karta page scroll na thay */
-}
-.crop-wrap .overlay-crop { 
-  pointer-events: none;          /* overlay clicks pass-through */
-}
+.crop-wrap .stage-wrap { touch-action: none; }
+.crop-wrap .overlay-crop { pointer-events: none; }
 .crop-wrap .overlay-crop .rect,
-.crop-wrap .overlay-crop .handle { 
-  pointer-events: auto;          /* pan box/handles interactive rehse */
-}
+.crop-wrap .overlay-crop .handle { pointer-events: auto; }
+
 
