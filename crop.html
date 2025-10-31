@@ -10,36 +10,32 @@
   <script defer src="/assets/seo.js"></script>
   <meta name="color-scheme" content="light dark" />
   <style>
-    /* Page-scoped compact layout (safe; other tools unaffected) */
-    .crop-wrap .panel .grid-crop{
-      display:grid;grid-template-columns:320px 1fr 320px;gap:20px;align-items:start
-    }
-    /* Upload (compact row) */
+    .crop-wrap .panel .grid-crop{display:grid;grid-template-columns:320px 1fr 320px;gap:20px;align-items:start}
     .upload-box{padding:16px}
     .upload-box .btn-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
     .upload-box .pill#meta{padding:8px 12px;line-height:1;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-    .upload-box .muted{margin:6px 0 4px}
     .thumbs.small{display:flex;flex-direction:column;gap:10px;max-height:58vh;overflow:auto;padding-right:4px}
     .thumbs.small .thumb{border:1px solid var(--border);border-radius:10px;padding:6px;box-shadow:var(--shadow-sm);cursor:pointer;background:var(--surface-1)}
     .thumbs.small .thumb.active{outline:2px solid var(--brand-1)}
 
-    /* Stage (center preview) */
     .stage-wrap{position:relative;display:block;margin:8px auto 0;max-width:100%}
     .stage-wrap canvas{display:none;max-width:100%;height:auto;border-radius:12px;background:var(--surface-2);outline:2px solid rgba(0,0,0,.10);box-shadow:var(--shadow-sm)}
     .stage-wrap.ready canvas{display:block}
-    .overlay-crop{position:absolute;inset:0;border-radius:12px}
-    .overlay-crop .rect{position:absolute;border:2px dashed rgba(124,58,237,.9);background:rgba(124,58,237,.08);border-radius:10px;display:none;box-shadow:0 0 0 2px rgba(255,255,255,.35) inset;cursor:move}
-    .overlay-crop .handle{position:absolute;width:12px;height:12px;background:#fff;border:2px solid #7c3aed;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+
+    /* Overlay container sits exactly over canvas (we set its box in JS) */
+    .overlay-crop{position:absolute;border-radius:12px;pointer-events:none}
+    .overlay-crop .rect{position:absolute;border:2px dashed rgba(124,58,237,.9);background:rgba(124,58,237,.08);border-radius:10px;display:none;box-shadow:0 0 0 2px rgba(255,255,255,.35) inset;cursor:move;pointer-events:auto}
+    .overlay-crop .handle{position:absolute;width:12px;height:12px;background:#fff;border:2px solid #7c3aed;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.2);pointer-events:auto}
     .overlay-crop .handle.nw,.overlay-crop .handle.se{cursor:nwse-resize}
     .overlay-crop .handle.ne,.overlay-crop .handle.sw{cursor:nesw-resize}
     .overlay-crop .handle.n,.overlay-crop .handle.s{cursor:ns-resize}
     .overlay-crop .handle.w,.overlay-crop .handle.e{cursor:ew-resize}
 
-    /* Right controls (compact like Compress) */
     .controls-box{padding:16px}
     .controls-box .settings-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    .controls-box details{margin-top:6px}
-    .controls-box .title{margin-bottom:6px}
+
+    /* Page-only helpers for touch */
+    .crop-wrap .stage-wrap{touch-action:none}
 
     @media (max-width:1024px){
       .crop-wrap .panel .grid-crop{grid-template-columns:1fr}
@@ -67,7 +63,7 @@
   <div class="wrap crop-wrap">
     <aside class="panel">
       <div class="grid-crop">
-        <!-- ============ 1) Upload PDF (compact) ============ -->
+        <!-- 1) Upload -->
         <section class="panel card box upload-box theme-center" id="dropzone" aria-label="Upload PDF">
           <h2 class="title">Upload PDF</h2>
           <p class="muted">Drag &amp; drop PDF here</p>
@@ -80,21 +76,21 @@
 
           <div class="small muted">Everything runs in your browser (no uploads).</div>
           <div class="rule soft mt-2"></div>
-
-          <!-- thumbnails (no label/placeholder) -->
           <div id="thumbs" class="thumbs small" aria-live="polite"></div>
 
           <input id="file" type="file" accept="application/pdf" hidden />
         </section>
 
-        <!-- ============ 2) Settings (canvas) ============ -->
+        <!-- 2) Settings (canvas + overlay) -->
         <section class="panel card box action-box theme-center" aria-label="Settings">
           <h2 class="title">Settings</h2>
           <progress id="prog" max="100" value="0" class="w-100"></progress>
           <div id="status" class="small">Idle…</div>
+
           <div class="stage-wrap mt-2" id="stageWrap" tabindex="0" aria-label="Page preview">
             <canvas id="stage" width="0" height="0"></canvas>
-            <div class="overlay-crop" aria-hidden="true">
+            <!-- overlay container (aligned to canvas in JS) -->
+            <div class="overlay-crop" id="overlay" aria-hidden="true">
               <div class="rect" id="rect">
                 <div class="handle nw" data-h="nw"></div>
                 <div class="handle ne" data-h="ne"></div>
@@ -109,7 +105,7 @@
           </div>
         </section>
 
-        <!-- ============ 3) Crop (compact) ============ -->
+        <!-- 3) Crop controls -->
         <section class="panel card box theme-center controls-box" aria-label="Crop">
           <h2 class="title">Crop</h2>
 
@@ -165,7 +161,7 @@
 
     // elements
     const fileInput=$('#file'), metaEl=$('#meta'), clearBtnTop=$('#clearBtnTop'), dropzone=$('#dropzone');
-    const stage=$('#stage'), stageWrap=$('#stageWrap'), overlayRect=$('#rect'), thumbsEl=$('#thumbs');
+    const stage=$('#stage'), stageWrap=$('#stageWrap'), overlay=$('#overlay'), rectEl=$('#rect'), thumbsEl=$('#thumbs');
     const applyAllEl=$('#applyAll'), clearBtn=$('#clearCrop'), applyBtn=$('#applyCrop'), backBtn=$('#backOriginal'), downloadBtn=$('#downloadBtn');
     const prog=$('#prog'), statusEl=$('#status');
 
@@ -214,10 +210,13 @@
       fileInput.value='';
       pdfDocJS=null; pageCount=0; currentPage=1; currentViewport=null;
       stage.width=stage.height=0; stageWrap.classList.remove('ready');
+      // overlay reset
+      overlay.style.display='none'; overlay.style.left=overlay.style.top='0px'; overlay.style.width=overlay.style.height='0px';
+      rectEl.style.display='none';
       thumbsEl.innerHTML='';
       metaEl.textContent='No file'; metaEl.title='';
       enableControls(false); setStatus('Idle…');
-      selection=null; document.querySelector('.overlay-crop .rect').style.display='none';
+      selection=null;
       prog.value=0;
       originalBytes=null; previewBytes=null; activeDoc='original'; backBtn.classList.remove('show');
       applyAllEl.checked=true;
@@ -227,7 +226,7 @@
     async function handleFile(file){
       try{
         setStatus('Loading PDF…'); enableControls(false);
-        selection=null; document.querySelector('.overlay-crop .rect').style.display='none'; cancelActiveRender();
+        selection=null; rectEl.style.display='none'; cancelActiveRender();
 
         const cleanBase=(file.name||'document.pdf').replace(/\.pdf$/i,'');
         outFileNameBase=cleanBase;
@@ -256,6 +255,21 @@
       return Math.min(targetW/v1.width, targetH/v1.height);
     }
 
+    function syncOverlayToCanvas(){
+      // make overlay box exactly track canvas CSS box
+      const r = stage.getBoundingClientRect();
+      const p = stageWrap.getBoundingClientRect();
+      const left = stage.offsetLeft; // relative to stageWrap
+      const top  = stage.offsetTop;
+
+      overlay.style.display='block';
+      overlay.style.left = left + 'px';
+      overlay.style.top  = top  + 'px';
+      overlay.style.width  = (parseFloat(stage.style.width)  || r.width)  + 'px';
+      overlay.style.height = (parseFloat(stage.style.height) || r.height) + 'px';
+      overlay.style.pointerEvents = 'none'; // children enable their own
+    }
+
     async function setPage(n, providedDoc=null){
       currentPage=n;
       Array.from(thumbsEl.children).forEach((el,i)=>el.classList.toggle('active', i===n-1));
@@ -281,9 +295,11 @@
       try{await pageRenderTask.promise;}catch(e){if(e?.name!=='RenderingCancelledException')throw e;}finally{pageRenderTask=null;}
       stageWrap.classList.add('ready'); page.cleanup();
 
-      // restore saved selection (when in original mode)
+      // sync overlay to canvas position/size
+      syncOverlayToCanvas();
+
+      // restore selection (only in original mode)
       const cssW=parseFloat(stage.style.width)||stage.width, cssH=parseFloat(stage.style.height)||stage.height;
-      const rectEl = document.querySelector('.overlay-crop .rect');
       if(activeDoc==='preview'){
         selection=null; rectEl.style.display='none';
       }else{
@@ -296,13 +312,11 @@
         }else{
           selection=null;
         }
-        if(selection){ rectEl.style.display='block'; } else { rectEl.style.display='none'; }
       }
       updateRectUI();
 
       const ok=selection && selection.w>=2 && selection.h>=2;
       clearBtn.disabled=!ok; applyBtn.disabled=!ok;
-
       stageWrap.scrollIntoView({block:'center', inline:'nearest'});
     }
     window.addEventListener('resize',()=>{ if(bytesForActive()) setPage(currentPage); });
@@ -321,11 +335,7 @@
 
     /* ---------- Selection (Pointer Events) ---------- */
     const HANDLE_HIT = 12;
-    let dragMode = null;      // 'draw' | 'move' | 'resize' | null
-    let dragStart = null;     // {x,y}
-    let lastPos   = null;     // {x,y}
-    let activeHandle = null;  // 'nw','n','ne','e','se','s','sw','w'
-    let lockRatio = null;     // keep aspect when Shift
+    let dragMode = null, dragStart = null, lastPos = null, activeHandle = null, lockRatio = null;
 
     function canvasRect(){ return stage.getBoundingClientRect(); }
 
@@ -352,26 +362,21 @@
         nw:[0,0], ne:[sel.w,0], sw:[0,sel.h], se:[sel.w,sel.h],
         n:[sel.w/2,0], s:[sel.w/2,sel.h], w:[0,sel.h/2], e:[sel.w,sel.h/2]
       };
-      document.querySelectorAll('.overlay-crop .handle').forEach(h=>{
+      overlay.querySelectorAll('.handle').forEach(h=>{
         const [hx,hy]=pos[h.dataset.h];
         h.style.left=(hx-6)+'px'; h.style.top=(hy-6)+'px';
       });
     }
 
     function updateRectUI(){
-      const rectEl = document.querySelector('.overlay-crop .rect');
       if(!selection){ rectEl.style.display='none'; clearBtn.disabled=true; applyBtn.disabled=true; return; }
-      const can = stage;
-      const offX = can.offsetLeft || 0;
-      const offY = can.offsetTop  || 0;
-      const s = selection;
       rectEl.style.display='block';
-      rectEl.style.left   = (offX + s.x)+'px';
-      rectEl.style.top    = (offY + s.y)+'px';
-      rectEl.style.width  = s.w+'px';
-      rectEl.style.height = s.h+'px';
-      placeHandles(s);
-      const ok = s.w>=2 && s.h>=2; clearBtn.disabled=!ok; applyBtn.disabled=!ok;
+      rectEl.style.left   = selection.x + 'px';
+      rectEl.style.top    = selection.y + 'px';
+      rectEl.style.width  = selection.w + 'px';
+      rectEl.style.height = selection.h + 'px';
+      placeHandles(selection);
+      const ok = selection.w>=2 && selection.h>=2; clearBtn.disabled=!ok; applyBtn.disabled=!ok;
     }
 
     function persistSelection(){
@@ -400,6 +405,9 @@
 
     stageWrap.addEventListener('pointerdown', (e)=>{
       if(!currentViewport) return;
+      // ensure overlay synced (if any late layout shift)
+      syncOverlayToCanvas();
+
       const r = canvasRect();
       if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
 
@@ -448,7 +456,7 @@
         const ratio=lockRatio || (selection.w/selection.h || 1);
         if(keep){
           if(['n','s'].includes(activeHandle)){ next.w = next.h*ratio; if(activeHandle==='n') next.x=x2-next.w; }
-          else if(['e','w'].includes(activeHandle)){ next.h = next.w/ratio; if(activeHandle==='w') next.y=y2-next.h; }
+          else if(['e','w'].includes(activeHandle)){ next.h = next.w/ratio; if(activeHandle==='w') next.y = y2 - next.h; }
           else{
             const w1=next.w, h1=w1/ratio;
             const h2=next.h, w2=h2*ratio;
@@ -490,8 +498,7 @@
     });
 
     function clearSelectionUI(){
-      selection=null; const rectEl=document.querySelector('.overlay-crop .rect');
-      rectEl.style.display='none';
+      selection=null; rectEl.style.display='none';
       clearBtn.disabled=true; applyBtn.disabled=true;
       savedPctByPage.delete(currentPage);
     }
@@ -534,7 +541,7 @@
 
         activeDoc='preview';
         lastTemplatePct=null;
-        selection=null; document.querySelector('.overlay-crop .rect').style.display='none';
+        selection=null; rectEl.style.display='none';
         clearBtn.disabled=true; applyBtn.disabled=true;
         backBtn.classList.add('show');
 
