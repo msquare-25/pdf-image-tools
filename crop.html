@@ -6,13 +6,15 @@
   <title>Crop PDF — Client-side</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="/style.css" />
-  <script defer src="/site.js"></script>
-  <script defer src="/assets/seo.js"></script>
   <meta name="color-scheme" content="light dark" />
+
+  <!-- Page-local polish: keeps layout consistent with Compress -->
   <style>
-    .crop-wrap .panel .grid-crop{display:grid;grid-template-columns:320px 1fr 320px;gap:20px;align-items:start}
+    .crop-wrap .panel .grid-crop{
+      display:grid;grid-template-columns:320px 1fr 320px;gap:20px;align-items:start
+    }
     .upload-box{padding:16px}
-    .upload-box .btn-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+    .upload-box .btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px}
     .upload-box .pill#meta{padding:8px 12px;line-height:1;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
     .thumbs.small{display:flex;flex-direction:column;gap:10px;max-height:58vh;overflow:auto;padding-right:4px}
     .thumbs.small .thumb{border:1px solid var(--border);border-radius:10px;padding:6px;box-shadow:var(--shadow-sm);cursor:pointer;background:var(--surface-1)}
@@ -22,10 +24,17 @@
     .stage-wrap canvas{display:none;max-width:100%;height:auto;border-radius:12px;background:var(--surface-2);outline:2px solid rgba(0,0,0,.10);box-shadow:var(--shadow-sm)}
     .stage-wrap.ready canvas{display:block}
 
-    /* Overlay container sits exactly over canvas (we set its box in JS) */
-    .overlay-crop{position:absolute;border-radius:12px;pointer-events:none}
-    .overlay-crop .rect{position:absolute;border:2px dashed rgba(124,58,237,.9);background:rgba(124,58,237,.08);border-radius:10px;display:none;box-shadow:0 0 0 2px rgba(255,255,255,.35) inset;cursor:move;pointer-events:auto}
-    .overlay-crop .handle{position:absolute;width:12px;height:12px;background:#fff;border:2px solid #7c3aed;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.2);pointer-events:auto}
+    /* Overlay: we align this to the canvas in JS, and handle ALL pointer events here */
+    .overlay-crop{position:absolute;border-radius:12px;pointer-events:auto}
+    .overlay-crop .rect{
+      position:absolute;border:2px dashed rgba(124,58,237,.9);
+      background:rgba(124,58,237,.08);border-radius:10px;display:none;
+      box-shadow:0 0 0 2px rgba(255,255,255,.35) inset;cursor:move;pointer-events:auto
+    }
+    .overlay-crop .handle{
+      position:absolute;width:12px;height:12px;background:#fff;border:2px solid #7c3aed;
+      border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.2);pointer-events:auto
+    }
     .overlay-crop .handle.nw,.overlay-crop .handle.se{cursor:nwse-resize}
     .overlay-crop .handle.ne,.overlay-crop .handle.sw{cursor:nesw-resize}
     .overlay-crop .handle.n,.overlay-crop .handle.s{cursor:ns-resize}
@@ -34,7 +43,7 @@
     .controls-box{padding:16px}
     .controls-box .settings-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
 
-    /* Page-only helpers for touch */
+    /* Touch must not be hijacked by page scrolling while drawing */
     .crop-wrap .stage-wrap{touch-action:none}
 
     @media (max-width:1024px){
@@ -43,542 +52,543 @@
     }
   </style>
 </head>
-<body>
+
+<body class="crop-page">
 <header class="site-header">
   <div class="container bar">
     <div class="brand"><span class="logo"></span><span>PDF &amp; Image Tools</span></div>
     <div class="container tool-tabs-wrap">
       <button class="tool-scroll tool-left" aria-label="Scroll tools left" title="Scroll left">‹</button>
       <nav class="tool-tabs" role="navigation" aria-label="Tools">
-        <a href="/merge">Merge PDF</a><a href="/delete-pages">Delete pages</a><a href="/rotate-pages">Rotate PDF</a>
-        <a href="/reorder-pages">Reorder PDF</a><a href="/crop" class="active">Crop PDF</a><a href="/compress">Compress PDF</a>
-        <a href="/pdf-to-images">PDF → Images</a><a href="/image-to-pdf">Image → PDF</a><a href="/jpg-to-png">JPG → PNG</a><a href="/png-to-jpg">PNG → JPG</a>
+        <a href="/merge">Merge PDF</a>
+        <a href="/delete-pages">Delete pages</a>
+        <a href="/rotate-pages">Rotate PDF</a>
+        <a href="/reorder-pages">Reorder PDF</a>
+        <a href="/crop" class="active">Crop PDF</a>
+        <a href="/compress">Compress PDF</a>
+        <a href="/pdf-to-images">PDF → Images</a>
+        <a href="/image-to-pdf">Image → PDF</a>
+        <a href="/jpg-to-png">JPG → PNG</a>
+        <a href="/png-to-jpg">PNG → JPG</a>
       </nav>
       <button class="tool-scroll tool-right" aria-label="Scroll tools right" title="Scroll right">›</button>
     </div>
   </div>
 </header>
 
-<main>
-  <div class="wrap crop-wrap">
-    <aside class="panel">
-      <div class="grid-crop">
-        <!-- 1) Upload -->
-        <section class="panel card box upload-box theme-center" id="dropzone" aria-label="Upload PDF">
-          <h2 class="title">Upload PDF</h2>
-          <p class="muted">Drag &amp; drop PDF here</p>
+<main class="wrap crop-wrap">
+  <aside class="panel">
+    <div class="grid-crop">
+      <!-- Upload (box 1) -->
+      <section class="panel card box upload-box theme-center" id="dropzone" aria-label="Upload PDF">
+        <h2 class="title">Upload PDF</h2>
+        <p class="muted">Drag &amp; drop PDF here</p>
 
-          <div class="btn-row">
-            <label for="file" class="btn gradient">Browse PDF</label>
-            <div class="pill" id="meta">No file</div>
-            <button class="btn subtle" id="clearBtnTop" disabled>Clear</button>
-          </div>
+        <div class="btn-row">
+          <label for="file" class="btn gradient">Browse PDF</label>
+          <div class="pill" id="meta">No file</div>
+          <button class="btn subtle" id="clearBtnTop" disabled>Clear</button>
+        </div>
 
-          <div class="small muted">Everything runs in your browser (no uploads).</div>
-          <div class="rule soft mt-2"></div>
-          <div id="thumbs" class="thumbs small" aria-live="polite"></div>
+        <div class="small muted">Everything runs in your browser (no uploads).</div>
+        <div class="rule soft mt-2"></div>
+        <div id="thumbs" class="thumbs small" aria-live="polite"></div>
 
-          <input id="file" type="file" accept="application/pdf" hidden />
-        </section>
-
-        <!-- 2) Settings (canvas + overlay) -->
-        <section class="panel card box action-box theme-center" aria-label="Settings">
-          <h2 class="title">Settings</h2>
-          <progress id="prog" max="100" value="0" class="w-100"></progress>
-          <div id="status" class="small">Idle…</div>
-
-          <div class="stage-wrap mt-2" id="stageWrap" tabindex="0" aria-label="Page preview">
-            <canvas id="stage" width="0" height="0"></canvas>
-            <!-- overlay container (aligned to canvas in JS) -->
-            <div class="overlay-crop" id="overlay" aria-hidden="true">
-              <div class="rect" id="rect">
-                <div class="handle nw" data-h="nw"></div>
-                <div class="handle ne" data-h="ne"></div>
-                <div class="handle sw" data-h="sw"></div>
-                <div class="handle se" data-h="se"></div>
-                <div class="handle n"  data-h="n"></div>
-                <div class="handle s"  data-h="s"></div>
-                <div class="handle w"  data-h="w"></div>
-                <div class="handle e"  data-h="e"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- 3) Crop controls -->
-        <section class="panel card box theme-center controls-box" aria-label="Crop">
-          <h2 class="title">Crop</h2>
-
-          <label class="inline" for="applyAll">
-            <input id="applyAll" type="checkbox" checked />
-            <span>Apply crop to all pages</span>
-          </label>
-
-          <details>
-            <summary>Advanced</summary>
-            <div class="small muted mt-1">
-              • Drag to draw a crop box. Drag inside to move; use handles to resize.<br>
-              • Shift while resizing = keep aspect ratio.<br>
-              • Arrows to nudge (1px), Shift+Arrows = 10px, Ctrl+Arrows = resize.<br>
-              • Press <kbd>Esc</kbd> to clear. Preview is non-destructive; use “Back to original”.
-            </div>
-          </details>
-
-          <div class="settings-actions">
-            <button id="clearCrop" class="btn ghost" disabled>Clear selection (Esc)</button>
-            <button id="applyCrop" class="btn" disabled>Preview crop</button>
-            <button id="backOriginal" class="btn subtle back-link" title="Back to original">Back to original</button>
-            <button id="downloadBtn" class="btn" disabled>Crop &amp; Download</button>
-          </div>
-        </section>
-      </div>
-    </aside>
-
-    <!-- Title + How it works -->
-    <main class="panel">
-      <h1 class="page-title">Crop PDF</h1>
-      <p class="sub">3 steps: Upload • Pick page • Draw/adjust crop • Preview &amp; Download. All processing stays on your device.</p>
-
-      <section class="card mt-3">
-        <h2 class="title">How it works</h2>
-        <ul class="sub">
-          <li>Each page is rendered with <strong>PDF.js</strong> and rebuilt with <strong>pdf-lib</strong>.</li>
-          <li>Draw a crop box, preview non-destructively, then download.</li>
-          <li>Use “Apply to all pages” for consistent margins.</li>
-        </ul>
-        <p class="sub mt-1">Privacy: No uploads. Everything stays on your device.</p>
+        <input id="file" type="file" accept="application/pdf" hidden />
       </section>
-    </main>
-  </div>
 
-  <!-- libs -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script>pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
-  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+      <!-- Settings (box 2, canvas + overlay) -->
+      <section class="panel card box action-box theme-center" aria-label="Settings">
+        <h2 class="title">Settings</h2>
+        <progress id="prog" max="100" value="0" class="w-100"></progress>
+        <div id="status" class="small">Idle…</div>
 
-  <script>
-    const $ = (s) => document.querySelector(s);
+        <div class="stage-wrap mt-2" id="stageWrap" tabindex="0" aria-label="Page preview">
+          <canvas id="stage" width="0" height="0"></canvas>
+          <!-- Overlay absolutely aligned to canvas; receives pointer events -->
+          <div class="overlay-crop" id="overlay" aria-hidden="true">
+            <div class="rect" id="rect">
+              <div class="handle nw" data-h="nw"></div>
+              <div class="handle ne" data-h="ne"></div>
+              <div class="handle sw" data-h="sw"></div>
+              <div class="handle se" data-h="se"></div>
+              <div class="handle n"  data-h="n"></div>
+              <div class="handle s"  data-h="s"></div>
+              <div class="handle w"  data-h="w"></div>
+              <div class="handle e"  data-h="e"></div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    // elements
-    const fileInput=$('#file'), metaEl=$('#meta'), clearBtnTop=$('#clearBtnTop'), dropzone=$('#dropzone');
-    const stage=$('#stage'), stageWrap=$('#stageWrap'), overlay=$('#overlay'), rectEl=$('#rect'), thumbsEl=$('#thumbs');
-    const applyAllEl=$('#applyAll'), clearBtn=$('#clearCrop'), applyBtn=$('#applyCrop'), backBtn=$('#backOriginal'), downloadBtn=$('#downloadBtn');
-    const prog=$('#prog'), statusEl=$('#status');
+      <!-- Crop controls (box 3) -->
+      <section class="panel card box theme-center controls-box" aria-label="Crop">
+        <h2 class="title">Crop</h2>
 
-    // state
-    let pdfDocJS=null, pageCount=0, currentPage=1, currentViewport=null;
-    let pageRenderTask=null;
-    let selection=null;
-    let activeDoc='original'; // 'original' | 'preview'
-    let originalBytes=null, previewBytes=null;
-    let outFileNameBase='cropped';
+        <label class="inline" for="applyAll">
+          <input id="applyAll" type="checkbox" checked />
+          <span>Apply crop to all pages</span>
+        </label>
 
-    const savedPctByPage = new Map();
-    let lastTemplatePct = null;
+        <details>
+          <summary>Advanced</summary>
+          <div class="small muted mt-1">
+            • Drag to draw a crop box. Drag inside to move; use handles to resize.<br>
+            • Shift while resizing = keep aspect ratio.<br>
+            • Arrows to nudge; Ctrl+Arrows = resize; Esc = clear.<br>
+            • “Preview crop” is non-destructive. Use “Back to original” to try again.
+          </div>
+        </details>
 
-    function fmt(n){return new Intl.NumberFormat().format(n);}
-    function setStatus(t){statusEl.textContent=t;}
-    function enableControls(on){
-      applyAllEl.disabled=!on; downloadBtn.disabled=!on; clearBtnTop.disabled=!on;
-      downloadBtn.classList.toggle('primary-blue', !!on);
-    }
-    function cancelActiveRender(){ if(pageRenderTask?.cancel){ try{pageRenderTask.cancel()}catch{} } pageRenderTask=null; }
+        <div class="settings-actions">
+          <button id="clearCrop" class="btn ghost" disabled>Clear selection (Esc)</button>
+          <button id="applyCrop" class="btn" disabled>Preview crop</button>
+          <button id="backOriginal" class="btn subtle back-link" title="Back to original">Back to original</button>
+          <button id="downloadBtn" class="btn" disabled>Crop &amp; Download</button>
+        </div>
+      </section>
+    </div>
+  </aside>
 
-    function bytesForActive(){
-      const src = (activeDoc==='preview' ? previewBytes : originalBytes);
-      return src ? src.slice() : null;
-    }
-    async function getActiveJsDoc(){
-      const data=bytesForActive(); if(!data) throw new Error('No PDF loaded');
-      return await pdfjsLib.getDocument({data}).promise;
-    }
+  <!-- Title / How it works -->
+  <main class="panel">
+    <h1 class="page-title">Crop PDF</h1>
+    <p class="sub">3 steps: Upload • Pick page • Draw/adjust crop • Preview &amp; Download. All processing stays on your device.</p>
 
-    /* ---------- Upload / Reset ---------- */
-    fileInput.addEventListener('change',async e=>{const f=e.target.files?.[0];if(f)await handleFile(f);});
-    clearBtnTop.addEventListener('click', resetDocState);
+    <section class="card mt-3">
+      <h2 class="title">How it works</h2>
+      <ul class="sub">
+        <li>Each page is rendered with <strong>PDF.js</strong> and rebuilt with <strong>pdf-lib</strong>.</li>
+        <li>Draw your crop box, preview non-destructively, then download.</li>
+        <li>Use “Apply to all pages” for consistent margins.</li>
+      </ul>
+      <p class="sub mt-1">Privacy: No uploads. Everything stays on your device.</p>
+    </section>
+  </main>
+</main>
 
-    ['dragenter','dragover'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.add('dropping');}));
-    ['dragleave','drop'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.remove('dropping');}));
-    dropzone.addEventListener('drop',async e=>{
-      const f=e.dataTransfer?.files?.[0]; if(!f) return;
-      if(!/application\/pdf/.test(f.type) && !/\.pdf$/i.test(f.name)) return alert('Please drop a PDF file.');
-      await handleFile(f);
-    });
+<!-- libs -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
-    function resetDocState(){
-      cancelActiveRender();
-      fileInput.value='';
-      pdfDocJS=null; pageCount=0; currentPage=1; currentViewport=null;
-      stage.width=stage.height=0; stageWrap.classList.remove('ready');
-      // overlay reset
-      overlay.style.display='none'; overlay.style.left=overlay.style.top='0px'; overlay.style.width=overlay.style.height='0px';
-      rectEl.style.display='none';
-      thumbsEl.innerHTML='';
-      metaEl.textContent='No file'; metaEl.title='';
-      enableControls(false); setStatus('Idle…');
-      selection=null;
-      prog.value=0;
-      originalBytes=null; previewBytes=null; activeDoc='original'; backBtn.classList.remove('show');
-      applyAllEl.checked=true;
-      savedPctByPage.clear(); lastTemplatePct=null;
-    }
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
 
-    async function handleFile(file){
-      try{
-        setStatus('Loading PDF…'); enableControls(false);
-        selection=null; rectEl.style.display='none'; cancelActiveRender();
+  // elements
+  const fileInput=$('#file'), metaEl=$('#meta'), clearBtnTop=$('#clearBtnTop'), dropzone=$('#dropzone');
+  const stage=$('#stage'), stageWrap=$('#stageWrap'), overlay=$('#overlay'), rectEl=$('#rect'), thumbsEl=$('#thumbs');
+  const applyAllEl=$('#applyAll'), clearBtn=$('#clearCrop'), applyBtn=$('#applyCrop'), backBtn=$('#backOriginal'), downloadBtn=$('#downloadBtn');
+  const prog=$('#prog'), statusEl=$('#status');
 
-        const cleanBase=(file.name||'document.pdf').replace(/\.pdf$/i,'');
-        outFileNameBase=cleanBase;
-        metaEl.textContent = `${file.name} • loading…`; metaEl.title=metaEl.textContent;
+  // state
+  let pdfDocJS=null, pageCount=0, currentPage=1, currentViewport=null;
+  let pageRenderTask=null;
+  let selection=null;
+  let activeDoc='original'; // 'original' | 'preview'
+  let originalBytes=null, previewBytes=null;
+  let outFileNameBase='cropped';
 
-        originalBytes = new Uint8Array(await file.arrayBuffer());
-        previewBytes = null; activeDoc='original';
+  const savedPctByPage = new Map();
+  let lastTemplatePct = null;
 
-        const doc = await pdfjsLib.getDocument({ data: originalBytes.slice() }).promise;
-        pdfDocJS=doc; pageCount=pdfDocJS.numPages;
-        metaEl.textContent = `${file.name} • ${fmt(pageCount)} pages`;
-        metaEl.title = metaEl.textContent;
+  function fmt(n){return new Intl.NumberFormat().format(n);}
+  function setStatus(t){statusEl.textContent=t;}
+  function enableControls(on){
+    applyAllEl.disabled=!on; downloadBtn.disabled=!on; clearBtnTop.disabled=!on;
+    downloadBtn.classList.toggle('primary-blue', !!on);
+  }
+  function cancelActiveRender(){ if(pageRenderTask?.cancel){ try{pageRenderTask.cancel()}catch{} } pageRenderTask=null; }
 
-        await rebuildThumbs(doc);
-        await setPage(1, doc);
-        enableControls(true); setStatus('Ready.');
-      }catch(err){ console.error(err); alert('PDF load failed: '+(err?.message||err)); setStatus('Error loading PDF.'); }
-    }
+  function bytesForActive(){ return (activeDoc==='preview' ? previewBytes : originalBytes)?.slice() || null; }
+  async function getActiveJsDoc(){ const data=bytesForActive(); if(!data) throw new Error('No PDF loaded'); return await pdfjsLib.getDocument({data}).promise; }
 
-    /* ---------- Render / Thumbs ---------- */
-    function computeFitScale(page){
-      const v1=page.getViewport({scale:1});
-      const centerWidth=stageWrap.clientWidth||stageWrap.getBoundingClientRect().width||800;
-      const targetW=Math.max(240, centerWidth*0.98);
-      const targetH=Math.max(260, Math.floor(window.innerHeight*0.72));
-      return Math.min(targetW/v1.width, targetH/v1.height);
-    }
+  /* ---------- Upload / Reset ---------- */
+  fileInput.addEventListener('change',async e=>{const f=e.target.files?.[0];if(f)await handleFile(f);});
+  clearBtnTop.addEventListener('click', resetDocState);
 
-    function syncOverlayToCanvas(){
-      // make overlay box exactly track canvas CSS box
-      const r = stage.getBoundingClientRect();
-      const p = stageWrap.getBoundingClientRect();
-      const left = stage.offsetLeft; // relative to stageWrap
-      const top  = stage.offsetTop;
+  ['dragenter','dragover'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.add('dropping');}));
+  ['dragleave','drop'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.remove('dropping');}));
+  dropzone.addEventListener('drop',async e=>{
+    const f=e.dataTransfer?.files?.[0]; if(!f) return;
+    if(!/application\/pdf/.test(f.type) && !/\.pdf$/i.test(f.name)) return alert('Please drop a PDF file.');
+    await handleFile(f);
+  });
 
-      overlay.style.display='block';
-      overlay.style.left = left + 'px';
-      overlay.style.top  = top  + 'px';
-      overlay.style.width  = (parseFloat(stage.style.width)  || r.width)  + 'px';
-      overlay.style.height = (parseFloat(stage.style.height) || r.height) + 'px';
-      overlay.style.pointerEvents = 'none'; // children enable their own
-    }
+  function resetDocState(){
+    cancelActiveRender();
+    fileInput.value='';
+    pdfDocJS=null; pageCount=0; currentPage=1; currentViewport=null;
+    stage.width=stage.height=0; stageWrap.classList.remove('ready');
 
-    async function setPage(n, providedDoc=null){
-      currentPage=n;
-      Array.from(thumbsEl.children).forEach((el,i)=>el.classList.toggle('active', i===n-1));
+    // overlay reset
+    overlay.style.display='none'; overlay.style.left=overlay.style.top='0px'; overlay.style.width=overlay.style.height='0px';
+    rectEl.style.display='none';
 
-      const doc=providedDoc||await getActiveJsDoc(); pdfDocJS=doc;
-      const page=await pdfDocJS.getPage(n);
-      stageWrap.classList.remove('ready');
+    thumbsEl.innerHTML='';
+    metaEl.textContent='No file'; metaEl.title='';
+    enableControls(false); setStatus('Idle…');
+    selection=null; prog.value=0;
+    originalBytes=null; previewBytes=null; activeDoc='original'; backBtn.classList.remove('show');
+    applyAllEl.checked=true;
+    savedPctByPage.clear(); lastTemplatePct=null;
+  }
 
-      const scale=computeFitScale(page);
-      currentViewport=page.getViewport({scale});
-      const dpr=Math.max(1,window.devicePixelRatio||1);
-      stage.width=Math.ceil(currentViewport.width*dpr);
-      stage.height=Math.ceil(currentViewport.height*dpr);
-      stage.style.width=Math.ceil(currentViewport.width)+'px';
-      stage.style.height=Math.ceil(currentViewport.height)+'px';
+  async function handleFile(file){
+    try{
+      setStatus('Loading PDF…'); enableControls(false);
+      selection=null; rectEl.style.display='none'; cancelActiveRender();
 
-      const ctx=stage.getContext('2d');
-      ctx.setTransform(dpr,0,0,dpr,0,0);
-      ctx.clearRect(0,0,stage.width,stage.height);
+      const cleanBase=(file.name||'document.pdf').replace(/\.pdf$/i,'');
+      outFileNameBase=cleanBase;
+      metaEl.textContent = `${file.name} • loading…`; metaEl.title=metaEl.textContent;
 
-      cancelActiveRender();
-      pageRenderTask=page.render({canvasContext:ctx,viewport:currentViewport});
-      try{await pageRenderTask.promise;}catch(e){if(e?.name!=='RenderingCancelledException')throw e;}finally{pageRenderTask=null;}
-      stageWrap.classList.add('ready'); page.cleanup();
+      originalBytes = new Uint8Array(await file.arrayBuffer());
+      previewBytes = null; activeDoc='original';
 
-      // sync overlay to canvas position/size
-      syncOverlayToCanvas();
+      const doc = await pdfjsLib.getDocument({ data: originalBytes.slice() }).promise;
+      pdfDocJS=doc; pageCount=pdfDocJS.numPages;
+      metaEl.textContent = `${file.name} • ${fmt(pageCount)} pages`;
+      metaEl.title = metaEl.textContent;
 
-      // restore selection (only in original mode)
-      const cssW=parseFloat(stage.style.width)||stage.width, cssH=parseFloat(stage.style.height)||stage.height;
-      if(activeDoc==='preview'){
-        selection=null; rectEl.style.display='none';
+      await rebuildThumbs(doc);
+      await setPage(1, doc);
+      enableControls(true); setStatus('Ready.');
+    }catch(err){ console.error(err); alert('PDF load failed: '+(err?.message||err)); setStatus('Error loading PDF.'); }
+  }
+
+  /* ---------- Render / Thumbs ---------- */
+  function computeFitScale(page){
+    const v1=page.getViewport({scale:1});
+    const centerWidth=stageWrap.clientWidth||stageWrap.getBoundingClientRect().width||800;
+    const targetW=Math.max(240, centerWidth*0.98);
+    const targetH=Math.max(260, Math.floor(window.innerHeight*0.72));
+    return Math.min(targetW/v1.width, targetH/v1.height);
+  }
+
+  function syncOverlayToCanvas(){
+    // make overlay box exactly track canvas CSS box
+    const r = stage.getBoundingClientRect();
+    const left = stage.offsetLeft; // relative to stageWrap
+    const top  = stage.offsetTop;
+
+    overlay.style.display='block';
+    overlay.style.left = left + 'px';
+    overlay.style.top  = top  + 'px';
+    overlay.style.width  = (parseFloat(stage.style.width)  || r.width)  + 'px';
+    overlay.style.height = (parseFloat(stage.style.height) || r.height) + 'px';
+  }
+
+  async function setPage(n, providedDoc=null){
+    currentPage=n;
+    Array.from(thumbsEl.children).forEach((el,i)=>el.classList.toggle('active', i===n-1));
+
+    const doc=providedDoc||await getActiveJsDoc(); pdfDocJS=doc;
+    const page=await pdfDocJS.getPage(n);
+    stageWrap.classList.remove('ready');
+
+    const scale=computeFitScale(page);
+    currentViewport=page.getViewport({scale});
+    const dpr=Math.max(1,window.devicePixelRatio||1);
+    stage.width=Math.ceil(currentViewport.width*dpr);
+    stage.height=Math.ceil(currentViewport.height*dpr);
+    stage.style.width=Math.ceil(currentViewport.width)+'px';
+    stage.style.height=Math.ceil(currentViewport.height)+'px';
+
+    const ctx=stage.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,stage.width,stage.height);
+
+    cancelActiveRender();
+    pageRenderTask=page.render({canvasContext:ctx,viewport:currentViewport});
+    try{await pageRenderTask.promise;}catch(e){if(e?.name!=='RenderingCancelledException')throw e;}finally{pageRenderTask=null;}
+    stageWrap.classList.add('ready'); page.cleanup();
+
+    // sync overlay to canvas position/size
+    syncOverlayToCanvas();
+
+    // restore selection (original only)
+    const cssW=parseFloat(stage.style.width)||stage.width, cssH=parseFloat(stage.style.height)||stage.height;
+    if(activeDoc==='preview'){
+      selection=null; rectEl.style.display='none';
+    }else{
+      const savedPct=savedPctByPage.get(currentPage);
+      if(savedPct){
+        selection = { x:savedPct.x*cssW, y:savedPct.y*cssH, w:savedPct.w*cssW, h:savedPct.h*cssH };
+      }else if(lastTemplatePct){
+        const w=lastTemplatePct.w*cssW, h=lastTemplatePct.h*cssH;
+        selection = { x:Math.max(0,(cssW-w)/2), y:Math.max(0,(cssH-h)/2), w, h };
       }else{
-        const savedPct=savedPctByPage.get(currentPage);
-        if(savedPct){
-          selection = { x:savedPct.x*cssW, y:savedPct.y*cssH, w:savedPct.w*cssW, h:savedPct.h*cssH };
-        }else if(lastTemplatePct){
-          const w=lastTemplatePct.w*cssW, h=lastTemplatePct.h*cssH;
-          selection = { x:Math.max(0,(cssW-w)/2), y:Math.max(0,(cssH-h)/2), w, h };
-        }else{
-          selection=null;
-        }
-      }
-      updateRectUI();
-
-      const ok=selection && selection.w>=2 && selection.h>=2;
-      clearBtn.disabled=!ok; applyBtn.disabled=!ok;
-      stageWrap.scrollIntoView({block:'center', inline:'nearest'});
-    }
-    window.addEventListener('resize',()=>{ if(bytesForActive()) setPage(currentPage); });
-
-    async function rebuildThumbs(providedDoc=null){
-      const doc=providedDoc||await getActiveJsDoc(); const pages=doc.numPages;
-      thumbsEl.innerHTML='';
-      for(let i=1;i<=pages;i++){
-        const p=await doc.getPage(i); const v=p.getViewport({scale:.22});
-        const c=document.createElement('canvas'); const ctx=c.getContext('2d'); c.width=v.width; c.height=v.height;
-        await p.render({canvasContext:ctx,viewport:v}).promise; p.cleanup();
-        const holder=document.createElement('div'); holder.className='thumb'; if(i===currentPage) holder.classList.add('active');
-        holder.appendChild(c); holder.title='Page '+i; holder.addEventListener('click',()=>setPage(i)); thumbsEl.appendChild(holder);
+        selection=null;
       }
     }
+    updateRectUI();
 
-    /* ---------- Selection (Pointer Events) ---------- */
-    const HANDLE_HIT = 12;
-    let dragMode = null, dragStart = null, lastPos = null, activeHandle = null, lockRatio = null;
+    const ok=selection && selection.w>=2 && selection.h>=2;
+    clearBtn.disabled=!ok; applyBtn.disabled=!ok;
+    stageWrap.scrollIntoView({block:'center', inline:'nearest'});
+  }
+  window.addEventListener('resize',()=>{ if(bytesForActive()) setPage(currentPage); });
 
-    function canvasRect(){ return stage.getBoundingClientRect(); }
-
-    function pointFromEvent(e){
-      const r = canvasRect();
-      const x = Math.max(0, Math.min(r.width,  e.clientX - r.left));
-      const y = Math.max(0, Math.min(r.height, e.clientY - r.top));
-      return { x, y };
+  async function rebuildThumbs(providedDoc=null){
+    const doc=providedDoc||await getActiveJsDoc(); const pages=doc.numPages;
+    thumbsEl.innerHTML='';
+    for(let i=1;i<=pages;i++){
+      const p=await doc.getPage(i); const v=p.getViewport({scale:.22});
+      const c=document.createElement('canvas'); const ctx=c.getContext('2d'); c.width=v.width; c.height=v.height;
+      await p.render({canvasContext:ctx,viewport:v}).promise; p.cleanup();
+      const holder=document.createElement('div'); holder.className='thumb'; if(i===currentPage) holder.classList.add('active');
+      holder.appendChild(c); holder.title='Page '+i; holder.addEventListener('click',()=>setPage(i)); thumbsEl.appendChild(holder);
     }
+  }
 
-    function normalizeSel(sel){
-      let {x,y,w,h}=sel;
-      if(w<0){x+=w; w=-w;} if(h<0){y+=h; h=-h;}
-      const r = canvasRect();
-      x=Math.max(0,Math.min(x,r.width - w));
-      y=Math.max(0,Math.min(y,r.height- h));
-      w=Math.max(1,Math.min(w,r.width - x));
-      h=Math.max(1,Math.min(h,r.height- y));
-      return {x,y,w,h};
-    }
+  /* ---------- Selection (Overlay is the event target) ---------- */
+  const HANDLE_HIT = 12;
+  let dragMode = null, dragStart = null, lastPos = null, activeHandle = null, lockRatio = null;
 
-    function placeHandles(sel){
-      const pos = {
-        nw:[0,0], ne:[sel.w,0], sw:[0,sel.h], se:[sel.w,sel.h],
-        n:[sel.w/2,0], s:[sel.w/2,sel.h], w:[0,sel.h/2], e:[sel.w,sel.h/2]
-      };
-      overlay.querySelectorAll('.handle').forEach(h=>{
-        const [hx,hy]=pos[h.dataset.h];
-        h.style.left=(hx-6)+'px'; h.style.top=(hy-6)+'px';
-      });
-    }
+  function overlayRect(){ return overlay.getBoundingClientRect(); }
 
-    function updateRectUI(){
-      if(!selection){ rectEl.style.display='none'; clearBtn.disabled=true; applyBtn.disabled=true; return; }
-      rectEl.style.display='block';
-      rectEl.style.left   = selection.x + 'px';
-      rectEl.style.top    = selection.y + 'px';
-      rectEl.style.width  = selection.w + 'px';
-      rectEl.style.height = selection.h + 'px';
-      placeHandles(selection);
-      const ok = selection.w>=2 && selection.h>=2; clearBtn.disabled=!ok; applyBtn.disabled=!ok;
-    }
+  function pointFromEvent(e){
+    const r = overlayRect();
+    const x = Math.max(0, Math.min(r.width,  e.clientX - r.left));
+    const y = Math.max(0, Math.min(r.height, e.clientY - r.top));
+    return { x, y };
+  }
 
-    function persistSelection(){
-      if(!selection || activeDoc==='preview') return;
-      const cssW = parseFloat(stage.style.width)||stage.width;
-      const cssH = parseFloat(stage.style.height)||stage.height;
-      const pct = { x:selection.x/cssW, y:selection.y/cssH, w:selection.w/cssW, h:selection.h/cssH };
-      savedPctByPage.set(currentPage, pct);
-      lastTemplatePct = { w:pct.w, h:pct.h };
-    }
+  function normalizeSel(sel){
+    let {x,y,w,h}=sel;
+    if(w<0){x+=w; w=-w;} if(h<0){y+=h; h=-h;}
+    const r = overlayRect();
+    x=Math.max(0,Math.min(x,r.width - w));
+    y=Math.max(0,Math.min(y,r.height- h));
+    w=Math.max(1,Math.min(w,r.width - x));
+    h=Math.max(1,Math.min(h,r.height- y));
+    return {x,y,w,h};
+  }
 
-    function hitHandle(pt){
-      if(!selection) return null;
-      const k = {
-        nw:[selection.x,selection.y], ne:[selection.x+selection.w,selection.y],
-        sw:[selection.x,selection.y+selection.h], se:[selection.x+selection.w,selection.y+selection.h],
-        n:[selection.x+selection.w/2,selection.y], s:[selection.x+selection.w/2,selection.y+selection.h],
-        w:[selection.x,selection.y+selection.h/2], e:[selection.x+selection.w,selection.y+selection.h/2]
-      };
-      for(const key in k){
-        const [hx,hy]=k[key];
-        if(Math.abs(pt.x-hx)<=HANDLE_HIT && Math.abs(pt.y-hy)<=HANDLE_HIT) return key;
-      }
-      return null;
-    }
-
-    stageWrap.addEventListener('pointerdown', (e)=>{
-      if(!currentViewport) return;
-      // ensure overlay synced (if any late layout shift)
-      syncOverlayToCanvas();
-
-      const r = canvasRect();
-      if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
-
-      stageWrap.setPointerCapture(e.pointerId);
-      const pt = pointFromEvent(e);
-
-      if(selection){
-        const onHandle = hitHandle(pt);
-        if(onHandle){
-          dragMode='resize'; activeHandle=onHandle; lastPos=pt; lockRatio=(e.shiftKey?(selection.w/selection.h||1):null);
-        }else{
-          const inside=(pt.x>=selection.x && pt.x<=selection.x+selection.w && pt.y>=selection.y && pt.y<=selection.y+selection.h);
-          if(inside){ dragMode='move'; lastPos=pt; }
-          else{ dragMode='draw'; dragStart=pt; selection={x:pt.x,y:pt.y,w:0,h:0}; lockRatio=null; }
-        }
-      }else{
-        dragMode='draw'; dragStart=pt; selection={x:pt.x,y:pt.y,w:0,h:0}; lockRatio=null;
-      }
-      updateRectUI();
+  function placeHandles(sel){
+    const pos = {
+      nw:[0,0], ne:[sel.w,0], sw:[0,sel.h], se:[sel.w,sel.h],
+      n:[sel.w/2,0], s:[sel.w/2,sel.h], w:[0,sel.h/2], e:[sel.w,sel.h/2]
+    };
+    overlay.querySelectorAll('.handle').forEach(h=>{
+      const [hx,hy]=pos[h.dataset.h];
+      h.style.left=(hx-6)+'px'; h.style.top=(hy-6)+'px';
     });
+  }
 
-    stageWrap.addEventListener('pointermove', (e)=>{
-      if(!dragMode) return;
-      const pt = pointFromEvent(e);
-      const r = canvasRect();
+  function updateRectUI(){
+    if(!selection){ rectEl.style.display='none'; clearBtn.disabled=true; applyBtn.disabled=true; return; }
+    rectEl.style.display='block';
+    rectEl.style.left   = selection.x + 'px';
+    rectEl.style.top    = selection.y + 'px';
+    rectEl.style.width  = selection.w + 'px';
+    rectEl.style.height = selection.h + 'px';
+    placeHandles(selection);
+    const ok = selection.w>=2 && selection.h>=2; clearBtn.disabled=!ok; applyBtn.disabled=!ok;
+  }
 
-      if(dragMode==='draw'){
-        selection.w=pt.x-dragStart.x; selection.h=pt.y-dragStart.y;
-        selection=normalizeSel(selection); updateRectUI(); return;
+  function persistSelection(){
+    if(!selection || activeDoc==='preview') return;
+    const cssW = parseFloat(stage.style.width)||stage.width;
+    const cssH = parseFloat(stage.style.height)||stage.height;
+    const pct = { x:selection.x/cssW, y:selection.y/cssH, w:selection.w/cssW, h:selection.h/cssH };
+    savedPctByPage.set(currentPage, pct);
+    lastTemplatePct = { w:pct.w, h:pct.h };
+  }
+
+  function hitHandle(pt){
+    if(!selection) return null;
+    const k = {
+      nw:[selection.x,selection.y], ne:[selection.x+selection.w,selection.y],
+      sw:[selection.x,selection.y+selection.h], se:[selection.x+selection.w,selection.y+selection.h],
+      n:[selection.x+selection.w/2,selection.y], s:[selection.x+selection.w/2,selection.y+selection.h],
+      w:[selection.x,selection.y+selection.h/2], e:[selection.x+selection.w,selection.y+selection.h/2]
+    };
+    for(const key in k){
+      const [hx,hy]=k[key];
+      if(Math.abs(pt.x-hx)<=HANDLE_HIT && Math.abs(pt.y-hy)<=HANDLE_HIT) return key;
+    }
+    return null;
+  }
+
+  // POINTER EVENTS ON OVERLAY (not on stage/canvas)
+  overlay.addEventListener('pointerdown', (e)=>{
+    if(!currentViewport) return;
+
+    syncOverlayToCanvas(); // ensure perfect alignment at start
+    const r = overlayRect();
+    if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+
+    overlay.setPointerCapture(e.pointerId);
+    const pt = pointFromEvent(e);
+
+    if(selection){
+      const onHandle = hitHandle(pt);
+      if(onHandle){
+        dragMode='resize'; activeHandle=onHandle; lastPos=pt; lockRatio=(e.shiftKey?(selection.w/selection.h||1):null);
+      }else{
+        const inside=(pt.x>=selection.x && pt.x<=selection.x+selection.w && pt.y>=selection.y && pt.y<=selection.y+selection.h);
+        if(inside){ dragMode='move'; lastPos=pt; }
+        else{ dragMode='draw'; dragStart=pt; selection={x:pt.x,y:pt.y,w:0,h:0}; lockRatio=null; }
       }
-      if(dragMode==='move'){
-        const dx=pt.x-lastPos.x, dy=pt.y-lastPos.y;
-        selection=normalizeSel({x:selection.x+dx,y:selection.y+dy,w:selection.w,h:selection.h});
-        lastPos=pt; updateRectUI(); return;
-      }
-      if(dragMode==='resize'){
-        let x1=selection.x, y1=selection.y, x2=selection.x+selection.w, y2=selection.y+selection.h;
-        const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-        if(['nw','w','sw'].includes(activeHandle)) x1=clamp(pt.x,0,x2-1);
-        if(['ne','e','se'].includes(activeHandle)) x2=clamp(pt.x,x1+1,r.width);
-        if(['nw','n','ne'].includes(activeHandle)) y1=clamp(pt.y,0,y2-1);
-        if(['sw','s','se'].includes(activeHandle)) y2=clamp(pt.y,y1+1,r.height);
-        let next={x:x1,y:y1,w:x2-x1,h:y2-y1};
+    }else{
+      dragMode='draw'; dragStart=pt; selection={x:pt.x,y:pt.y,w:0,h:0}; lockRatio=null;
+    }
+    updateRectUI();
+  });
 
-        const keep=e.shiftKey || lockRatio;
-        const ratio=lockRatio || (selection.w/selection.h || 1);
-        if(keep){
-          if(['n','s'].includes(activeHandle)){ next.w = next.h*ratio; if(activeHandle==='n') next.x=x2-next.w; }
-          else if(['e','w'].includes(activeHandle)){ next.h = next.w/ratio; if(activeHandle==='w') next.y = y2 - next.h; }
-          else{
-            const w1=next.w, h1=w1/ratio;
-            const h2=next.h, w2=h2*ratio;
-            if(activeHandle==='nw'||activeHandle==='ne'){
-              if(h1<=next.h){ next.h=h1; if(activeHandle==='nw') next.y=y2-next.h; }
-              else          { next.w=w2; if(activeHandle==='ne') next.x=x2-next.w; }
-            }else{
-              if(h1<=next.h){ next.h=h1; } else { next.w=w2; }
-            }
+  overlay.addEventListener('pointermove', (e)=>{
+    if(!dragMode) return;
+    const pt = pointFromEvent(e);
+
+    if(dragMode==='draw'){
+      selection.w=pt.x-dragStart.x; selection.h=pt.y-dragStart.y;
+      selection=normalizeSel(selection); updateRectUI(); return;
+    }
+    if(dragMode==='move'){
+      const dx=pt.x-lastPos.x, dy=pt.y-lastPos.y;
+      selection=normalizeSel({x:selection.x+dx,y:selection.y+dy,w:selection.w,h:selection.h});
+      lastPos=pt; updateRectUI(); return;
+    }
+    if(dragMode==='resize'){
+      const r = overlayRect();
+      let x1=selection.x, y1=selection.y, x2=selection.x+selection.w, y2=selection.y+selection.h;
+      const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+      if(['nw','w','sw'].includes(activeHandle)) x1=clamp(pt.x,0,x2-1);
+      if(['ne','e','se'].includes(activeHandle)) x2=clamp(pt.x,x1+1,r.width);
+      if(['nw','n','ne'].includes(activeHandle)) y1=clamp(pt.y,0,y2-1);
+      if(['sw','s','se'].includes(activeHandle)) y2=clamp(pt.y,y1+1,r.height);
+      let next={x:x1,y:y1,w:x2-x1,h:y2-y1};
+
+      const keep=e.shiftKey || lockRatio;
+      const ratio=lockRatio || (selection.w/selection.h || 1);
+      if(keep){
+        if(['n','s'].includes(activeHandle)){ next.w = next.h*ratio; if(activeHandle==='n') next.x=x2-next.w; }
+        else if(['e','w'].includes(activeHandle)){ next.h = next.w/ratio; if(activeHandle==='w') next.y = y2 - next.h; }
+        else{
+          const w1=next.w, h1=w1/ratio;
+          const h2=next.h, w2=h2*ratio;
+          if(activeHandle==='nw'||activeHandle==='ne'){
+            if(h1<=next.h){ next.h=h1; if(activeHandle==='nw') next.y=y2-next.h; }
+            else          { next.w=w2; if(activeHandle==='ne') next.x=x2-next.w; }
+          }else{
+            if(h1<=next.h){ next.h=h1; } else { next.w=w2; }
           }
         }
-        selection=normalizeSel(next); lastPos=pt; updateRectUI();
       }
-    });
+      selection=normalizeSel(next); lastPos=pt; updateRectUI();
+    }
+  });
 
-    stageWrap.addEventListener('pointerup', ()=>{
-      if(!dragMode) return;
-      dragMode=null; activeHandle=null; dragStart=null; persistSelection();
-    });
+  overlay.addEventListener('pointerup', ()=>{
+    if(!dragMode) return;
+    dragMode=null; activeHandle=null; dragStart=null; persistSelection();
+  });
 
-    window.addEventListener('keydown', (e)=>{
-      if(e.key==='Escape'){ e.preventDefault(); clearSelectionUI(); return; }
-      if(!selection) return;
-      const r=canvasRect();
-      const move = e.shiftKey?10:1, resize = e.shiftKey?10:1;
-      let handled=false;
-      if(!e.ctrlKey){
-        if(e.key==='ArrowLeft'){  selection.x=Math.max(0,selection.x-move); handled=true; }
-        if(e.key==='ArrowRight'){ selection.x=Math.min(r.width-selection.w,selection.x+move); handled=true; }
-        if(e.key==='ArrowUp'){    selection.y=Math.max(0,selection.y-move); handled=true; }
-        if(e.key==='ArrowDown'){  selection.y=Math.min(r.height-selection.h,selection.y+move); handled=true; }
-      }else{
-        if(e.key==='ArrowRight'){ selection.w=Math.min(r.width -selection.x,selection.w+resize); handled=true; }
-        if(e.key==='ArrowLeft'){  selection.w=Math.max(1,selection.w-resize); handled=true; }
-        if(e.key==='ArrowDown'){  selection.h=Math.min(r.height-selection.y,selection.h+resize); handled=true; }
-        if(e.key==='ArrowUp'){    selection.h=Math.max(1,selection.h-resize); handled=true; }
-      }
-      if(handled){ e.preventDefault(); selection=normalizeSel(selection); updateRectUI(); persistSelection(); }
-    });
+  window.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape'){ e.preventDefault(); clearSelectionUI(); return; }
+    if(!selection) return;
+    const r=overlayRect();
+    const move = e.shiftKey?10:1, resize = e.shiftKey?10:1;
+    let handled=false;
+    if(!e.ctrlKey){
+      if(e.key==='ArrowLeft'){  selection.x=Math.max(0,selection.x-move); handled=true; }
+      if(e.key==='ArrowRight'){ selection.x=Math.min(r.width-selection.w,selection.x+move); handled=true; }
+      if(e.key==='ArrowUp'){    selection.y=Math.max(0,selection.y-move); handled=true; }
+      if(e.key==='ArrowDown'){  selection.y=Math.min(r.height-selection.h,selection.y+move); handled=true; }
+    }else{
+      if(e.key==='ArrowRight'){ selection.w=Math.min(r.width -selection.x,selection.w+resize); handled=true; }
+      if(e.key==='ArrowLeft'){  selection.w=Math.max(1,selection.w-resize); handled=true; }
+      if(e.key==='ArrowDown'){  selection.h=Math.min(r.height-selection.y,selection.h+resize); handled=true; }
+      if(e.key==='ArrowUp'){    selection.h=Math.max(1,selection.h-resize); handled=true; }
+    }
+    if(handled){ e.preventDefault(); selection=normalizeSel(selection); updateRectUI(); persistSelection(); }
+  });
 
-    function clearSelectionUI(){
+  function clearSelectionUI(){
+    selection=null; rectEl.style.display='none';
+    clearBtn.disabled=true; applyBtn.disabled=true;
+    savedPctByPage.delete(currentPage);
+  }
+
+  /* ---------- Build / Preview / Download ---------- */
+  async function buildCroppedBytes(sel, scope){
+    const work = await PDFLib.PDFDocument.load(originalBytes.slice());
+    const pages = work.getPages();
+    const refPage = pages[currentPage-1];
+    const { width: pdfW, height: pdfH } = refPage.getSize();
+    const cssW = parseFloat(stage.style.width), cssH = parseFloat(stage.style.height);
+    const scaleX = pdfW/cssW, scaleY = pdfH/cssH;
+
+    const cropX = sel.x * scaleX, cropW = sel.w * scaleX;
+    const cropY = (pdfH - (sel.y + sel.h) * scaleY), cropH = sel.h * scaleY;
+
+    const applyTo = (p)=>{
+      const w=Math.max(1,Math.min(cropW,p.getWidth()));
+      const h=Math.max(1,Math.min(cropH,p.getHeight()));
+      const x=Math.max(0,Math.min(cropX,p.getWidth()-w));
+      const y=Math.max(0,Math.min(cropY,p.getHeight()-h));
+      p.setCropBox(x,y,w,h); p.setMediaBox(x,y,w,h);
+      if(p.setBleedBox)p.setBleedBox(x,y,w,h); if(p.setTrimBox)p.setTrimBox(x,y,w,h); if(p.setArtBox)p.setArtBox(x,y,w,h);
+    };
+
+    if(scope==='all'){ pages.forEach(applyTo); } else { applyTo(refPage); }
+    return await work.save({updateFieldAppearances:false});
+  }
+
+  applyBtn.addEventListener('click', async ()=>{
+    try{
+      if(activeDoc!=='original'){ alert('Already in preview. Use “Back to original” to reset.'); return; }
+      if(!originalBytes){ alert('Please upload a PDF first.'); return; }
+      if(!selection || selection.w<2 || selection.h<2){ setStatus('Draw a crop box first.'); return; }
+      const sel={...selection};
+      prog.style.display='block'; prog.value=5; setStatus('Building preview…');
+
+      previewBytes = await buildCroppedBytes(sel, applyAllEl.checked ? 'all' : 'current');
+      prog.value=60;
+
+      activeDoc='preview';
+      lastTemplatePct=null;
       selection=null; rectEl.style.display='none';
       clearBtn.disabled=true; applyBtn.disabled=true;
-      savedPctByPage.delete(currentPage);
-    }
+      backBtn.classList.add('show');
 
-    /* ---------- Build / Preview / Download ---------- */
-    async function buildCroppedBytes(sel, scope){
-      const work = await PDFLib.PDFDocument.load(originalBytes.slice());
-      const pages = work.getPages();
-      const refPage = pages[currentPage-1];
-      const { width: pdfW, height: pdfH } = refPage.getSize();
-      const cssW = parseFloat(stage.style.width), cssH = parseFloat(stage.style.height);
-      const scaleX = pdfW/cssW, scaleY = pdfH/cssH;
-
-      const cropX = sel.x * scaleX, cropW = sel.w * scaleX;
-      const cropY = (pdfH - (sel.y + sel.h) * scaleY), cropH = sel.h * scaleY;
-
-      const applyTo = (p)=>{
-        const w=Math.max(1,Math.min(cropW,p.getWidth()));
-        const h=Math.max(1,Math.min(cropH,p.getHeight()));
-        const x=Math.max(0,Math.min(cropX,p.getWidth()-w));
-        const y=Math.max(0,Math.min(cropY,p.getHeight()-h));
-        p.setCropBox(x,y,w,h); p.setMediaBox(x,y,w,h);
-        if(p.setBleedBox)p.setBleedBox(x,y,w,h); if(p.setTrimBox)p.setTrimBox(x,y,w,h); if(p.setArtBox)p.setArtBox(x,y,w,h);
-      };
-
-      if(scope==='all'){ pages.forEach(applyTo); } else { applyTo(refPage); }
-      return await work.save({updateFieldAppearances:false});
-    }
-
-    applyBtn.addEventListener('click', async ()=>{
-      try{
-        if(activeDoc!=='original'){ alert('Already in preview. Use “Back to original” to reset.'); return; }
-        if(!originalBytes){ alert('Please upload a PDF first.'); return; }
-        if(!selection || selection.w<2 || selection.h<2){ setStatus('Draw a crop box first.'); return; }
-        const sel={...selection};
-        prog.style.display='block'; prog.value=5; setStatus('Building preview…');
-
-        previewBytes = await buildCroppedBytes(sel, applyAllEl.checked ? 'all' : 'current');
-        prog.value=60;
-
-        activeDoc='preview';
-        lastTemplatePct=null;
-        selection=null; rectEl.style.display='none';
-        clearBtn.disabled=true; applyBtn.disabled=true;
-        backBtn.classList.add('show');
-
-        await rebuildThumbs(); prog.value=90;
-        await setPage(currentPage);
-        setStatus('Preview ready');
-        prog.value=100; setTimeout(()=>prog.style.display='none',200);
-      }catch(err){ console.error(err); alert('Preview failed: '+(err?.message||err)); setStatus('Preview failed'); prog.style.display='none'; }
-    });
-
-    backBtn.addEventListener('click', async ()=>{
-      if(!originalBytes) return;
-      activeDoc='original';
-      backBtn.classList.remove('show');
-      await rebuildThumbs(); await setPage(currentPage);
-      setStatus('Back to original');
-    });
-
-    downloadBtn.addEventListener('click', async ()=>{
-      if(!originalBytes){ return; }
-      if(!selection){ alert('Draw a crop box first.'); return; }
-      setStatus('Preparing download…'); prog.style.display='block'; prog.value=10;
-      const finalBytes = await buildCroppedBytes(selection, applyAllEl.checked ? 'all' : 'current');
-      prog.value=70;
-      const blob=new Blob([finalBytes],{type:'application/pdf'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a'); a.href=url;
-      a.download = applyAllEl.checked ? `${outFileNameBase}.cropped.pdf` : `${outFileNameBase}-p${currentPage}.cropped.pdf`;
-      a.click();
-      setTimeout(()=>URL.revokeObjectURL(url),1500);
+      await rebuildThumbs(); prog.value=90;
+      await setPage(currentPage);
+      setStatus('Preview ready');
       prog.value=100; setTimeout(()=>prog.style.display='none',200);
-      setStatus('Done.');
-    });
+    }catch(err){ console.error(err); alert('Preview failed: '+(err?.message||err)); setStatus('Preview failed'); prog.style.display='none'; }
+  });
 
-    // init
-    resetDocState();
-  </script>
-</main>
+  backBtn.addEventListener('click', async ()=>{
+    if(!originalBytes) return;
+    activeDoc='original';
+    backBtn.classList.remove('show');
+    await rebuildThumbs(); await setPage(currentPage);
+    setStatus('Back to original');
+  });
+
+  downloadBtn.addEventListener('click', async ()=>{
+    if(!originalBytes){ return; }
+    if(!selection){ alert('Draw a crop box first.'); return; }
+    setStatus('Preparing download…'); prog.style.display='block'; prog.value=10;
+    const finalBytes = await buildCroppedBytes(selection, applyAllEl.checked ? 'all' : 'current');
+    prog.value=70;
+    const blob=new Blob([finalBytes],{type:'application/pdf'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url;
+    a.download = applyAllEl.checked ? `${outFileNameBase}.cropped.pdf` : `${outFileNameBase}-p${currentPage}.cropped.pdf`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    prog.value=100; setTimeout(()=>prog.style.display='none',200);
+    setStatus('Done.');
+  });
+
+  // init
+  resetDocState();
+})();
+</script>
 </body>
 </html>
