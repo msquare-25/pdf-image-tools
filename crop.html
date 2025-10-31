@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="description" content="Free, fast, and private PDF & Image tools — everything runs in your browser (no uploads).">
-
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Crop PDF — Client-side</title>
@@ -12,32 +10,32 @@
   <script defer src="/assets/seo.js"></script>
   <meta name="color-scheme" content="light dark" />
   <style>
-    /* ===== Layout tweaks for compact look (only this page) ===== */
+    /* Page-scoped compact layout (safe; other tools unaffected) */
     .crop-wrap .panel .grid-crop{
       display:grid;grid-template-columns:320px 1fr 320px;gap:20px;align-items:start
     }
-    /* FIRST BOX: compact header row */
+    /* Upload (compact row) */
     .upload-box{padding:16px}
     .upload-box .btn-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
-    .upload-box .pill#meta{padding:8px 12px;line-height:1;white-space:nowrap}
+    .upload-box .pill#meta{padding:8px 12px;line-height:1;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
     .upload-box .muted{margin:6px 0 4px}
     .thumbs.small{display:flex;flex-direction:column;gap:10px;max-height:58vh;overflow:auto;padding-right:4px}
     .thumbs.small .thumb{border:1px solid var(--border);border-radius:10px;padding:6px;box-shadow:var(--shadow-sm);cursor:pointer;background:var(--surface-1)}
     .thumbs.small .thumb.active{outline:2px solid var(--brand-1)}
 
-    /* MIDDLE STAGE */
+    /* Stage (center preview) */
     .stage-wrap{position:relative;display:block;margin:8px auto 0;max-width:100%}
     .stage-wrap canvas{display:none;max-width:100%;height:auto;border-radius:12px;background:var(--surface-2);outline:2px solid rgba(0,0,0,.10);box-shadow:var(--shadow-sm)}
     .stage-wrap.ready canvas{display:block}
-    .overlay-crop{position:absolute;inset:0;pointer-events:none;border-radius:12px}
-    .overlay-crop .rect{position:absolute;border:2px dashed rgba(124,58,237,.9);background:rgba(124,58,237,.08);border-radius:10px;display:none;box-shadow:0 0 0 2px rgba(255,255,255,.35) inset;cursor:move;pointer-events:auto}
-    .overlay-crop .handle{position:absolute;width:12px;height:12px;background:#fff;border:2px solid #7c3aed;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.2);pointer-events:auto}
+    .overlay-crop{position:absolute;inset:0;border-radius:12px}
+    .overlay-crop .rect{position:absolute;border:2px dashed rgba(124,58,237,.9);background:rgba(124,58,237,.08);border-radius:10px;display:none;box-shadow:0 0 0 2px rgba(255,255,255,.35) inset;cursor:move}
+    .overlay-crop .handle{position:absolute;width:12px;height:12px;background:#fff;border:2px solid #7c3aed;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.2)}
     .overlay-crop .handle.nw,.overlay-crop .handle.se{cursor:nwse-resize}
     .overlay-crop .handle.ne,.overlay-crop .handle.sw{cursor:nesw-resize}
     .overlay-crop .handle.n,.overlay-crop .handle.s{cursor:ns-resize}
     .overlay-crop .handle.w,.overlay-crop .handle.e{cursor:ew-resize}
 
-    /* THIRD BOX: compact controls (like Compress panel height) */
+    /* Right controls (compact like Compress) */
     .controls-box{padding:16px}
     .controls-box .settings-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
     .controls-box details{margin-top:6px}
@@ -70,8 +68,8 @@
     <aside class="panel">
       <div class="grid-crop">
         <!-- ============ 1) Upload PDF (compact) ============ -->
-        <section class="panel card box upload-box theme-center" id="dropzone" aria-label="Upload">
-          <h2 class="title">Upload</h2>
+        <section class="panel card box upload-box theme-center" id="dropzone" aria-label="Upload PDF">
+          <h2 class="title">Upload PDF</h2>
           <p class="muted">Drag &amp; drop PDF here</p>
 
           <div class="btn-row">
@@ -89,9 +87,9 @@
           <input id="file" type="file" accept="application/pdf" hidden />
         </section>
 
-        <!-- ============ 2) Settings (canvas stays same) ============ -->
-        <section class="panel card box action-box theme-center" aria-label="Setting">
-          <h2 class="title">Setting</h2>
+        <!-- ============ 2) Settings (canvas) ============ -->
+        <section class="panel card box action-box theme-center" aria-label="Settings">
+          <h2 class="title">Settings</h2>
           <progress id="prog" max="100" value="0" class="w-100"></progress>
           <div id="status" class="small">Idle…</div>
           <div class="stage-wrap mt-2" id="stageWrap" tabindex="0" aria-label="Page preview">
@@ -111,9 +109,9 @@
           </div>
         </section>
 
-        <!-- ============ 3) Download Crop PDF (compact like Compress) ============ -->
-        <section class="panel card box theme-center controls-box" aria-label="Download">
-          <h2 class="title">Download</h2>
+        <!-- ============ 3) Crop (compact) ============ -->
+        <section class="panel card box theme-center controls-box" aria-label="Crop">
+          <h2 class="title">Crop</h2>
 
           <label class="inline" for="applyAll">
             <input id="applyAll" type="checkbox" checked />
@@ -134,13 +132,13 @@
             <button id="clearCrop" class="btn ghost" disabled>Clear selection (Esc)</button>
             <button id="applyCrop" class="btn" disabled>Preview crop</button>
             <button id="backOriginal" class="btn subtle back-link" title="Back to original">Back to original</button>
-            <button id="downloadBtn" class="btn" disabled>Download New PDF</button>
+            <button id="downloadBtn" class="btn" disabled>Crop &amp; Download</button>
           </div>
         </section>
       </div>
     </aside>
 
-    <!-- Title + How it works (unchanged) -->
+    <!-- Title + How it works -->
     <main class="panel">
       <h1 class="page-title">Crop PDF</h1>
       <p class="sub">3 steps: Upload • Pick page • Draw/adjust crop • Preview &amp; Download. All processing stays on your device.</p>
@@ -148,9 +146,9 @@
       <section class="card mt-3">
         <h2 class="title">How it works</h2>
         <ul class="sub">
-          <li>Each page is rendered to an image via <strong>PDF.js</strong>, then rebuilt as a compact PDF with <strong>pdf-lib</strong>.</li>
-          <li>Great for scans/photos. Text-only PDFs may not shrink much.</li>
-          <li>If the compressed file is larger and “Keep original” is ON, we serve the original.</li>
+          <li>Each page is rendered with <strong>PDF.js</strong> and rebuilt with <strong>pdf-lib</strong>.</li>
+          <li>Draw a crop box, preview non-destructively, then download.</li>
+          <li>Use “Apply to all pages” for consistent margins.</li>
         </ul>
         <p class="sub mt-1">Privacy: No uploads. Everything stays on your device.</p>
       </section>
@@ -174,14 +172,9 @@
     // state
     let pdfDocJS=null, pageCount=0, currentPage=1, currentViewport=null;
     let pageRenderTask=null;
-    let selection=null, dragMode=null, activeHandle=null, dragStart=null, lastPos=null;
-    let lockRatio=null;
-
-    // original / preview bytes
-    let originalBytes=null;
-    let previewBytes=null;
-    let activeDoc = 'original'; // 'original' | 'preview'
-
+    let selection=null;
+    let activeDoc='original'; // 'original' | 'preview'
+    let originalBytes=null, previewBytes=null;
     let outFileNameBase='cropped';
 
     const savedPctByPage = new Map();
@@ -204,9 +197,10 @@
       return await pdfjsLib.getDocument({data}).promise;
     }
 
-    // upload/reset
+    /* ---------- Upload / Reset ---------- */
     fileInput.addEventListener('change',async e=>{const f=e.target.files?.[0];if(f)await handleFile(f);});
     clearBtnTop.addEventListener('click', resetDocState);
+
     ['dragenter','dragover'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.add('dropping');}));
     ['dragleave','drop'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.remove('dropping');}));
     dropzone.addEventListener('drop',async e=>{
@@ -223,7 +217,7 @@
       thumbsEl.innerHTML='';
       metaEl.textContent='No file'; metaEl.title='';
       enableControls(false); setStatus('Idle…');
-      selection=null; overlayRect.style.display='none';
+      selection=null; document.querySelector('.overlay-crop .rect').style.display='none';
       prog.value=0;
       originalBytes=null; previewBytes=null; activeDoc='original'; backBtn.classList.remove('show');
       applyAllEl.checked=true;
@@ -233,7 +227,7 @@
     async function handleFile(file){
       try{
         setStatus('Loading PDF…'); enableControls(false);
-        selection=null; overlayRect.style.display='none'; cancelActiveRender();
+        selection=null; document.querySelector('.overlay-crop .rect').style.display='none'; cancelActiveRender();
 
         const cleanBase=(file.name||'document.pdf').replace(/\.pdf$/i,'');
         outFileNameBase=cleanBase;
@@ -244,8 +238,8 @@
 
         const doc = await pdfjsLib.getDocument({ data: originalBytes.slice() }).promise;
         pdfDocJS=doc; pageCount=pdfDocJS.numPages;
-        metaEl.textContent = `${file.name} • ${pageCount} pages`; // short text to keep one row
-        metaEl.title = `${file.name} • ${pageCount} pages`;
+        metaEl.textContent = `${file.name} • ${fmt(pageCount)} pages`;
+        metaEl.title = metaEl.textContent;
 
         await rebuildThumbs(doc);
         await setPage(1, doc);
@@ -253,6 +247,7 @@
       }catch(err){ console.error(err); alert('PDF load failed: '+(err?.message||err)); setStatus('Error loading PDF.'); }
     }
 
+    /* ---------- Render / Thumbs ---------- */
     function computeFitScale(page){
       const v1=page.getViewport({scale:1});
       const centerWidth=stageWrap.clientWidth||stageWrap.getBoundingClientRect().width||800;
@@ -286,19 +281,22 @@
       try{await pageRenderTask.promise;}catch(e){if(e?.name!=='RenderingCancelledException')throw e;}finally{pageRenderTask=null;}
       stageWrap.classList.add('ready'); page.cleanup();
 
+      // restore saved selection (when in original mode)
       const cssW=parseFloat(stage.style.width)||stage.width, cssH=parseFloat(stage.style.height)||stage.height;
+      const rectEl = document.querySelector('.overlay-crop .rect');
       if(activeDoc==='preview'){
-        selection=null;
+        selection=null; rectEl.style.display='none';
       }else{
         const savedPct=savedPctByPage.get(currentPage);
         if(savedPct){
-          selection = pctToSel(savedPct, cssW, cssH);
+          selection = { x:savedPct.x*cssW, y:savedPct.y*cssH, w:savedPct.w*cssW, h:savedPct.h*cssH };
         }else if(lastTemplatePct){
           const w=lastTemplatePct.w*cssW, h=lastTemplatePct.h*cssH;
-          selection = { x: Math.max(0,(cssW-w)/2), y: Math.max(0,(cssH-h)/2), w, h };
+          selection = { x:Math.max(0,(cssW-w)/2), y:Math.max(0,(cssH-h)/2), w, h };
         }else{
           selection=null;
         }
+        if(selection){ rectEl.style.display='block'; } else { rectEl.style.display='none'; }
       }
       updateRectUI();
 
@@ -321,72 +319,112 @@
       }
     }
 
-    const HANDLE_HIT=10;
-    function getLocalXY(evt){const r=stage.getBoundingClientRect();return{ x:Math.max(0,Math.min(r.width,evt.clientX-r.left)), y:Math.max(0,Math.min(r.height,evt.clientY-r.top)) };}
+    /* ---------- Selection (Pointer Events) ---------- */
+    const HANDLE_HIT = 12;
+    let dragMode = null;      // 'draw' | 'move' | 'resize' | null
+    let dragStart = null;     // {x,y}
+    let lastPos   = null;     // {x,y}
+    let activeHandle = null;  // 'nw','n','ne','e','se','s','sw','w'
+    let lockRatio = null;     // keep aspect when Shift
+
+    function canvasRect(){ return stage.getBoundingClientRect(); }
+
+    function pointFromEvent(e){
+      const r = canvasRect();
+      const x = Math.max(0, Math.min(r.width,  e.clientX - r.left));
+      const y = Math.max(0, Math.min(r.height, e.clientY - r.top));
+      return { x, y };
+    }
+
     function normalizeSel(sel){
       let {x,y,w,h}=sel;
       if(w<0){x+=w; w=-w;} if(h<0){y+=h; h=-h;}
-      const maxW=parseFloat(stage.style.width)||stage.width, maxH=parseFloat(stage.style.height)||stage.height;
-      x=Math.max(0,Math.min(x,maxW-w)); y=Math.max(0,Math.min(y,maxH-h));
-      w=Math.max(1,Math.min(w,maxW-x)); h=Math.max(1,Math.min(h,maxH-y));
-      return{x,y,w,h};
+      const r = canvasRect();
+      x=Math.max(0,Math.min(x,r.width - w));
+      y=Math.max(0,Math.min(y,r.height- h));
+      w=Math.max(1,Math.min(w,r.width - x));
+      h=Math.max(1,Math.min(h,r.height- y));
+      return {x,y,w,h};
     }
+
     function placeHandles(sel){
-      const pos={ nw:[0,0], ne:[sel.w,0], sw:[0,sel.h], se:[sel.w,sel.h],
-        n:[sel.w/2,0], s:[sel.w/2,sel.h], w:[0,sel.h/2], e:[sel.w,sel.h/2] };
-      overlayRect.querySelectorAll('.handle').forEach(h=>{
-        const [hx,hy]=pos[h.dataset.h]; h.style.left=(hx-6)+'px'; h.style.top=(hy-6)+'px';
+      const pos = {
+        nw:[0,0], ne:[sel.w,0], sw:[0,sel.h], se:[sel.w,sel.h],
+        n:[sel.w/2,0], s:[sel.w/2,sel.h], w:[0,sel.h/2], e:[sel.w,sel.h/2]
+      };
+      document.querySelectorAll('.overlay-crop .handle').forEach(h=>{
+        const [hx,hy]=pos[h.dataset.h];
+        h.style.left=(hx-6)+'px'; h.style.top=(hy-6)+'px';
       });
     }
+
     function updateRectUI(){
-      if(!selection){overlayRect.style.display='none';clearBtn.disabled=true;applyBtn.disabled=true;return;}
-      const s=selection;
-      const offX = stage.offsetLeft || 0;
-      const offY = stage.offsetTop  || 0;
-      overlayRect.style.display='block';
-      overlayRect.style.left  = (offX + s.x)+'px';
-      overlayRect.style.top   = (offY + s.y)+'px';
-      overlayRect.style.width = s.w+'px';
-      overlayRect.style.height= s.h+'px';
+      const rectEl = document.querySelector('.overlay-crop .rect');
+      if(!selection){ rectEl.style.display='none'; clearBtn.disabled=true; applyBtn.disabled=true; return; }
+      const can = stage;
+      const offX = can.offsetLeft || 0;
+      const offY = can.offsetTop  || 0;
+      const s = selection;
+      rectEl.style.display='block';
+      rectEl.style.left   = (offX + s.x)+'px';
+      rectEl.style.top    = (offY + s.y)+'px';
+      rectEl.style.width  = s.w+'px';
+      rectEl.style.height = s.h+'px';
       placeHandles(s);
       const ok = s.w>=2 && s.h>=2; clearBtn.disabled=!ok; applyBtn.disabled=!ok;
     }
-    function selToPct(sel, cssW, cssH){ return { x:sel.x/cssW, y:sel.y/cssH, w:sel.w/cssW, h:sel.h/cssH }; }
-    function pctToSel(p, cssW, cssH){ return { x:p.x*cssW, y:p.y*cssH, w:p.w*cssW, h:p.h*cssH }; }
+
     function persistSelection(){
       if(!selection || activeDoc==='preview') return;
-      const cssW=parseFloat(stage.style.width)||stage.width, cssH=parseFloat(stage.style.height)||stage.height;
-      const pct = selToPct(selection, cssW, cssH);
+      const cssW = parseFloat(stage.style.width)||stage.width;
+      const cssH = parseFloat(stage.style.height)||stage.height;
+      const pct = { x:selection.x/cssW, y:selection.y/cssH, w:selection.w/cssW, h:selection.h/cssH };
       savedPctByPage.set(currentPage, pct);
       lastTemplatePct = { w:pct.w, h:pct.h };
     }
 
-    function startDraw(e){
-      if(!currentViewport) return;
-      const pt=getLocalXY(e);
-      dragMode='draw'; dragStart=pt; selection={x:pt.x,y:pt.y,w:0,h:0}; lockRatio=null; updateRectUI();
-    }
-    stageWrap.addEventListener('mousedown',startDraw);
-    stage.addEventListener('mousedown',startDraw);
-
-    overlayRect.addEventListener('mousedown',e=>{
-      if(!selection) return; e.preventDefault(); e.stopPropagation();
-      const pt=getLocalXY(e);
-      const centers={
+    function hitHandle(pt){
+      if(!selection) return null;
+      const k = {
         nw:[selection.x,selection.y], ne:[selection.x+selection.w,selection.y],
         sw:[selection.x,selection.y+selection.h], se:[selection.x+selection.w,selection.y+selection.h],
         n:[selection.x+selection.w/2,selection.y], s:[selection.x+selection.w/2,selection.y+selection.h],
         w:[selection.x,selection.y+selection.h/2], e:[selection.x+selection.w,selection.y+selection.h/2]
       };
-      let found=null; for(const k in centers){const [hx,hy]=centers[k]; if(Math.abs(pt.x-hx)<=HANDLE_HIT&&Math.abs(pt.y-hy)<=HANDLE_HIT){found=k;break;}}
-      if(found){ dragMode='resize'; activeHandle=found; lastPos=pt; lockRatio=(e.shiftKey? (selection.w/selection.h||1):null); return; }
-      dragMode='move'; lastPos=pt; lockRatio=null;
+      for(const key in k){
+        const [hx,hy]=k[key];
+        if(Math.abs(pt.x-hx)<=HANDLE_HIT && Math.abs(pt.y-hy)<=HANDLE_HIT) return key;
+      }
+      return null;
+    }
+
+    stageWrap.addEventListener('pointerdown', (e)=>{
+      if(!currentViewport) return;
+      const r = canvasRect();
+      if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+
+      stageWrap.setPointerCapture(e.pointerId);
+      const pt = pointFromEvent(e);
+
+      if(selection){
+        const onHandle = hitHandle(pt);
+        if(onHandle){
+          dragMode='resize'; activeHandle=onHandle; lastPos=pt; lockRatio=(e.shiftKey?(selection.w/selection.h||1):null);
+        }else{
+          const inside=(pt.x>=selection.x && pt.x<=selection.x+selection.w && pt.y>=selection.y && pt.y<=selection.y+selection.h);
+          if(inside){ dragMode='move'; lastPos=pt; }
+          else{ dragMode='draw'; dragStart=pt; selection={x:pt.x,y:pt.y,w:0,h:0}; lockRatio=null; }
+        }
+      }else{
+        dragMode='draw'; dragStart=pt; selection={x:pt.x,y:pt.y,w:0,h:0}; lockRatio=null;
+      }
+      updateRectUI();
     });
 
-    window.addEventListener('mousemove',e=>{
+    stageWrap.addEventListener('pointermove', (e)=>{
       if(!dragMode) return;
-      const pt=getLocalXY(e);
-      const maxW=parseFloat(stage.style.width)||stage.width, maxH=parseFloat(stage.style.height)||stage.height;
+      const pt = pointFromEvent(e);
+      const r = canvasRect();
 
       if(dragMode==='draw'){
         selection.w=pt.x-dragStart.x; selection.h=pt.y-dragStart.y;
@@ -394,22 +432,21 @@
       }
       if(dragMode==='move'){
         const dx=pt.x-lastPos.x, dy=pt.y-lastPos.y;
-        let nx=Math.max(0,Math.min(selection.x+dx,maxW-selection.w));
-        let ny=Math.max(0,Math.min(selection.y+dy,maxH-selection.h));
-        selection={x:nx,y:ny,w:selection.w,h:selection.h}; lastPos=pt; updateRectUI(); return;
+        selection=normalizeSel({x:selection.x+dx,y:selection.y+dy,w:selection.w,h:selection.h});
+        lastPos=pt; updateRectUI(); return;
       }
       if(dragMode==='resize'){
         let x1=selection.x, y1=selection.y, x2=selection.x+selection.w, y2=selection.y+selection.h;
         const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
         if(['nw','w','sw'].includes(activeHandle)) x1=clamp(pt.x,0,x2-1);
-        if(['ne','e','se'].includes(activeHandle)) x2=clamp(pt.x,x1+1,maxW);
+        if(['ne','e','se'].includes(activeHandle)) x2=clamp(pt.x,x1+1,r.width);
         if(['nw','n','ne'].includes(activeHandle)) y1=clamp(pt.y,0,y2-1);
-        if(['sw','s','se'].includes(activeHandle)) y2=clamp(pt.y,y1+1,maxH);
-
+        if(['sw','s','se'].includes(activeHandle)) y2=clamp(pt.y,y1+1,r.height);
         let next={x:x1,y:y1,w:x2-x1,h:y2-y1};
-        const keepRatio = e.shiftKey || lockRatio;
-        const ratio = lockRatio || (selection.w/selection.h || 1);
-        if(keepRatio){
+
+        const keep=e.shiftKey || lockRatio;
+        const ratio=lockRatio || (selection.w/selection.h || 1);
+        if(keep){
           if(['n','s'].includes(activeHandle)){ next.w = next.h*ratio; if(activeHandle==='n') next.x=x2-next.w; }
           else if(['e','w'].includes(activeHandle)){ next.h = next.w/ratio; if(activeHandle==='w') next.y=y2-next.h; }
           else{
@@ -417,48 +454,49 @@
             const h2=next.h, w2=h2*ratio;
             if(activeHandle==='nw'||activeHandle==='ne'){
               if(h1<=next.h){ next.h=h1; if(activeHandle==='nw') next.y=y2-next.h; }
-              else { next.w=w2; if(activeHandle==='ne') next.x=x2-next.w; }
+              else          { next.w=w2; if(activeHandle==='ne') next.x=x2-next.w; }
             }else{
-              if(h1<=next.h){ next.h=h1; }
-              else { next.w=w2; }
+              if(h1<=next.h){ next.h=h1; } else { next.w=w2; }
             }
           }
         }
-        selection=normalizeSel(next); lastPos=pt; updateRectUI(); return;
+        selection=normalizeSel(next); lastPos=pt; updateRectUI();
       }
     });
 
-    window.addEventListener('mouseup',()=>{ if(!dragMode) return; dragMode=null; activeHandle=null; dragStart=null; updateRectUI(); persistSelection(); });
+    stageWrap.addEventListener('pointerup', ()=>{
+      if(!dragMode) return;
+      dragMode=null; activeHandle=null; dragStart=null; persistSelection();
+    });
 
-    window.addEventListener('keydown',e=>{
+    window.addEventListener('keydown', (e)=>{
       if(e.key==='Escape'){ e.preventDefault(); clearSelectionUI(); return; }
       if(!selection) return;
-      const moveStep = e.shiftKey ? 10 : 1;
-      const resizeStep = e.shiftKey ? 10 : 1;
-      const cssW=parseFloat(stage.style.width)||stage.width, cssH=parseFloat(stage.style.height)||stage.height;
+      const r=canvasRect();
+      const move = e.shiftKey?10:1, resize = e.shiftKey?10:1;
       let handled=false;
       if(!e.ctrlKey){
-        if(e.key==='ArrowLeft'){ selection.x=Math.max(0, selection.x-moveStep); handled=true; }
-        if(e.key==='ArrowRight'){ selection.x=Math.min(cssW-selection.w, selection.x+moveStep); handled=true; }
-        if(e.key==='ArrowUp'){ selection.y=Math.max(0, selection.y-moveStep); handled=true; }
-        if(e.key==='ArrowDown'){ selection.y=Math.min(cssH-selection.h, selection.y+moveStep); handled=true; }
+        if(e.key==='ArrowLeft'){  selection.x=Math.max(0,selection.x-move); handled=true; }
+        if(e.key==='ArrowRight'){ selection.x=Math.min(r.width-selection.w,selection.x+move); handled=true; }
+        if(e.key==='ArrowUp'){    selection.y=Math.max(0,selection.y-move); handled=true; }
+        if(e.key==='ArrowDown'){  selection.y=Math.min(r.height-selection.h,selection.y+move); handled=true; }
       }else{
-        if(e.key==='ArrowRight'){ selection.w=Math.min(cssW-selection.x, selection.w+resizeStep); handled=true; }
-        if(e.key==='ArrowLeft'){ selection.w=Math.max(1, selection.w-resizeStep); handled=true; }
-        if(e.key==='ArrowDown'){ selection.h=Math.min(cssH-selection.y, selection.h+resizeStep); handled=true; }
-        if(e.key==='ArrowUp'){ selection.h=Math.max(1, selection.h-resizeStep); handled=true; }
+        if(e.key==='ArrowRight'){ selection.w=Math.min(r.width -selection.x,selection.w+resize); handled=true; }
+        if(e.key==='ArrowLeft'){  selection.w=Math.max(1,selection.w-resize); handled=true; }
+        if(e.key==='ArrowDown'){  selection.h=Math.min(r.height-selection.y,selection.h+resize); handled=true; }
+        if(e.key==='ArrowUp'){    selection.h=Math.max(1,selection.h-resize); handled=true; }
       }
       if(handled){ e.preventDefault(); selection=normalizeSel(selection); updateRectUI(); persistSelection(); }
     });
 
     function clearSelectionUI(){
-      selection=null; overlayRect.style.display='none';
+      selection=null; const rectEl=document.querySelector('.overlay-crop .rect');
+      rectEl.style.display='none';
       clearBtn.disabled=true; applyBtn.disabled=true;
       savedPctByPage.delete(currentPage);
     }
 
-    clearBtn.addEventListener('click', clearSelectionUI);
-
+    /* ---------- Build / Preview / Download ---------- */
     async function buildCroppedBytes(sel, scope){
       const work = await PDFLib.PDFDocument.load(originalBytes.slice());
       const pages = work.getPages();
@@ -483,7 +521,6 @@
       return await work.save({updateFieldAppearances:false});
     }
 
-    // preview
     applyBtn.addEventListener('click', async ()=>{
       try{
         if(activeDoc!=='original'){ alert('Already in preview. Use “Back to original” to reset.'); return; }
@@ -496,9 +533,8 @@
         prog.value=60;
 
         activeDoc='preview';
-        lastTemplatePct = null;
-        selection = null;
-        overlayRect.style.display='none';
+        lastTemplatePct=null;
+        selection=null; document.querySelector('.overlay-crop .rect').style.display='none';
         clearBtn.disabled=true; applyBtn.disabled=true;
         backBtn.classList.add('show');
 
@@ -517,7 +553,6 @@
       setStatus('Back to original');
     });
 
-    // download
     downloadBtn.addEventListener('click', async ()=>{
       if(!originalBytes){ return; }
       if(!selection){ alert('Draw a crop box first.'); return; }
