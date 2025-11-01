@@ -52,6 +52,21 @@
     #backOriginal { display: none; }
     #backOriginal.show { display: inline-flex; }
 
+    /* ==== Loading banner (spinner + progress) ==== */
+    .banner{
+      display:flex; align-items:center; gap:12px;
+      padding:10px 12px; border-radius:10px; background:var(--surface-2);
+      box-shadow:var(--shadow-sm); margin:10px 0 0;
+    }
+    .banner .spinner{
+      width:18px; height:18px; border-radius:50%;
+      border:3px solid rgba(0,0,0,.15); border-top-color: var(--brand-1);
+      animation: spin 1s linear infinite;
+    }
+    .banner .btext{ display:flex; flex-direction:column; gap:6px; }
+    .banner progress{ width:180px; height:8px; }
+    @keyframes spin{ to { transform: rotate(360deg); } }
+
     @media (max-width:1024px){
       .crop-wrap .panel .grid-crop{grid-template-columns:1fr}
       .thumbs.small{flex-direction:row;flex-wrap:wrap;max-height:none}
@@ -106,6 +121,16 @@
       <!-- Settings (box 2, canvas + overlay) -->
       <section class="panel card box action-box theme-center" aria-label="Settings">
         <h2 class="title">Settings</h2>
+
+        <!-- NEW: Loading banner -->
+        <div id="loadingBanner" class="banner" hidden>
+          <div class="spinner" aria-hidden="true"></div>
+          <div class="btext">
+            <span>Loading pages… <b id="pgNow">0</b>/<b id="pgTotal">0</b></span>
+            <progress id="pgProg" max="100" value="0"></progress>
+          </div>
+        </div>
+
         <progress id="prog" max="100" value="0" class="w-100"></progress>
         <div id="status" class="small">Idle…</div>
 
@@ -190,6 +215,13 @@
   const applyAllEl=$('#applyAll'), clearBtn=$('#clearCrop'), applyBtn=$('#applyCrop'), backBtn=$('#backOriginal'), downloadBtn=$('#downloadBtn');
   const prog=$('#prog'), statusEl=$('#status');
   const stageInner = document.getElementById('stageInner');
+  const settingsCard = document.querySelector('.action-box');
+
+  /* Loading banner refs */
+  const loadingBanner = document.getElementById('loadingBanner');
+  const pgNow = document.getElementById('pgNow');
+  const pgTotal = document.getElementById('pgTotal');
+  const pgProg = document.getElementById('pgProg');
 
   /* --- Touch detection → show Clear on touch only & click handler --- */
   const isTouch =
@@ -286,6 +318,9 @@
     originalBytes=null; previewBytes=null; activeDoc='original'; backBtn.classList.remove('show');
     applyAllEl.checked=true; lastPreviewScope='current';
     savedPctByPage.clear(); lastTemplatePct=null;
+
+    // hide banner just in case
+    loadingBanner.hidden = true;
   }
 
   async function handleFile(file){
@@ -305,10 +340,24 @@
       metaEl.textContent = `${file.name} • ${fmt(pageCount)} pages`;
       metaEl.title = metaEl.textContent;
 
-      await rebuildThumbs(doc);
+      // show banner & totals while thumbnails build
+      pgTotal.textContent = pageCount;
+      pgNow.textContent = 0;
+      pgProg.value = 0;
+      loadingBanner.hidden = false;
+
+      await rebuildThumbs(doc);          // updates banner counts
       await setPage(1, doc);
+
+      // hide banner after everything ready
+      loadingBanner.hidden = true;
+
       enableControls(true); setStatus('Ready.');
-    }catch(err){ console.error(err); alert('PDF load failed: '+(err?.message||err)); setStatus('Error loading PDF.'); }
+
+      // jump to Settings (center card)
+      settingsCard.scrollIntoView({ behavior:'smooth', block:'start' });
+
+    }catch(err){ console.error(err); alert('PDF load failed: '+(err?.message||err)); setStatus('Error loading PDF.'); loadingBanner.hidden=true; }
   }
 
   /* ---------- Render / Thumbs ---------- */
@@ -379,14 +428,35 @@
   window.addEventListener('resize',()=>{ if(bytesForActive()) setPage(currentPage); });
 
   async function rebuildThumbs(providedDoc=null){
-    const doc=providedDoc||await getActiveJsDoc(); const pages=doc.numPages;
+    const doc=providedDoc||await getActiveJsDoc();
+    const pages=doc.numPages;
     thumbsEl.innerHTML='';
+    // show banner if not already
+    loadingBanner.hidden = false;
+    pgTotal.textContent = pages;
+    pgNow.textContent = 0;
+    pgProg.value = 0;
+
     for(let i=1;i<=pages;i++){
-      const p=await doc.getPage(i); const v=p.getViewport({scale:.22});
-      const c=document.createElement('canvas'); const ctx=c.getContext('2d'); c.width=v.width; c.height=v.height;
+      const p=await doc.getPage(i);
+      const v=p.getViewport({scale:.22});
+      const c=document.createElement('canvas');
+      const ctx=c.getContext('2d');
+      c.width=v.width; c.height=v.height;
       await p.render({canvasContext:ctx,viewport:v}).promise; p.cleanup();
-      const holder=document.createElement('div'); holder.className='thumb'; if(i===currentPage) holder.classList.add('active');
-      holder.appendChild(c); holder.title='Page '+i; holder.addEventListener('click',()=>setPage(i)); thumbsEl.appendChild(holder);
+
+      const holder=document.createElement('div');
+      holder.className='thumb'; if(i===currentPage) holder.classList.add('active');
+      holder.appendChild(c); holder.title='Page '+i;
+      holder.addEventListener('click',()=>setPage(i));
+      thumbsEl.appendChild(holder);
+
+      // update banner progress
+      pgNow.textContent = i;
+      pgProg.value = Math.round((i/pages)*100);
+
+      // allow UI to breathe for very large files
+      if (i % 8 === 0) { await new Promise(r=>requestAnimationFrame(r)); }
     }
   }
 
