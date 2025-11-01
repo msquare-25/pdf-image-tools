@@ -974,3 +974,4 @@ footer a.small:hover{ text-decoration:underline; }
   pointer-events: auto;
 }
 
+.action-box { scroll-margin-top: 72px; }
