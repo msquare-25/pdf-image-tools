@@ -103,22 +103,23 @@
         <progress id="prog" max="100" value="0" class="w-100"></progress>
         <div id="status" class="small">Idle…</div>
 
-        <div class="stage-wrap mt-2" id="stageWrap" tabindex="0" aria-label="Page preview">
-          <canvas id="stage" width="0" height="0"></canvas>
-          <!-- Overlay absolutely aligned to canvas; receives pointer events -->
-          <div class="overlay-crop" id="overlay" aria-hidden="true">
-            <div class="rect" id="rect">
-              <div class="handle nw" data-h="nw"></div>
-              <div class="handle ne" data-h="ne"></div>
-              <div class="handle sw" data-h="sw"></div>
-              <div class="handle se" data-h="se"></div>
-              <div class="handle n"  data-h="n"></div>
-              <div class="handle s"  data-h="s"></div>
-              <div class="handle w"  data-h="w"></div>
-              <div class="handle e"  data-h="e"></div>
-            </div>
-          </div>
-        </div>
+<div class="stage-wrap mt-2" id="stageWrap" tabindex="0" aria-label="Page preview">
+  <div id="stageInner" class="stage-inner">
+    <canvas id="stage" width="0" height="0"></canvas>
+    <div class="overlay-crop" id="overlay" aria-hidden="true">
+      <div class="rect" id="rect">
+        <div class="handle nw" data-h="nw"></div>
+        <div class="handle ne" data-h="ne"></div>
+        <div class="handle sw" data-h="sw"></div>
+        <div class="handle se" data-h="se"></div>
+        <div class="handle n"  data-h="n"></div>
+        <div class="handle s"  data-h="s"></div>
+        <div class="handle w"  data-h="w"></div>
+        <div class="handle e"  data-h="e"></div>
+      </div>
+    </div>
+  </div>
+</div>
       </section>
 
       <!-- Crop controls (box 3) -->
