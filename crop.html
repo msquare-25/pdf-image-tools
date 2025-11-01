@@ -18,6 +18,12 @@
     .thumbs.small .thumb{border:1px solid var(--border);border-radius:10px;padding:6px;box-shadow:var(--shadow-sm);cursor:pointer;background:var(--surface-1)}
     .thumbs.small .thumb.active{outline:2px solid var(--brand-1)}
 
+    /* Hide thumbnails on small screens (desktop/“Desktop site” shows them) */
+    @media (max-width: 900px){
+      .upload-box .rule,
+      #thumbs { display:none !important; }
+    }
+
     .stage-wrap{ position:relative; display:flex; justify-content:center; }
     .stage-inner{ position:relative; }
     .stage-inner canvas{ display:block; }
@@ -48,9 +54,9 @@
 
     .crop-wrap .stage-wrap{ touch-action:none; }
 
-    /* Back to original is hidden until preview turns it on */
-    #backOriginal { display: none; }
-    #backOriginal.show { display: inline-flex; }
+    /* Back to original hidden until preview */
+    #backOriginal { display:none; }
+    #backOriginal.show { display:inline-flex; }
 
     @media (max-width:1024px){
       .crop-wrap .panel .grid-crop{grid-template-columns:1fr}
@@ -132,10 +138,21 @@
       <section class="panel card box theme-center controls-box" aria-label="Crop">
         <h2 class="title">Crop</h2>
 
-        <label class="inline" for="applyAll">
-          <input id="applyAll" type="checkbox" checked />
-          <span>Apply crop to all pages</span>
-        </label>
+        <!-- Scope control -->
+        <div class="row" style="display:flex;gap:10px;align-items:center;margin:6px 0 10px">
+          <label class="inline" style="display:flex;gap:8px;align-items:center">
+            <span>Scope</span>
+            <select id="scope" class="input" style="min-width:140px">
+              <option value="all" selected>All pages</option>
+              <option value="current">Current page</option>
+              <option value="selected">Selected…</option>
+            </select>
+          </label>
+          <input id="selPages" class="input" inputmode="numeric"
+                 placeholder="e.g. 1,3-5,8"
+                 title="Pages or ranges, e.g. 1,3-5,8"
+                 style="max-width:200px; display:none;">
+        </div>
 
         <details>
           <summary>Advanced</summary>
@@ -148,7 +165,6 @@
         </details>
 
         <div class="settings-actions">
-          <!-- Touch devices ma show; desktop ma Esc enough -->
           <button id="clearCrop" class="btn ghost" disabled hidden>Clear selection (Esc)</button>
           <button id="applyCrop" class="btn" disabled>Preview crop</button>
           <button id="backOriginal" class="btn subtle back-link" title="Back to original">Back to original</button>
@@ -169,7 +185,7 @@
       <ul class="sub">
         <li>Each page is rendered with <strong>PDF.js</strong> and rebuilt with <strong>pdf-lib</strong>.</li>
         <li>Draw your crop box, preview non-destructively, then download.</li>
-        <li>Use “Apply to all pages” for consistent margins.</li>
+        <li>Use the Scope menu to crop all, current, or selected pages (e.g. <code>1,3-5,8</code>).</li>
       </ul>
       <p class="sub mt-1">Privacy: No uploads. Everything stays on your device.</p>
     </section>
@@ -187,14 +203,16 @@
   // elements
   const fileInput=$('#file'), metaEl=$('#meta'), clearBtnTop=$('#clearBtnTop'), dropzone=$('#dropzone');
   const stage=$('#stage'), stageWrap=$('#stageWrap'), overlay=$('#overlay'), rectEl=$('#rect'), thumbsEl=$('#thumbs');
-  const applyAllEl=$('#applyAll'), clearBtn=$('#clearCrop'), applyBtn=$('#applyCrop'), backBtn=$('#backOriginal'), downloadBtn=$('#downloadBtn');
+  const clearBtn=$('#clearCrop'), applyBtn=$('#applyCrop'), backBtn=$('#backOriginal'), downloadBtn=$('#downloadBtn');
   const prog=$('#prog'), statusEl=$('#status');
   const stageInner = document.getElementById('stageInner');
   const settingsCard = document.querySelector('.action-box');
+  const scopeSel = document.querySelector('#scope');
+  const selPages = document.querySelector('#selPages');
 
   // touch detect + show Clear on touch
   const isTouch =
-    (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
+    window.matchMedia?.('(pointer: coarse)').matches ||
     ('ontouchstart' in window) ||
     (navigator.maxTouchPoints > 0);
 
@@ -204,11 +222,18 @@
     clearBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearSelectionUI(); });
   }
 
+  // Scope UI toggle
+  if (scopeSel) {
+    scopeSel.addEventListener('change', () => {
+      selPages.style.display = (scopeSel.value === 'selected') ? 'inline-block' : 'none';
+    });
+  }
+
   // helpers
   function fmt(n){return new Intl.NumberFormat().format(n);}
   function setStatus(t){statusEl.textContent=t;}
   function enableControls(on){
-    applyAllEl.disabled=!on; downloadBtn.disabled=!on; clearBtnTop.disabled=!on;
+    downloadBtn.disabled=!on; clearBtnTop.disabled=!on;
     downloadBtn.classList.toggle('primary-blue', !!on);
   }
   function cancelActiveRender(){ if(pageRenderTask?.cancel){ try{pageRenderTask.cancel()}catch{} } pageRenderTask=null; }
@@ -242,6 +267,27 @@
     }
   }
 
+  // Parse "1,3-5,8" to array of page numbers
+  function parsePageRanges(txt, max) {
+    const out = new Set();
+    (txt || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
+      .forEach(part => {
+        const m = part.match(/^(\d+)\s*-\s*(\d+)$/);
+        if (m) {
+          let a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+          if (a > b) [a, b] = [b, a];
+          for (let i = a; i <= b; i++) if (i >= 1 && i <= max) out.add(i);
+        } else {
+          const n = parseInt(part, 10);
+          if (n >= 1 && n <= max) out.add(n);
+        }
+      });
+    return [...out].sort((a,b)=>a-b);
+  }
+
   // state
   let pdfDocJS=null, pageCount=0, currentPage=1, currentViewport=null;
   let pageRenderTask=null;
@@ -250,7 +296,7 @@
   let activeDoc='original'; // 'original' | 'preview'
   let originalBytes=null, previewBytes=null;
   let outFileNameBase='cropped';
-  let lastPreviewScope='current';
+  let lastPreviewScope='current'; // 'all' | 'current' | 'selected'
 
   const savedPctByPage = new Map();
   let lastTemplatePct = null;
@@ -286,8 +332,8 @@
     enableControls(false); setStatus('Idle…');
     selection=null; selectionNorm=null; prog.value=0;
     originalBytes=null; previewBytes=null; activeDoc='original'; backBtn.classList.remove('show');
-    applyAllEl.checked=true; lastPreviewScope='current';
     savedPctByPage.clear(); lastTemplatePct=null;
+    lastPreviewScope='current';
   }
 
   async function handleFile(file){
@@ -299,7 +345,7 @@
       outFileNameBase=cleanBase;
       metaEl.textContent = `${file.name} • loading…`; metaEl.title=metaEl.textContent;
 
-      // while loading, jump to Settings on mobile
+      // jump to Settings immediately on mobile (while loading)
       maybeScrollToSettings();
 
       originalBytes = new Uint8Array(await file.arrayBuffer());
@@ -316,7 +362,7 @@
       await rebuildThumbs(doc);
       await setPage(1, doc);
 
-      // after first paint, ensure Settings is visible on mobile
+      // ensure Settings in view on phones after first paint
       setTimeout(maybeScrollToSettings, 120);
 
       enableControls(true);
@@ -592,10 +638,10 @@
 
   /* ---------- Build / Preview / Download ---------- */
   async function buildCroppedBytes(sel, scope){
-    const work = await PDFLib.PDFDocument.load(originalBytes.slice());
+    const work  = await PDFLib.PDFDocument.load(originalBytes.slice());
     const pages = work.getPages();
-    const refPage = pages[currentPage-1];
-    const { width: pdfW, height: pdfH } = refPage.getSize();
+    const ref   = pages[currentPage-1];
+    const { width: pdfW, height: pdfH } = ref.getSize();
     const cssW = parseFloat(stage.style.width), cssH = parseFloat(stage.style.height);
     const scaleX = pdfW/cssW, scaleY = pdfH/cssH;
 
@@ -611,7 +657,13 @@
       if(p.setBleedBox)p.setBleedBox(x,y,w,h); if(p.setTrimBox)p.setTrimBox(x,y,w,h); if(p.setArtBox)p.setArtBox(x,y,w,h);
     };
 
-    if(scope==='all'){ pages.forEach(applyTo); } else { applyTo(refPage); }
+    if (Array.isArray(scope)) {
+      scope.forEach(i => { const p = pages[i-1]; if (p) applyTo(p); });
+    } else if (scope === 'all') {
+      pages.forEach(applyTo);
+    } else { // 'current'
+      applyTo(ref);
+    }
     return await work.save({updateFieldAppearances:false});
   }
 
@@ -631,11 +683,19 @@
       rebuildJustInTime();
       if(!selection || selection.w<2 || selection.h<2){ setStatus('Draw a crop box first.'); return; }
 
-      prog.style.display='block'; prog.value=5; setStatus('Building preview…');
-      const scope = applyAllEl.checked ? 'all' : 'current';
-      lastPreviewScope = scope;
+      // scope selection (all/current/selected)
+      let scopeVal = scopeSel ? scopeSel.value : 'all';
+      let scopeArg = scopeVal;
+      if (scopeVal === 'selected') {
+        const picked = parsePageRanges(selPages.value, pageCount);
+        if (picked.length === 0) { alert('Enter pages (e.g., 1,3-5,8)'); return; }
+        scopeArg = picked;
+      }
+      lastPreviewScope = scopeVal;
 
-      previewBytes = await buildCroppedBytes(selection, scope);
+      prog.style.display='block'; prog.value=5; setStatus('Building preview…');
+
+      previewBytes = await buildCroppedBytes(selection, scopeArg);
       prog.value=60;
 
       activeDoc='preview';
@@ -659,7 +719,7 @@
     if(!originalBytes) return;
     activeDoc='original';
     backBtn.classList.remove('show');
-    maybeScrollToSettings();                   // scroll before rebuilding
+    maybeScrollToSettings();
     await rebuildThumbs(); await setPage(currentPage);
     setStatus('Back to original');
   });
@@ -669,30 +729,46 @@
     try{
       if(!originalBytes) return;
 
+      // If in preview, download exactly what user saw
       if(activeDoc==='preview' && previewBytes){
         const blob=new Blob([previewBytes],{type:'application/pdf'});
         const url=URL.createObjectURL(blob);
         const a=document.createElement('a'); a.href=url;
-        a.download = (lastPreviewScope==='all')
-          ? `${outFileNameBase}.cropped.pdf`
-          : `${outFileNameBase}-p${currentPage}.cropped.pdf`;
+        let name = `${outFileNameBase}.cropped.pdf`;
+        if (lastPreviewScope === 'current') name = `${outFileNameBase}-p${currentPage}.cropped.pdf`;
+        if (lastPreviewScope === 'selected') name = `${outFileNameBase}-selected.cropped.pdf`;
+        a.download = name;
         a.click();
         setTimeout(()=>URL.revokeObjectURL(url),1500);
         setStatus('Downloaded.');
         return;
       }
 
+      // Original mode: build fresh from current selection & chosen scope
       if(!selectionNorm){ alert('Draw a crop box first.'); return; }
       rebuildJustInTime();
       if(!selection || selection.w<2 || selection.h<2){ alert('Draw a crop box first.'); return; }
 
+      let scopeVal = scopeSel ? scopeSel.value : 'all';
+      let scopeArg = scopeVal;
+      if (scopeVal === 'selected') {
+        const picked = parsePageRanges(selPages.value, pageCount);
+        if (picked.length === 0) { alert('Enter pages (e.g., 1,3-5,8)'); return; }
+        scopeArg = picked;
+      }
+
       setStatus('Preparing download…'); prog.style.display='block'; prog.value=10;
-      const finalBytes = await buildCroppedBytes(selection, applyAllEl.checked ? 'all' : 'current');
+      const finalBytes = await buildCroppedBytes(selection, scopeArg);
       prog.value=70;
       const blob=new Blob([finalBytes],{type:'application/pdf'});
       const url=URL.createObjectURL(blob);
       const a=document.createElement('a'); a.href=url;
-      a.download = applyAllEl.checked ? `${outFileNameBase}.cropped.pdf` : `${outFileNameBase}-p${currentPage}.cropped.pdf`;
+
+      let name = `${outFileNameBase}.cropped.pdf`;
+      if (scopeVal === 'current') name = `${outFileNameBase}-p${currentPage}.cropped.pdf`;
+      if (scopeVal === 'selected') name = `${outFileNameBase}-selected.cropped.pdf`;
+
+      a.download = name;
       a.click();
       setTimeout(()=>URL.revokeObjectURL(url),1500);
       prog.value=100; setTimeout(()=>prog.style.display='none',200);
