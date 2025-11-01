@@ -916,4 +916,13 @@ footer a.small:hover{ text-decoration:underline; }
 .stage-wrap { position: relative; }
 .overlay-crop { z-index: 2; }
 #stage { z-index: 1; }
+.stage-wrap{ position:relative; display:flex; justify-content:center; }
+.stage-inner{ position:relative; }            /* canvas + overlay ni exact frame */
+.stage-inner canvas{ display:block; }         /* extra gaps avoid */
+.overlay-crop{ position:absolute; inset:0;    /* top:0;left:0;right:0;bottom:0 */
+  pointer-events:auto; touch-action:none; }   /* touch scroll na le */
+.overlay-crop .rect, .overlay-crop .handle{ pointer-events:auto; }
+.crop-wrap .stage-wrap{ touch-action:none; }  /* safety */
+
+
 
