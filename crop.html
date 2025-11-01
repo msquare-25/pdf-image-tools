@@ -196,6 +196,7 @@
   let pdfDocJS=null, pageCount=0, currentPage=1, currentViewport=null;
   let pageRenderTask=null;
   let selection=null;
+  let selectionNorm=null; // {nx,ny,nw,nh} in [0..1]
   let activeDoc='original'; // 'original' | 'preview'
   let originalBytes=null, previewBytes=null;
   let outFileNameBase='cropped';
@@ -203,9 +204,12 @@
   const savedPctByPage = new Map();
   let lastTemplatePct = null;
 
-  // NEW: freeze overlay bounds per drag to avoid jump
+  // drag state
   let dragBounds = null;
+  const HANDLE_HIT = 12;
+  let dragMode = null, dragStart = null, lastPos = null, activeHandle = null, lockRatio = null;
 
+  /* ---------- Utils ---------- */
   function fmt(n){return new Intl.NumberFormat().format(n);}
   function setStatus(t){statusEl.textContent=t;}
   function enableControls(on){
@@ -216,6 +220,23 @@
 
   function bytesForActive(){ return (activeDoc==='preview' ? previewBytes : originalBytes)?.slice() || null; }
   async function getActiveJsDoc(){ const data=bytesForActive(); if(!data) throw new Error('No PDF loaded'); return await pdfjsLib.getDocument({data}).promise; }
+
+  function cssSize(){ const r=stageInner.getBoundingClientRect(); return {w:r.width,h:r.height}; }
+  function saveNormalizedFromSelection(){
+    if(!selection){ selectionNorm=null; return; }
+    const {w,h}=cssSize(); if(w<=0||h<=0) return;
+    selectionNorm={ nx:selection.x/w, ny:selection.y/h, nw:selection.w/w, nh:selection.h/h };
+  }
+  function rebuildSelectionFromNormalized(){
+    if(!selectionNorm) return;
+    const {w,h}=cssSize();
+    selection={
+      x: Math.round(selectionNorm.nx*w),
+      y: Math.round(selectionNorm.ny*h),
+      w: Math.max(1, Math.round(selectionNorm.nw*w)),
+      h: Math.max(1, Math.round(selectionNorm.nh*h))
+    };
+  }
 
   /* ---------- Upload / Reset ---------- */
   fileInput.addEventListener('change',async e=>{const f=e.target.files?.[0];if(f)await handleFile(f);});
@@ -235,14 +256,13 @@
     pdfDocJS=null; pageCount=0; currentPage=1; currentViewport=null;
     stage.width=stage.height=0; stageWrap.classList.remove('ready');
 
-    // overlay reset (no left/top reset needed)
     rectEl.style.display='none';
     dragBounds = null;
 
     thumbsEl.innerHTML='';
     metaEl.textContent='No file'; metaEl.title='';
     enableControls(false); setStatus('Idle…');
-    selection=null; prog.value=0;
+    selection=null; selectionNorm=null; prog.value=0;
     originalBytes=null; previewBytes=null; activeDoc='original'; backBtn.classList.remove('show');
     applyAllEl.checked=true;
     savedPctByPage.clear(); lastTemplatePct=null;
@@ -251,7 +271,7 @@
   async function handleFile(file){
     try{
       setStatus('Loading PDF…'); enableControls(false);
-      selection=null; rectEl.style.display='none'; cancelActiveRender();
+      selection=null; selectionNorm=null; rectEl.style.display='none'; cancelActiveRender();
 
       const cleanBase=(file.name||'document.pdf').replace(/\.pdf$/i,'');
       outFileNameBase=cleanBase;
@@ -283,10 +303,8 @@
   function syncOverlayToCanvas(){
     const cssW = Math.ceil(currentViewport?.width  || stage.width);
     const cssH = Math.ceil(currentViewport?.height || stage.height);
-    // canvas CSS size
     stage.style.width  = cssW + 'px';
     stage.style.height = cssH + 'px';
-    // wrapper CSS size (overlay fills via inset:0)
     stageInner.style.width  = cssW + 'px';
     stageInner.style.height = cssH + 'px';
   }
@@ -319,16 +337,18 @@
     // restore selection (original only)
     const cssW=parseFloat(stage.style.width)||stage.width, cssH=parseFloat(stage.style.height)||stage.height;
     if(activeDoc==='preview'){
-      selection=null; rectEl.style.display='none';
+      selection=null; selectionNorm=null; rectEl.style.display='none';
     }else{
       const savedPct=savedPctByPage.get(currentPage);
       if(savedPct){
         selection = { x:savedPct.x*cssW, y:savedPct.y*cssH, w:savedPct.w*cssW, h:savedPct.h*cssH };
+        saveNormalizedFromSelection();
       }else if(lastTemplatePct){
         const w=lastTemplatePct.w*cssW, h=lastTemplatePct.h*cssH;
         selection = { x:Math.max(0,(cssW-w)/2), y:Math.max(0,(cssH-h)/2), w, h };
+        saveNormalizedFromSelection();
       }else{
-        selection=null;
+        selection=null; selectionNorm=null;
       }
     }
     updateRectUI();
@@ -351,14 +371,10 @@
     }
   }
 
-  /* ---------- Selection (Overlay is the event target) ---------- */
-  const HANDLE_HIT = 12;
-  let dragMode = null, dragStart = null, lastPos = null, activeHandle = null, lockRatio = null;
-
-  // use the stable, borderless wrapper
+  /* ---------- Pointer math (stable wrapper, frozen bounds) ---------- */
   function hostRect() { return stageInner.getBoundingClientRect(); }
   function pointFromEvent(e){
-    const r = dragBounds || hostRect();               // freeze during drag
+    const r = dragBounds || hostRect();
     const x = Math.max(0, Math.min(r.width,  e.clientX - r.left));
     const y = Math.max(0, Math.min(r.height, e.clientY - r.top));
     return { x, y };
@@ -420,140 +436,97 @@
     return null;
   }
 
-  // Pointer interaction now lives on the stable wrapper (stageInner)
+  /* ---------- Pointer listeners on stable wrapper ---------- */
   stageInner.addEventListener('pointerdown', (e) => {
-    e.preventDefault();                      // stop touch scroll/jitter
+    e.preventDefault();
     if (!currentViewport) return;
 
     stageInner.setPointerCapture(e.pointerId);
-    dragBounds = hostRect();                 // freeze bounds for the whole drag
+    dragBounds = hostRect();
     const pt = pointFromEvent(e);
 
     if (selection) {
-      const onHandle = hitHandle(pt);       // uses current selection coords
+      const onHandle = hitHandle(pt);
       if (onHandle) {
-        dragMode = 'resize';
-        activeHandle = onHandle;
-        lastPos = pt;
-        lockRatio = (e.shiftKey ? (selection.w/selection.h || 1) : null);
+        dragMode = 'resize'; activeHandle = onHandle; lastPos = pt; lockRatio = (e.shiftKey ? (selection.w/selection.h || 1) : null);
       } else {
-        const inside = (
-          pt.x >= selection.x && pt.x <= selection.x + selection.w &&
-          pt.y >= selection.y && pt.y <= selection.y + selection.h
-        );
-        if (inside) {
-          dragMode = 'move';
-          lastPos = pt;
-        } else {
-          dragMode = 'draw';
-          dragStart = pt;
-          selection = { x: pt.x, y: pt.y, w: 0, h: 0 };
-          lockRatio = null;
-        }
+        const inside = (pt.x>=selection.x && pt.x<=selection.x+selection.w && pt.y>=selection.y && pt.y<=selection.y+selection.h);
+        if (inside) { dragMode='move'; lastPos=pt; }
+        else { dragMode='draw'; dragStart=pt; selection={x:pt.x,y:pt.y,w:0,h:0}; lockRatio=null; }
       }
     } else {
-      dragMode = 'draw';
-      dragStart = pt;
-      selection = { x: pt.x, y: pt.y, w: 0, h: 0 };
-      lockRatio = null;
+      dragMode='draw'; dragStart=pt; selection={x:pt.x,y:pt.y,w:0,h:0}; lockRatio=null;
     }
-
-    updateRectUI();
-  }, { passive: false });
+    updateRectUI(); saveNormalizedFromSelection();
+  }, { passive:false });
 
   stageInner.addEventListener('pointermove', (e) => {
     if (!dragMode) return;
-    e.preventDefault();                      // keep coordinates stable on touch
+    e.preventDefault();
     const pt = pointFromEvent(e);
 
     if (dragMode === 'draw') {
       const r = dragBounds || hostRect();
-      // clamp start and current inside stage bounds
       const x1 = Math.max(0, Math.min(r.width,  dragStart.x));
       const y1 = Math.max(0, Math.min(r.height, dragStart.y));
       const x2 = Math.max(0, Math.min(r.width,  pt.x));
       const y2 = Math.max(0, Math.min(r.height, pt.y));
-      // build a rectangle from two points (works in every direction)
       const x = Math.min(x1, x2);
       const y = Math.min(y1, y2);
       const w = Math.max(1, Math.abs(x2 - x1));
       const h = Math.max(1, Math.abs(y2 - y1));
       selection = { x, y, w, h };
-      updateRectUI();
+      updateRectUI(); saveNormalizedFromSelection();
       return;
     }
 
     if (dragMode === 'move') {
-      const dx = pt.x - lastPos.x;
-      const dy = pt.y - lastPos.y;
-      selection = normalizeSel({
-        x: selection.x + dx,
-        y: selection.y + dy,
-        w: selection.w,
-        h: selection.h
-      });
-      lastPos = pt;
-      updateRectUI();
+      const dx = pt.x - lastPos.x, dy = pt.y - lastPos.y;
+      selection = normalizeSel({ x:selection.x+dx, y:selection.y+dy, w:selection.w, h:selection.h });
+      lastPos = pt; updateRectUI(); saveNormalizedFromSelection();
       return;
     }
 
     if (dragMode === 'resize') {
       const r = dragBounds || hostRect();
-      let x1 = selection.x,
-          y1 = selection.y,
-          x2 = selection.x + selection.w,
-          y2 = selection.y + selection.h;
+      let x1=selection.x, y1=selection.y, x2=selection.x+selection.w, y2=selection.y+selection.h;
+      const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+      if(['nw','w','sw'].includes(activeHandle)) x1=clamp(pt.x,0,x2-1);
+      if(['ne','e','se'].includes(activeHandle)) x2=clamp(pt.x,x1+1,r.width);
+      if(['nw','n','ne'].includes(activeHandle)) y1=clamp(pt.y,0,y2-1);
+      if(['sw','s','se'].includes(activeHandle)) y2=clamp(pt.y,y1+1,r.height);
+      let next={x:x1,y:y1,w:x2-x1,h:y2-y1};
 
-      const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
-
-      if (['nw','w','sw'].includes(activeHandle)) x1 = clamp(pt.x, 0, x2 - 1);
-      if (['ne','e','se'].includes(activeHandle)) x2 = clamp(pt.x, x1 + 1, r.width);
-      if (['nw','n','ne'].includes(activeHandle)) y1 = clamp(pt.y, 0, y2 - 1);
-      if (['sw','s','se'].includes(activeHandle)) y2 = clamp(pt.y, y1 + 1, r.height);
-
-      let next = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
-
-      const keep = e.shiftKey || lockRatio;
-      const ratio = lockRatio || (selection.w / selection.h || 1);
-
-      if (keep) {
-        if (['n','s'].includes(activeHandle)) {
-          next.w = next.h * ratio;
-          if (activeHandle === 'n') next.x = x2 - next.w;
-        } else if (['e','w'].includes(activeHandle)) {
-          next.h = next.w / ratio;
-          if (activeHandle === 'w') next.y = y2 - next.h;
-        } else {
-          const w1 = next.w, h1 = w1 / ratio;
-          const h2 = next.h, w2 = h2 * ratio;
-          if (activeHandle === 'nw' || activeHandle === 'ne') {
-            if (h1 <= next.h) { next.h = h1; if (activeHandle === 'nw') next.y = y2 - next.h; }
-            else             { next.w = w2; if (activeHandle === 'ne') next.x = x2 - next.w; }
-          } else {
-            if (h1 <= next.h) next.h = h1; else next.w = w2;
+      const keep=e.shiftKey || lockRatio;
+      const ratio=lockRatio || (selection.w/selection.h || 1);
+      if(keep){
+        if(['n','s'].includes(activeHandle)){ next.w = next.h*ratio; if(activeHandle==='n') next.x=x2-next.w; }
+        else if(['e','w'].includes(activeHandle)){ next.h = next.w/ratio; if(activeHandle==='w') next.y = y2 - next.h; }
+        else{
+          const w1=next.w, h1=w1/ratio;
+          const h2=next.h, w2=h2*ratio;
+          if(activeHandle==='nw'||activeHandle==='ne'){
+            if(h1<=next.h){ next.h=h1; if(activeHandle==='nw') next.y=y2-next.h; }
+            else          { next.w=w2; if(activeHandle==='ne') next.x=x2-next.w; }
+          }else{
+            if(h1<=next.h){ next.h=h1; } else { next.w=w2; }
           }
         }
       }
-
-      selection = normalizeSel(next);
-      lastPos = pt;
-      updateRectUI();
+      selection=normalizeSel(next); lastPos=pt; updateRectUI(); saveNormalizedFromSelection();
     }
-  }, { passive: false });
+  }, { passive:false });
 
   stageInner.addEventListener('pointerup', () => {
     if (!dragMode) return;
-    dragMode = null;
-    activeHandle = null;
-    dragStart = null;
-    dragBounds = null;                        // release the frozen rect
+    dragMode=null; activeHandle=null; dragStart=null; dragBounds=null;
     persistSelection();
   });
 
   window.addEventListener('keydown', (e)=>{
     if(e.key==='Escape'){ e.preventDefault(); clearSelectionUI(); return; }
     if(!selection) return;
-    const r=dragBounds || overlayRect();
+    const r=stageInner.getBoundingClientRect();
     const move = e.shiftKey?10:1, resize = e.shiftKey?10:1;
     let handled=false;
     if(!e.ctrlKey){
@@ -567,11 +540,11 @@
       if(e.key==='ArrowDown'){  selection.h=Math.min(r.height-selection.y,selection.h+resize); handled=true; }
       if(e.key==='ArrowUp'){    selection.h=Math.max(1,selection.h-resize); handled=true; }
     }
-    if(handled){ e.preventDefault(); selection=normalizeSel(selection); updateRectUI(); persistSelection(); }
+    if(handled){ e.preventDefault(); selection=normalizeSel(selection); updateRectUI(); saveNormalizedFromSelection(); persistSelection(); }
   });
 
   function clearSelectionUI(){
-    selection=null; rectEl.style.display='none';
+    selection=null; selectionNorm=null; rectEl.style.display='none';
     clearBtn.disabled=true; applyBtn.disabled=true;
     savedPctByPage.delete(currentPage);
   }
@@ -601,10 +574,21 @@
     return await work.save({updateFieldAppearances:false});
   }
 
+  // Rebuild selection from normalized just-in-time (handles scroll/zoom/layout changes)
+  function rebuildJustInTime(){
+    syncOverlayToCanvas();
+    rebuildSelectionFromNormalized();
+    updateRectUI();
+  }
+
   applyBtn.addEventListener('click', async ()=>{
     try{
       if(activeDoc!=='original'){ alert('Already in preview. Use “Back to original” to reset.'); return; }
       if(!originalBytes){ alert('Please upload a PDF first.'); return; }
+      if(!selectionNorm){ setStatus('Draw a crop box first.'); return; }
+
+      rebuildJustInTime(); // << important
+
       if(!selection || selection.w<2 || selection.h<2){ setStatus('Draw a crop box first.'); return; }
       const sel={...selection};
       prog.style.display='block'; prog.value=5; setStatus('Building preview…');
@@ -615,7 +599,7 @@
 
       activeDoc='preview';
       lastTemplatePct=null;
-      selection=null; rectEl.style.display='none';
+      selection=null; selectionNorm=null; rectEl.style.display='none';
       clearBtn.disabled=true; applyBtn.disabled=true;
       backBtn.classList.add('show');
 
@@ -636,7 +620,10 @@
 
   downloadBtn.addEventListener('click', async ()=>{
     if(!originalBytes){ return; }
-    if(!selection){ alert('Draw a crop box first.'); return; }
+    if(!selectionNorm){ alert('Draw a crop box first.'); return; }
+
+    rebuildJustInTime(); // << important
+
     setStatus('Preparing download…'); prog.style.display='block'; prog.value=10;
     const finalBytes = await buildCroppedBytes(selection, applyAllEl.checked ? 'all' : 'current');
     prog.value=70;
@@ -649,6 +636,31 @@
     prog.value=100; setTimeout(()=>prog.style.display='none',200);
     setStatus('Done.');
   });
+
+  /* ---------- Defensive: keep UI in sync on resize/scroll/orientation ---------- */
+  const ro = new ResizeObserver(() => {
+    if (!currentViewport) return;
+    syncOverlayToCanvas();
+    rebuildSelectionFromNormalized();
+    updateRectUI();
+  });
+  ro.observe(stageInner);
+
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+      if (!currentViewport) return;
+      syncOverlayToCanvas();
+      rebuildSelectionFromNormalized();
+      updateRectUI();
+    }, 60);
+  }, { passive: true });
+
+  document.addEventListener('scroll', () => {
+    if (!currentViewport) return;
+    syncOverlayToCanvas();
+    rebuildSelectionFromNormalized();
+    updateRectUI();
+  }, { passive: true, capture: true });
 
   // init
   resetDocState();
