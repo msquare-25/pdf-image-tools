@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/style.css" />
   <meta name="color-scheme" content="light dark" />
 
-  <!-- Page-local polish: keeps layout consistent with Compress -->
+  <!-- Page-local polish: same layout as Compress -->
   <style>
     .crop-wrap .panel .grid-crop{
       display:grid;grid-template-columns:320px 1fr 320px;gap:20px;align-items:start
@@ -20,12 +20,19 @@
     .thumbs.small .thumb{border:1px solid var(--border);border-radius:10px;padding:6px;box-shadow:var(--shadow-sm);cursor:pointer;background:var(--surface-1)}
     .thumbs.small .thumb.active{outline:2px solid var(--brand-1)}
 
-    .stage-wrap{position:relative;display:block;margin:8px auto 0;max-width:100%}
-    .stage-wrap canvas{display:none;max-width:100%;height:auto;border-radius:12px;background:var(--surface-2);outline:2px solid rgba(0,0,0,.10);box-shadow:var(--shadow-sm)}
+    /* stage + overlay wrapper (we rely on inset:0 for perfect lock) */
+    .stage-wrap{ position:relative; display:flex; justify-content:center; }
+    .stage-inner{ position:relative; }
+    .stage-inner canvas{ display:block; }
+
+    .stage-wrap canvas{max-width:100%;height:auto;border-radius:12px;background:var(--surface-2);outline:2px solid rgba(0,0,0,.10);box-shadow:var(--shadow-sm)}
     .stage-wrap.ready canvas{display:block}
 
-    /* Overlay: we align this to the canvas in JS, and handle ALL pointer events here */
-    .overlay-crop{position:absolute;border-radius:12px;pointer-events:auto}
+    /* Overlay absolutely over the canvas; all pointer events handled here */
+    .overlay-crop{
+      position:absolute; inset:0; border-radius:12px;
+      pointer-events:auto; touch-action:none; z-index:2;
+    }
     .overlay-crop .rect{
       position:absolute;border:2px dashed rgba(124,58,237,.9);
       background:rgba(124,58,237,.08);border-radius:10px;display:none;
@@ -43,8 +50,8 @@
     .controls-box{padding:16px}
     .controls-box .settings-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
 
-    /* Touch must not be hijacked by page scrolling while drawing */
-    .crop-wrap .stage-wrap{touch-action:none}
+    /* touch scroll should not hijack drawing */
+    .crop-wrap .stage-wrap{ touch-action:none; }
 
     @media (max-width:1024px){
       .crop-wrap .panel .grid-crop{grid-template-columns:1fr}
@@ -103,23 +110,24 @@
         <progress id="prog" max="100" value="0" class="w-100"></progress>
         <div id="status" class="small">Idle…</div>
 
-<div class="stage-wrap mt-2" id="stageWrap" tabindex="0" aria-label="Page preview">
-  <div id="stageInner" class="stage-inner">
-    <canvas id="stage" width="0" height="0"></canvas>
-    <div class="overlay-crop" id="overlay" aria-hidden="true">
-      <div class="rect" id="rect">
-        <div class="handle nw" data-h="nw"></div>
-        <div class="handle ne" data-h="ne"></div>
-        <div class="handle sw" data-h="sw"></div>
-        <div class="handle se" data-h="se"></div>
-        <div class="handle n"  data-h="n"></div>
-        <div class="handle s"  data-h="s"></div>
-        <div class="handle w"  data-h="w"></div>
-        <div class="handle e"  data-h="e"></div>
-      </div>
-    </div>
-  </div>
-</div>
+        <div class="stage-wrap mt-2" id="stageWrap" tabindex="0" aria-label="Page preview">
+          <div id="stageInner" class="stage-inner">
+            <canvas id="stage" width="0" height="0"></canvas>
+            <!-- Overlay absolutely aligned to canvas via inset:0 -->
+            <div class="overlay-crop" id="overlay" aria-hidden="true">
+              <div class="rect" id="rect">
+                <div class="handle nw" data-h="nw"></div>
+                <div class="handle ne" data-h="ne"></div>
+                <div class="handle sw" data-h="sw"></div>
+                <div class="handle se" data-h="se"></div>
+                <div class="handle n"  data-h="n"></div>
+                <div class="handle s"  data-h="s"></div>
+                <div class="handle w"  data-h="w"></div>
+                <div class="handle e"  data-h="e"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- Crop controls (box 3) -->
@@ -182,6 +190,7 @@
   const stage=$('#stage'), stageWrap=$('#stageWrap'), overlay=$('#overlay'), rectEl=$('#rect'), thumbsEl=$('#thumbs');
   const applyAllEl=$('#applyAll'), clearBtn=$('#clearCrop'), applyBtn=$('#applyCrop'), backBtn=$('#backOriginal'), downloadBtn=$('#downloadBtn');
   const prog=$('#prog'), statusEl=$('#status');
+  const stageInner = document.getElementById('stageInner');
 
   // state
   let pdfDocJS=null, pageCount=0, currentPage=1, currentViewport=null;
@@ -223,8 +232,7 @@
     pdfDocJS=null; pageCount=0; currentPage=1; currentViewport=null;
     stage.width=stage.height=0; stageWrap.classList.remove('ready');
 
-    // overlay reset
-    overlay.style.display='none'; overlay.style.left=overlay.style.top='0px'; overlay.style.width=overlay.style.height='0px';
+    // overlay reset: (CHANGED) don't reset left/top/size; wrapper + inset:0 handles it
     rectEl.style.display='none';
 
     thumbsEl.innerHTML='';
@@ -268,17 +276,14 @@
     return Math.min(targetW/v1.width, targetH/v1.height);
   }
 
+  // (CHANGED) simplified: no overlay left/top — wrapper + inset:0 does the job
   function syncOverlayToCanvas(){
-    // make overlay box exactly track canvas CSS box
-    const r = stage.getBoundingClientRect();
-    const left = stage.offsetLeft; // relative to stageWrap
-    const top  = stage.offsetTop;
-
-    overlay.style.display='block';
-    overlay.style.left = left + 'px';
-    overlay.style.top  = top  + 'px';
-    overlay.style.width  = (parseFloat(stage.style.width)  || r.width)  + 'px';
-    overlay.style.height = (parseFloat(stage.style.height) || r.height) + 'px';
+    const cssW = Math.ceil(currentViewport?.width  || stage.width);
+    const cssH = Math.ceil(currentViewport?.height || stage.height);
+    stage.style.width  = cssW + 'px';
+    stage.style.height = cssH + 'px';
+    stageInner.style.width  = cssW + 'px';
+    stageInner.style.height = cssH + 'px';
   }
 
   async function setPage(n, providedDoc=null){
@@ -294,8 +299,6 @@
     const dpr=Math.max(1,window.devicePixelRatio||1);
     stage.width=Math.ceil(currentViewport.width*dpr);
     stage.height=Math.ceil(currentViewport.height*dpr);
-    stage.style.width=Math.ceil(currentViewport.width)+'px';
-    stage.style.height=Math.ceil(currentViewport.height)+'px';
 
     const ctx=stage.getContext('2d');
     ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -306,7 +309,7 @@
     try{await pageRenderTask.promise;}catch(e){if(e?.name!=='RenderingCancelledException')throw e;}finally{pageRenderTask=null;}
     stageWrap.classList.add('ready'); page.cleanup();
 
-    // sync overlay to canvas position/size
+    // keep overlay locked
     syncOverlayToCanvas();
 
     // restore selection (original only)
@@ -349,14 +352,12 @@
   let dragMode = null, dragStart = null, lastPos = null, activeHandle = null, lockRatio = null;
 
   function overlayRect(){ return overlay.getBoundingClientRect(); }
-
   function pointFromEvent(e){
     const r = overlayRect();
     const x = Math.max(0, Math.min(r.width,  e.clientX - r.left));
     const y = Math.max(0, Math.min(r.height, e.clientY - r.top));
     return { x, y };
   }
-
   function normalizeSel(sel){
     let {x,y,w,h}=sel;
     if(w<0){x+=w; w=-w;} if(h<0){y+=h; h=-h;}
@@ -367,7 +368,6 @@
     h=Math.max(1,Math.min(h,r.height- y));
     return {x,y,w,h};
   }
-
   function placeHandles(sel){
     const pos = {
       nw:[0,0], ne:[sel.w,0], sw:[0,sel.h], se:[sel.w,sel.h],
@@ -378,7 +378,6 @@
       h.style.left=(hx-6)+'px'; h.style.top=(hy-6)+'px';
     });
   }
-
   function updateRectUI(){
     if(!selection){ rectEl.style.display='none'; clearBtn.disabled=true; applyBtn.disabled=true; return; }
     rectEl.style.display='block';
@@ -389,7 +388,6 @@
     placeHandles(selection);
     const ok = selection.w>=2 && selection.h>=2; clearBtn.disabled=!ok; applyBtn.disabled=!ok;
   }
-
   function persistSelection(){
     if(!selection || activeDoc==='preview') return;
     const cssW = parseFloat(stage.style.width)||stage.width;
@@ -398,7 +396,6 @@
     savedPctByPage.set(currentPage, pct);
     lastTemplatePct = { w:pct.w, h:pct.h };
   }
-
   function hitHandle(pt){
     if(!selection) return null;
     const k = {
@@ -414,11 +411,13 @@
     return null;
   }
 
-  // POINTER EVENTS ON OVERLAY (not on stage/canvas)
+  // (CHANGED) preventDefault on pointerdown; events on overlay
   overlay.addEventListener('pointerdown', (e)=>{
+    e.preventDefault();
     if(!currentViewport) return;
 
-    syncOverlayToCanvas(); // ensure perfect alignment at start
+    syncOverlayToCanvas(); // keep overlay + canvas perfectly aligned
+
     const r = overlayRect();
     if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
 
@@ -547,7 +546,8 @@
       const sel={...selection};
       prog.style.display='block'; prog.value=5; setStatus('Building preview…');
 
-      previewBytes = await buildCroppedBytes(sel, applyAllEl.checked ? 'all' : 'current');
+      const scope = applyAllEl.checked ? 'all' : 'current';
+      previewBytes = await buildCroppedBytes(sel, scope);
       prog.value=60;
 
       activeDoc='preview';
