@@ -468,12 +468,22 @@ stageInner.addEventListener('pointermove', (e) => {
   const pt = pointFromEvent(e);
 
   if (dragMode === 'draw') {
-    selection.w = pt.x - dragStart.x;
-    selection.h = pt.y - dragStart.y;
-    selection = normalizeSel(selection);
-    updateRectUI();
-    return;
-  }
+  const r = dragBounds || hostRect();
+  // clamp start and current inside stage bounds
+  const x1 = Math.max(0, Math.min(r.width,  dragStart.x));
+  const y1 = Math.max(0, Math.min(r.height, dragStart.y));
+  const x2 = Math.max(0, Math.min(r.width,  pt.x));
+  const y2 = Math.max(0, Math.min(r.height, pt.y));
+  // build a rectangle from two points (works in every direction)
+  const x = Math.min(x1, x2);
+  const y = Math.min(y1, y2);
+  const w = Math.max(1, Math.abs(x2 - x1));
+  const h = Math.max(1, Math.abs(y2 - y1));
+  selection = { x, y, w, h };
+  updateRectUI();
+  return;
+}
+
 
   if (dragMode === 'move') {
     const dx = pt.x - lastPos.x;
