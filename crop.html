@@ -48,6 +48,10 @@
 
     .crop-wrap .stage-wrap{ touch-action:none; }
 
+    /* Back to original is hidden until preview turns it on */
+    #backOriginal { display: none; }
+    #backOriginal.show { display: inline-flex; }
+
     @media (max-width:1024px){
       .crop-wrap .panel .grid-crop{grid-template-columns:1fr}
       .thumbs.small{flex-direction:row;flex-wrap:wrap;max-height:none}
@@ -144,11 +148,13 @@
         </details>
 
         <div class="settings-actions">
-          <button id="clearCrop" class="btn ghost" disabled>Clear selection (Esc)</button>
+          <!-- Hidden by default; touch par JS thi show karishu -->
+          <button id="clearCrop" class="btn ghost" disabled hidden>Clear selection (Esc)</button>
           <button id="applyCrop" class="btn" disabled>Preview crop</button>
           <button id="backOriginal" class="btn subtle back-link" title="Back to original">Back to original</button>
           <button id="downloadBtn" class="btn" disabled>Crop &amp; Download</button>
         </div>
+
       </section>
     </div>
   </aside>
@@ -184,6 +190,26 @@
   const applyAllEl=$('#applyAll'), clearBtn=$('#clearCrop'), applyBtn=$('#applyCrop'), backBtn=$('#backOriginal'), downloadBtn=$('#downloadBtn');
   const prog=$('#prog'), statusEl=$('#status');
   const stageInner = document.getElementById('stageInner');
+
+  /* --- Touch detection → show Clear on touch only & click handler --- */
+  const isTouch =
+    (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
+    ('ontouchstart' in window) ||
+    (navigator.maxTouchPoints > 0);
+
+  if (clearBtn) {
+    if (isTouch) {
+      clearBtn.hidden = false;                    // phones/tablets: visible
+      clearBtn.textContent = 'Clear selection';
+    } else {
+      clearBtn.hidden = true;                     // desktop: Esc is enough
+    }
+    clearBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      clearSelectionUI();                         // same behavior as Esc
+    });
+  }
+  /* ----------------------------------------------------------------- */
 
   // state
   let pdfDocJS=null, pageCount=0, currentPage=1, currentViewport=null;
