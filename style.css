@@ -984,3 +984,10 @@ footer a.small:hover{ text-decoration:underline; }
 @media (max-width: 480px){
   .action-box { scroll-margin-top: 64px; }   /* slightly shorter header on phones */
 }
+
+/* Crop-only: toggle + hide page list */
+.crop-page #showPagesWrap{
+  display:inline-flex; align-items:center; gap:6px; margin:8px 0 0;
+}
+.crop-page #showPagesWrap input{ transform: translateY(1px); }
+.crop-page .upload-box.hide-pages #thumbs{ display:none; }
