@@ -299,6 +299,23 @@ const settingsCard = document.querySelector('.action-box');
       outFileNameBase=cleanBase;
       metaEl.textContent = `${file.name} • loading…`; metaEl.title=metaEl.textContent;
 
+      // Mobile: jump to Settings card immediately (while loading)
+if (settingsCard) {
+  const prefersNoMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  const scrollOpts = prefersNoMotion
+    ? { behavior: 'auto',   block: 'start', inline: 'nearest' }
+    : { behavior: 'smooth', block: 'start', inline: 'nearest' };
+
+  if (isTouch || window.innerWidth < 768) {
+    // wait a frame so the "loading…" text paints, then scroll
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        settingsCard.scrollIntoView(scrollOpts);
+      });
+    });
+  }
+}
+
       originalBytes = new Uint8Array(await file.arrayBuffer());
       previewBytes = null; activeDoc='original';
 
