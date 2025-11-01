@@ -52,21 +52,6 @@
     #backOriginal { display: none; }
     #backOriginal.show { display: inline-flex; }
 
-    /* ==== Loading banner (spinner + progress) ==== */
-    .banner{
-      display:flex; align-items:center; gap:12px;
-      padding:10px 12px; border-radius:10px; background:var(--surface-2);
-      box-shadow:var(--shadow-sm); margin:10px 0 0;
-    }
-    .banner .spinner{
-      width:18px; height:18px; border-radius:50%;
-      border:3px solid rgba(0,0,0,.15); border-top-color: var(--brand-1);
-      animation: spin 1s linear infinite;
-    }
-    .banner .btext{ display:flex; flex-direction:column; gap:6px; }
-    .banner progress{ width:180px; height:8px; }
-    @keyframes spin{ to { transform: rotate(360deg); } }
-
     @media (max-width:1024px){
       .crop-wrap .panel .grid-crop{grid-template-columns:1fr}
       .thumbs.small{flex-direction:row;flex-wrap:wrap;max-height:none}
@@ -121,16 +106,6 @@
       <!-- Settings (box 2, canvas + overlay) -->
       <section class="panel card box action-box theme-center" aria-label="Settings">
         <h2 class="title">Settings</h2>
-
-        <!-- NEW: Loading banner -->
-        <div id="loadingBanner" class="banner" hidden>
-          <div class="spinner" aria-hidden="true"></div>
-          <div class="btext">
-            <span>Loading pages… <b id="pgNow">0</b>/<b id="pgTotal">0</b></span>
-            <progress id="pgProg" max="100" value="0"></progress>
-          </div>
-        </div>
-
         <progress id="prog" max="100" value="0" class="w-100"></progress>
         <div id="status" class="small">Idle…</div>
 
@@ -215,13 +190,6 @@
   const applyAllEl=$('#applyAll'), clearBtn=$('#clearCrop'), applyBtn=$('#applyCrop'), backBtn=$('#backOriginal'), downloadBtn=$('#downloadBtn');
   const prog=$('#prog'), statusEl=$('#status');
   const stageInner = document.getElementById('stageInner');
-  const settingsCard = document.querySelector('.action-box');
-
-  /* Loading banner refs */
-  const loadingBanner = document.getElementById('loadingBanner');
-  const pgNow = document.getElementById('pgNow');
-  const pgTotal = document.getElementById('pgTotal');
-  const pgProg = document.getElementById('pgProg');
 
   /* --- Touch detection → show Clear on touch only & click handler --- */
   const isTouch =
@@ -318,14 +286,12 @@
     originalBytes=null; previewBytes=null; activeDoc='original'; backBtn.classList.remove('show');
     applyAllEl.checked=true; lastPreviewScope='current';
     savedPctByPage.clear(); lastTemplatePct=null;
-
-    // hide banner just in case
-    loadingBanner.hidden = true;
   }
 
   async function handleFile(file){
     try{
-      setStatus('Loading PDF…'); enableControls(false);
+      // (changed) we’ll drive the status from rebuildThumbs with a per-page counter
+      setStatus('Loading pages… 0 / 0'); enableControls(false);
       selection=null; selectionNorm=null; rectEl.style.display='none'; cancelActiveRender();
 
       const cleanBase=(file.name||'document.pdf').replace(/\.pdf$/i,'');
@@ -340,24 +306,17 @@
       metaEl.textContent = `${file.name} • ${fmt(pageCount)} pages`;
       metaEl.title = metaEl.textContent;
 
-      // show banner & totals while thumbnails build
-      pgTotal.textContent = pageCount;
-      pgNow.textContent = 0;
-      pgProg.value = 0;
-      loadingBanner.hidden = false;
+      // show total & reset progress bar
+      prog.style.display='block'; prog.value=0;
+      setStatus(`Loading pages… 0 / ${fmt(pageCount)}`);
 
-      await rebuildThumbs(doc);          // updates banner counts
+      await rebuildThumbs(doc);              // will update status each page
       await setPage(1, doc);
 
-      // hide banner after everything ready
-      loadingBanner.hidden = true;
-
-      enableControls(true); setStatus('Ready.');
-
-      // jump to Settings (center card)
-      settingsCard.scrollIntoView({ behavior:'smooth', block:'start' });
-
-    }catch(err){ console.error(err); alert('PDF load failed: '+(err?.message||err)); setStatus('Error loading PDF.'); loadingBanner.hidden=true; }
+      enableControls(true);
+      setStatus('Ready.');
+      prog.style.display='none';
+    }catch(err){ console.error(err); alert('PDF load failed: '+(err?.message||err)); setStatus('Error loading PDF.'); prog.style.display='none'; }
   }
 
   /* ---------- Render / Thumbs ---------- */
@@ -428,35 +387,35 @@
   window.addEventListener('resize',()=>{ if(bytesForActive()) setPage(currentPage); });
 
   async function rebuildThumbs(providedDoc=null){
-    const doc=providedDoc||await getActiveJsDoc();
+    const doc=providedDoc||await getActiveJsDoc(); 
     const pages=doc.numPages;
     thumbsEl.innerHTML='';
-    // show banner if not already
-    loadingBanner.hidden = false;
-    pgTotal.textContent = pages;
-    pgNow.textContent = 0;
-    pgProg.value = 0;
 
+    // update total (already set once) and drive status/progress per page
     for(let i=1;i<=pages;i++){
-      const p=await doc.getPage(i);
+      const p=await doc.getPage(i); 
       const v=p.getViewport({scale:.22});
-      const c=document.createElement('canvas');
-      const ctx=c.getContext('2d');
+      const c=document.createElement('canvas'); 
+      const ctx=c.getContext('2d'); 
       c.width=v.width; c.height=v.height;
-      await p.render({canvasContext:ctx,viewport:v}).promise; p.cleanup();
 
-      const holder=document.createElement('div');
-      holder.className='thumb'; if(i===currentPage) holder.classList.add('active');
-      holder.appendChild(c); holder.title='Page '+i;
-      holder.addEventListener('click',()=>setPage(i));
+      await p.render({canvasContext:ctx,viewport:v}).promise; 
+      p.cleanup();
+
+      const holder=document.createElement('div'); 
+      holder.className='thumb'; 
+      if(i===currentPage) holder.classList.add('active');
+      holder.appendChild(c); 
+      holder.title='Page '+i; 
+      holder.addEventListener('click',()=>setPage(i)); 
       thumbsEl.appendChild(holder);
 
-      // update banner progress
-      pgNow.textContent = i;
-      pgProg.value = Math.round((i/pages)*100);
+      // NEW: live status + progress
+      setStatus(`Loading pages… ${fmt(i)} / ${fmt(pages)}`);
+      if (pages > 0) { prog.value = Math.round((i/pages)*100); }
 
-      // allow UI to breathe for very large files
-      if (i % 8 === 0) { await new Promise(r=>requestAnimationFrame(r)); }
+      // let UI breathe on big docs
+      if (i % 8 === 0) await new Promise(r=>requestAnimationFrame(r));
     }
   }
 
@@ -669,7 +628,7 @@
     updateRectUI();
   }
 
-  // PREVIEW → keep previewBytes and enable Download
+  // PREVIEW
   applyBtn.addEventListener('click', async ()=>{
     try{
       if(activeDoc!=='original'){ alert('Already in preview. Use “Back to original” to reset.'); return; }
@@ -689,12 +648,10 @@
       activeDoc='preview';
       lastTemplatePct=null;
 
-      // Clear the visual selection but keep previewBytes for download
       selection=null; selectionNorm=null; rectEl.style.display='none';
       clearBtn.disabled=true; applyBtn.disabled=true;
       backBtn.classList.add('show');
 
-      // Enable download immediately after preview
       downloadBtn.disabled = false;
 
       await rebuildThumbs(); prog.value=90;
@@ -712,14 +669,11 @@
     setStatus('Back to original');
   });
 
-  // DOWNLOAD supports both modes:
-  // - original mode: builds from current selection
-  // - preview mode: downloads previewBytes directly (exactly what user saw)
+  // DOWNLOAD (preview or fresh)
   downloadBtn.addEventListener('click', async ()=>{
     try{
       if(!originalBytes) return;
 
-      // If in preview and we have previewBytes, download them directly
       if(activeDoc==='preview' && previewBytes){
         const blob=new Blob([previewBytes],{type:'application/pdf'});
         const url=URL.createObjectURL(blob);
@@ -733,7 +687,6 @@
         return;
       }
 
-      // Otherwise (original mode), build fresh from the current selection
       if(!selectionNorm){ alert('Draw a crop box first.'); return; }
       rebuildJustInTime();
       if(!selection || selection.w<2 || selection.h<2){ alert('Draw a crop box first.'); return; }
