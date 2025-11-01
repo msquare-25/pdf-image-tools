@@ -913,13 +913,17 @@ footer a.small:hover{ text-decoration:underline; }
 /* 1) disable native touch panning while drawing */
 .crop-wrap .stage-wrap { touch-action: none; }
 
-/* 2) canvas wrapper alignment */
-.stage-wrap { position: relative; display: flex; justify-content: center; }
-.stage-inner { position: relative; }      /* exact frame for canvas + overlay */
-.stage-inner canvas { display: block; }   /* avoid extra gaps */
+/* 2) canvas wrapper alignment — scoped to crop page only */
+.crop-wrap .stage-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.crop-wrap .stage-inner { position: relative; }      /* exact frame for canvas + overlay */
+.crop-wrap .stage-inner canvas { display: block; }   /* avoid extra gaps */
 
-/* 3) overlay sits exactly over canvas and receives events */
-.overlay-crop {
+/* 3) overlay sits exactly over canvas and receives events — crop only */
+.crop-wrap .overlay-crop {
   position: absolute;
   inset: 0;                   /* top:0; right:0; bottom:0; left:0 */
   pointer-events: auto;
@@ -927,9 +931,10 @@ footer a.small:hover{ text-decoration:underline; }
   z-index: 2;
 }
 
-/* 4) only the rectangle + handles are draggable/resizable */
-.overlay-crop .rect,
-.overlay-crop .handle { pointer-events: auto; }
+/* 4) only the rectangle + handles are draggable/resizable — crop only */
+.crop-wrap .overlay-crop .rect,
+.crop-wrap .overlay-crop .handle { pointer-events: auto; }
+
 
 /* (optional) if you really want canvas below with z-index, make it positioned
 #stage { position: relative; z-index: 1; }  */
