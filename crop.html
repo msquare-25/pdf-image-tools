@@ -313,6 +313,10 @@ const settingsCard = document.querySelector('.action-box');
 
       await rebuildThumbs(doc);              // will update status each page
       await setPage(1, doc);
+if (isTouch && settingsCard) {
+  // slight delay helps on slower phones so layout is ready
+  setTimeout(() => settingsCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+}
 
       enableControls(true);
       setStatus('Ready.');
