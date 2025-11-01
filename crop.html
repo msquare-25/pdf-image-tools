@@ -313,10 +313,24 @@ const settingsCard = document.querySelector('.action-box');
 
       await rebuildThumbs(doc);              // will update status each page
       await setPage(1, doc);
-if (isTouch && settingsCard) {
-  // slight delay helps on slower phones so layout is ready
-  setTimeout(() => settingsCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+// Smoothly jump to the Settings/Crop card on mobile (or tiny screens)
+if (settingsCard) {
+  const prefersNoMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  const scrollOpts = prefersNoMotion
+    ? { behavior: 'auto',   block: 'start', inline: 'nearest' }
+    : { behavior: 'smooth', block: 'start', inline: 'nearest' };
+
+  // Touch devices OR very small screens
+  if (isTouch || window.innerWidth < 768) {
+    // Let layout fully settle before scrolling (avoids jumping while thumbs render)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTimeout(() => settingsCard.scrollIntoView(scrollOpts), 120);
+      });
+    });
+  }
 }
+
 
       enableControls(true);
       setStatus('Ready.');
