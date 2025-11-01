@@ -935,3 +935,42 @@ footer a.small:hover{ text-decoration:underline; }
 #stage { position: relative; z-index: 1; }  */
 
 
+/* ======= CROP PAGE: hard reset for drawing surface ======= */
+.crop-page .stage-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 0;
+  border: 0;
+}
+
+.crop-page .stage-inner {
+  position: relative;         /* canvas + overlay frame */
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  box-sizing: content-box !important;
+  background: transparent;
+  transform: none !important; /* kill any inherited transform */
+}
+
+.crop-page #stage {
+  display: block;
+  margin: 0;
+  border: 0;
+}
+
+.crop-page .overlay-crop {
+  position: absolute;
+  inset: 0;                   /* top:0 right:0 bottom:0 left:0 */
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 2;
+}
+
+.crop-page .overlay-crop .rect,
+.crop-page .overlay-crop .handle {
+  pointer-events: auto;
+}
+
