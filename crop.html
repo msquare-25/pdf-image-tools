@@ -20,7 +20,7 @@
     .thumbs.small .thumb{border:1px solid var(--border);border-radius:10px;padding:6px;box-shadow:var(--shadow-sm);cursor:pointer;background:var(--surface-1)}
     .thumbs.small .thumb.active{outline:2px solid var(--brand-1)}
 
-    /* stage + overlay wrapper (we rely on inset:0 for perfect lock) */
+    /* stage + overlay wrapper (inset:0 lock) */
     .stage-wrap{ position:relative; display:flex; justify-content:center; }
     .stage-inner{ position:relative; }
     .stage-inner canvas{ display:block; }
@@ -203,6 +203,9 @@
   const savedPctByPage = new Map();
   let lastTemplatePct = null;
 
+  // NEW: freeze overlay bounds per drag to avoid jump
+  let dragBounds = null;
+
   function fmt(n){return new Intl.NumberFormat().format(n);}
   function setStatus(t){statusEl.textContent=t;}
   function enableControls(on){
@@ -232,8 +235,9 @@
     pdfDocJS=null; pageCount=0; currentPage=1; currentViewport=null;
     stage.width=stage.height=0; stageWrap.classList.remove('ready');
 
-    // overlay reset: (CHANGED) don't reset left/top/size; wrapper + inset:0 handles it
+    // overlay reset (no left/top reset needed)
     rectEl.style.display='none';
+    dragBounds = null;
 
     thumbsEl.innerHTML='';
     metaEl.textContent='No file'; metaEl.title='';
@@ -276,7 +280,6 @@
     return Math.min(targetW/v1.width, targetH/v1.height);
   }
 
-  // (CHANGED) simplified: no overlay left/top — wrapper + inset:0 does the job
   function syncOverlayToCanvas(){
     const cssW = Math.ceil(currentViewport?.width  || stage.width);
     const cssH = Math.ceil(currentViewport?.height || stage.height);
@@ -309,7 +312,6 @@
     try{await pageRenderTask.promise;}catch(e){if(e?.name!=='RenderingCancelledException')throw e;}finally{pageRenderTask=null;}
     stageWrap.classList.add('ready'); page.cleanup();
 
-    // keep overlay locked
     syncOverlayToCanvas();
 
     // restore selection (original only)
@@ -353,7 +355,8 @@
 
   function overlayRect(){ return overlay.getBoundingClientRect(); }
   function pointFromEvent(e){
-    const r = overlayRect();
+    // Use frozen bounds during an active drag to avoid any layout/scroll drift.
+    const r = dragBounds || overlayRect();
     const x = Math.max(0, Math.min(r.width,  e.clientX - r.left));
     const y = Math.max(0, Math.min(r.height, e.clientY - r.top));
     return { x, y };
@@ -361,7 +364,7 @@
   function normalizeSel(sel){
     let {x,y,w,h}=sel;
     if(w<0){x+=w; w=-w;} if(h<0){y+=h; h=-h;}
-    const r = overlayRect();
+    const r = dragBounds || overlayRect();
     x=Math.max(0,Math.min(x,r.width - w));
     y=Math.max(0,Math.min(y,r.height- h));
     w=Math.max(1,Math.min(w,r.width - x));
@@ -411,15 +414,13 @@
     return null;
   }
 
-  // (CHANGED) preventDefault on pointerdown; events on overlay
+  // pointer events on overlay
   overlay.addEventListener('pointerdown', (e)=>{
     e.preventDefault();
     if(!currentViewport) return;
 
-    syncOverlayToCanvas(); // keep overlay + canvas perfectly aligned
-
-    const r = overlayRect();
-    if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+    syncOverlayToCanvas();
+    dragBounds = overlay.getBoundingClientRect();   // <-- FREEZE BOUNDS
 
     overlay.setPointerCapture(e.pointerId);
     const pt = pointFromEvent(e);
@@ -453,7 +454,7 @@
       lastPos=pt; updateRectUI(); return;
     }
     if(dragMode==='resize'){
-      const r = overlayRect();
+      const r = dragBounds || overlayRect();
       let x1=selection.x, y1=selection.y, x2=selection.x+selection.w, y2=selection.y+selection.h;
       const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
       if(['nw','w','sw'].includes(activeHandle)) x1=clamp(pt.x,0,x2-1);
@@ -484,13 +485,15 @@
 
   overlay.addEventListener('pointerup', ()=>{
     if(!dragMode) return;
-    dragMode=null; activeHandle=null; dragStart=null; persistSelection();
+    dragMode=null; activeHandle=null; dragStart=null;
+    dragBounds=null;                                // <-- CLEAR SNAPSHOT
+    persistSelection();
   });
 
   window.addEventListener('keydown', (e)=>{
     if(e.key==='Escape'){ e.preventDefault(); clearSelectionUI(); return; }
     if(!selection) return;
-    const r=overlayRect();
+    const r=dragBounds || overlayRect();
     const move = e.shiftKey?10:1, resize = e.shiftKey?10:1;
     let handled=false;
     if(!e.ctrlKey){
