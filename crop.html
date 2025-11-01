@@ -280,17 +280,16 @@
     return Math.min(targetW/v1.width, targetH/v1.height);
   }
 
-function syncOverlayToCanvas(){
-  const cssW = Math.ceil(currentViewport?.width  || stage.width);
-  const cssH = Math.ceil(currentViewport?.height || stage.height);
-  // canvas CSS size
-  stage.style.width  = cssW + 'px';
-  stage.style.height = cssH + 'px';
-  // wrapper CSS size (overlay fills via inset:0)
-  stageInner.style.width  = cssW + 'px';
-  stageInner.style.height = cssH + 'px';
-}
-
+  function syncOverlayToCanvas(){
+    const cssW = Math.ceil(currentViewport?.width  || stage.width);
+    const cssH = Math.ceil(currentViewport?.height || stage.height);
+    // canvas CSS size
+    stage.style.width  = cssW + 'px';
+    stage.style.height = cssH + 'px';
+    // wrapper CSS size (overlay fills via inset:0)
+    stageInner.style.width  = cssW + 'px';
+    stageInner.style.height = cssH + 'px';
+  }
 
   async function setPage(n, providedDoc=null){
     currentPage=n;
@@ -356,27 +355,27 @@ function syncOverlayToCanvas(){
   const HANDLE_HIT = 12;
   let dragMode = null, dragStart = null, lastPos = null, activeHandle = null, lockRatio = null;
 
-// use the stable, borderless wrapper
-function hostRect() { return stageInner.getBoundingClientRect(); }
-function pointFromEvent(e){
-  const r = dragBounds || hostRect();               // freeze during drag
-  const x = Math.max(0, Math.min(r.width,  e.clientX - r.left));
-  const y = Math.max(0, Math.min(r.height, e.clientY - r.top));
-  return { x, y };
-}
-function normalizeSel(sel){
-  let {x,y,w,h}=sel;
-  if (w < 0) { x += w; w = -w; }
-  if (h < 0) { y += h; h = -h; }
-  const r = dragBounds || hostRect();
-  if (x < 0)            { w += x; x = 0; }
-  if (y < 0)            { h += y; y = 0; }
-  if (x + w > r.width)  { w  = r.width  - x; }
-  if (y + h > r.height) { h  = r.height - y; }
-  w = Math.max(1, w);
-  h = Math.max(1, h);
-  return { x, y, w, h };
-}
+  // use the stable, borderless wrapper
+  function hostRect() { return stageInner.getBoundingClientRect(); }
+  function pointFromEvent(e){
+    const r = dragBounds || hostRect();               // freeze during drag
+    const x = Math.max(0, Math.min(r.width,  e.clientX - r.left));
+    const y = Math.max(0, Math.min(r.height, e.clientY - r.top));
+    return { x, y };
+  }
+  function normalizeSel(sel){
+    let {x,y,w,h}=sel;
+    if (w < 0) { x += w; w = -w; }
+    if (h < 0) { y += h; h = -h; }
+    const r = dragBounds || hostRect();
+    if (x < 0)            { w += x; x = 0; }
+    if (y < 0)            { h += y; y = 0; }
+    if (x + w > r.width)  { w  = r.width  - x; }
+    if (y + h > r.height) { h  = r.height - y; }
+    w = Math.max(1, w);
+    h = Math.max(1, h);
+    return { x, y, w, h };
+  }
 
   function placeHandles(sel){
     const pos = {
@@ -422,135 +421,134 @@ function normalizeSel(sel){
   }
 
   // Pointer interaction now lives on the stable wrapper (stageInner)
-stageInner.addEventListener('pointerdown', (e) => {
-  e.preventDefault();                      // stop touch scroll/jitter
-  if (!currentViewport) return;
+  stageInner.addEventListener('pointerdown', (e) => {
+    e.preventDefault();                      // stop touch scroll/jitter
+    if (!currentViewport) return;
 
-  stageInner.setPointerCapture(e.pointerId);
-  dragBounds = hostRect();                 // freeze bounds for the whole drag
-  const pt = pointFromEvent(e);
+    stageInner.setPointerCapture(e.pointerId);
+    dragBounds = hostRect();                 // freeze bounds for the whole drag
+    const pt = pointFromEvent(e);
 
-  if (selection) {
-    const onHandle = hitHandle(pt);       // uses current selection coords
-    if (onHandle) {
-      dragMode = 'resize';
-      activeHandle = onHandle;
-      lastPos = pt;
-      lockRatio = (e.shiftKey ? (selection.w/selection.h || 1) : null);
-    } else {
-      const inside = (
-        pt.x >= selection.x && pt.x <= selection.x + selection.w &&
-        pt.y >= selection.y && pt.y <= selection.y + selection.h
-      );
-      if (inside) {
-        dragMode = 'move';
+    if (selection) {
+      const onHandle = hitHandle(pt);       // uses current selection coords
+      if (onHandle) {
+        dragMode = 'resize';
+        activeHandle = onHandle;
         lastPos = pt;
+        lockRatio = (e.shiftKey ? (selection.w/selection.h || 1) : null);
       } else {
-        dragMode = 'draw';
-        dragStart = pt;
-        selection = { x: pt.x, y: pt.y, w: 0, h: 0 };
-        lockRatio = null;
-      }
-    }
-  } else {
-    dragMode = 'draw';
-    dragStart = pt;
-    selection = { x: pt.x, y: pt.y, w: 0, h: 0 };
-    lockRatio = null;
-  }
-
-  updateRectUI();
-}, { passive: false });
-
-stageInner.addEventListener('pointermove', (e) => {
-  if (!dragMode) return;
-  e.preventDefault();                      // keep coordinates stable on touch
-  const pt = pointFromEvent(e);
-
-  if (dragMode === 'draw') {
-  const r = dragBounds || hostRect();
-  // clamp start and current inside stage bounds
-  const x1 = Math.max(0, Math.min(r.width,  dragStart.x));
-  const y1 = Math.max(0, Math.min(r.height, dragStart.y));
-  const x2 = Math.max(0, Math.min(r.width,  pt.x));
-  const y2 = Math.max(0, Math.min(r.height, pt.y));
-  // build a rectangle from two points (works in every direction)
-  const x = Math.min(x1, x2);
-  const y = Math.min(y1, y2);
-  const w = Math.max(1, Math.abs(x2 - x1));
-  const h = Math.max(1, Math.abs(y2 - y1));
-  selection = { x, y, w, h };
-  updateRectUI();
-  return;
-}
-
-
-  if (dragMode === 'move') {
-    const dx = pt.x - lastPos.x;
-    const dy = pt.y - lastPos.y;
-    selection = normalizeSel({
-      x: selection.x + dx,
-      y: selection.y + dy,
-      w: selection.w,
-      h: selection.h
-    });
-    lastPos = pt;
-    updateRectUI();
-    return;
-  }
-
-  if (dragMode === 'resize') {
-    const r = dragBounds || hostRect();
-    let x1 = selection.x,
-        y1 = selection.y,
-        x2 = selection.x + selection.w,
-        y2 = selection.y + selection.h;
-
-    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
-
-    if (['nw','w','sw'].includes(activeHandle)) x1 = clamp(pt.x, 0, x2 - 1);
-    if (['ne','e','se'].includes(activeHandle)) x2 = clamp(pt.x, x1 + 1, r.width);
-    if (['nw','n','ne'].includes(activeHandle)) y1 = clamp(pt.y, 0, y2 - 1);
-    if (['sw','s','se'].includes(activeHandle)) y2 = clamp(pt.y, y1 + 1, r.height);
-
-    let next = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
-
-    const keep = e.shiftKey || lockRatio;
-    const ratio = lockRatio || (selection.w / selection.h || 1);
-
-    if (keep) {
-      if (['n','s'].includes(activeHandle)) {
-        next.w = next.h * ratio;
-        if (activeHandle === 'n') next.x = x2 - next.w;
-      } else if (['e','w'].includes(activeHandle)) {
-        next.h = next.w / ratio;
-        if (activeHandle === 'w') next.y = y2 - next.h;
-      } else {
-        const w1 = next.w, h1 = w1 / ratio;
-        const h2 = next.h, w2 = h2 * ratio;
-        if (activeHandle === 'nw' || activeHandle === 'ne') {
-          if (h1 <= next.h) { next.h = h1; if (activeHandle === 'nw') next.y = y2 - next.h; }
-          else             { next.w = w2; if (activeHandle === 'ne') next.x = x2 - next.w; }
+        const inside = (
+          pt.x >= selection.x && pt.x <= selection.x + selection.w &&
+          pt.y >= selection.y && pt.y <= selection.y + selection.h
+        );
+        if (inside) {
+          dragMode = 'move';
+          lastPos = pt;
         } else {
-          if (h1 <= next.h) next.h = h1; else next.w = w2;
+          dragMode = 'draw';
+          dragStart = pt;
+          selection = { x: pt.x, y: pt.y, w: 0, h: 0 };
+          lockRatio = null;
         }
       }
+    } else {
+      dragMode = 'draw';
+      dragStart = pt;
+      selection = { x: pt.x, y: pt.y, w: 0, h: 0 };
+      lockRatio = null;
     }
 
-    selection = normalizeSel(next);
-    lastPos = pt;
     updateRectUI();
-  }
-}, { passive: false });
+  }, { passive: false });
 
-stageInner.addEventListener('pointerup', () => {
-  if (!dragMode) return;
-  dragMode = null;
-  activeHandle = null;
-  dragStart = null;
-  dragBounds = null;                        // release the frozen rect
-  persistSelection();
-});
+  stageInner.addEventListener('pointermove', (e) => {
+    if (!dragMode) return;
+    e.preventDefault();                      // keep coordinates stable on touch
+    const pt = pointFromEvent(e);
+
+    if (dragMode === 'draw') {
+      const r = dragBounds || hostRect();
+      // clamp start and current inside stage bounds
+      const x1 = Math.max(0, Math.min(r.width,  dragStart.x));
+      const y1 = Math.max(0, Math.min(r.height, dragStart.y));
+      const x2 = Math.max(0, Math.min(r.width,  pt.x));
+      const y2 = Math.max(0, Math.min(r.height, pt.y));
+      // build a rectangle from two points (works in every direction)
+      const x = Math.min(x1, x2);
+      const y = Math.min(y1, y2);
+      const w = Math.max(1, Math.abs(x2 - x1));
+      const h = Math.max(1, Math.abs(y2 - y1));
+      selection = { x, y, w, h };
+      updateRectUI();
+      return;
+    }
+
+    if (dragMode === 'move') {
+      const dx = pt.x - lastPos.x;
+      const dy = pt.y - lastPos.y;
+      selection = normalizeSel({
+        x: selection.x + dx,
+        y: selection.y + dy,
+        w: selection.w,
+        h: selection.h
+      });
+      lastPos = pt;
+      updateRectUI();
+      return;
+    }
+
+    if (dragMode === 'resize') {
+      const r = dragBounds || hostRect();
+      let x1 = selection.x,
+          y1 = selection.y,
+          x2 = selection.x + selection.w,
+          y2 = selection.y + selection.h;
+
+      const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+      if (['nw','w','sw'].includes(activeHandle)) x1 = clamp(pt.x, 0, x2 - 1);
+      if (['ne','e','se'].includes(activeHandle)) x2 = clamp(pt.x, x1 + 1, r.width);
+      if (['nw','n','ne'].includes(activeHandle)) y1 = clamp(pt.y, 0, y2 - 1);
+      if (['sw','s','se'].includes(activeHandle)) y2 = clamp(pt.y, y1 + 1, r.height);
+
+      let next = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+
+      const keep = e.shiftKey || lockRatio;
+      const ratio = lockRatio || (selection.w / selection.h || 1);
+
+      if (keep) {
+        if (['n','s'].includes(activeHandle)) {
+          next.w = next.h * ratio;
+          if (activeHandle === 'n') next.x = x2 - next.w;
+        } else if (['e','w'].includes(activeHandle)) {
+          next.h = next.w / ratio;
+          if (activeHandle === 'w') next.y = y2 - next.h;
+        } else {
+          const w1 = next.w, h1 = w1 / ratio;
+          const h2 = next.h, w2 = h2 * ratio;
+          if (activeHandle === 'nw' || activeHandle === 'ne') {
+            if (h1 <= next.h) { next.h = h1; if (activeHandle === 'nw') next.y = y2 - next.h; }
+            else             { next.w = w2; if (activeHandle === 'ne') next.x = x2 - next.w; }
+          } else {
+            if (h1 <= next.h) next.h = h1; else next.w = w2;
+          }
+        }
+      }
+
+      selection = normalizeSel(next);
+      lastPos = pt;
+      updateRectUI();
+    }
+  }, { passive: false });
+
+  stageInner.addEventListener('pointerup', () => {
+    if (!dragMode) return;
+    dragMode = null;
+    activeHandle = null;
+    dragStart = null;
+    dragBounds = null;                        // release the frozen rect
+    persistSelection();
+  });
 
   window.addEventListener('keydown', (e)=>{
     if(e.key==='Escape'){ e.preventDefault(); clearSelectionUI(); return; }
