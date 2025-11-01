@@ -974,4 +974,8 @@ footer a.small:hover{ text-decoration:underline; }
   pointer-events: auto;
 }
 
-.action-box { scroll-margin-top: 72px; }
+/* Make the Settings/Crop card land below the sticky header when scrolled into view */
+.action-box { scroll-margin-top: 72px; }     /* desktop/header height */
+@media (max-width: 480px){
+  .action-box { scroll-margin-top: 64px; }   /* slightly shorter header on phones */
+}
