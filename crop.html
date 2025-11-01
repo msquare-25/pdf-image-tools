@@ -148,7 +148,7 @@
         </details>
 
         <div class="settings-actions">
-          <!-- Hidden by default; touch par JS thi show karishu -->
+          <!-- Touch devices ma show; desktop ma Esc enough -->
           <button id="clearCrop" class="btn ghost" disabled hidden>Clear selection (Esc)</button>
           <button id="applyCrop" class="btn" disabled>Preview crop</button>
           <button id="backOriginal" class="btn subtle back-link" title="Back to original">Back to original</button>
@@ -190,47 +190,21 @@
   const applyAllEl=$('#applyAll'), clearBtn=$('#clearCrop'), applyBtn=$('#applyCrop'), backBtn=$('#backOriginal'), downloadBtn=$('#downloadBtn');
   const prog=$('#prog'), statusEl=$('#status');
   const stageInner = document.getElementById('stageInner');
-const settingsCard = document.querySelector('.action-box');
+  const settingsCard = document.querySelector('.action-box');
 
-  /* --- Touch detection → show Clear on touch only & click handler --- */
+  // touch detect + show Clear on touch
   const isTouch =
     (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
     ('ontouchstart' in window) ||
     (navigator.maxTouchPoints > 0);
 
   if (clearBtn) {
-    if (isTouch) {
-      clearBtn.hidden = false;                    // phones/tablets: visible
-      clearBtn.textContent = 'Clear selection';
-    } else {
-      clearBtn.hidden = true;                     // desktop: Esc is enough
-    }
-    clearBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      clearSelectionUI();                         // same behavior as Esc
-    });
+    if (isTouch) { clearBtn.hidden=false; clearBtn.textContent='Clear selection'; }
+    else { clearBtn.hidden=true; }
+    clearBtn.addEventListener('click', (e)=>{ e.preventDefault(); clearSelectionUI(); });
   }
-  /* ----------------------------------------------------------------- */
 
-  // state
-  let pdfDocJS=null, pageCount=0, currentPage=1, currentViewport=null;
-  let pageRenderTask=null;
-  let selection=null;
-  let selectionNorm=null; // {nx,ny,nw,nh} in [0..1]
-  let activeDoc='original'; // 'original' | 'preview'
-  let originalBytes=null, previewBytes=null;
-  let outFileNameBase='cropped';
-  let lastPreviewScope='current'; // remember preview scope
-
-  const savedPctByPage = new Map();
-  let lastTemplatePct = null;
-
-  // drag state
-  let dragBounds = null;
-  const HANDLE_HIT = 12;
-  let dragMode = null, dragStart = null, lastPos = null, activeHandle = null, lockRatio = null;
-
-  /* ---------- Utils ---------- */
+  // helpers
   function fmt(n){return new Intl.NumberFormat().format(n);}
   function setStatus(t){statusEl.textContent=t;}
   function enableControls(on){
@@ -258,6 +232,33 @@ const settingsCard = document.querySelector('.action-box');
       h: Math.max(1, Math.round(selectionNorm.nh*h))
     };
   }
+  function maybeScrollToSettings() {
+    if (!settingsCard) return;
+    const prefersNoMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const opts = prefersNoMotion ? {behavior:'auto',block:'start',inline:'nearest'}
+                                 : {behavior:'smooth',block:'start',inline:'nearest'};
+    if (isTouch || window.innerWidth < 768) {
+      requestAnimationFrame(()=>requestAnimationFrame(()=>settingsCard.scrollIntoView(opts)));
+    }
+  }
+
+  // state
+  let pdfDocJS=null, pageCount=0, currentPage=1, currentViewport=null;
+  let pageRenderTask=null;
+  let selection=null;
+  let selectionNorm=null; // normalized [0..1]
+  let activeDoc='original'; // 'original' | 'preview'
+  let originalBytes=null, previewBytes=null;
+  let outFileNameBase='cropped';
+  let lastPreviewScope='current';
+
+  const savedPctByPage = new Map();
+  let lastTemplatePct = null;
+
+  // drag state
+  let dragBounds = null;
+  const HANDLE_HIT = 12;
+  let dragMode = null, dragStart = null, lastPos = null, activeHandle = null, lockRatio = null;
 
   /* ---------- Upload / Reset ---------- */
   fileInput.addEventListener('change',async e=>{const f=e.target.files?.[0];if(f)await handleFile(f);});
@@ -291,7 +292,6 @@ const settingsCard = document.querySelector('.action-box');
 
   async function handleFile(file){
     try{
-      // (changed) we’ll drive the status from rebuildThumbs with a per-page counter
       setStatus('Loading pages… 0 / 0'); enableControls(false);
       selection=null; selectionNorm=null; rectEl.style.display='none'; cancelActiveRender();
 
@@ -299,22 +299,8 @@ const settingsCard = document.querySelector('.action-box');
       outFileNameBase=cleanBase;
       metaEl.textContent = `${file.name} • loading…`; metaEl.title=metaEl.textContent;
 
-      // Mobile: jump to Settings card immediately (while loading)
-if (settingsCard) {
-  const prefersNoMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-  const scrollOpts = prefersNoMotion
-    ? { behavior: 'auto',   block: 'start', inline: 'nearest' }
-    : { behavior: 'smooth', block: 'start', inline: 'nearest' };
-
-  if (isTouch || window.innerWidth < 768) {
-    // wait a frame so the "loading…" text paints, then scroll
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        settingsCard.scrollIntoView(scrollOpts);
-      });
-    });
-  }
-}
+      // while loading, jump to Settings on mobile
+      maybeScrollToSettings();
 
       originalBytes = new Uint8Array(await file.arrayBuffer());
       previewBytes = null; activeDoc='original';
@@ -324,30 +310,14 @@ if (settingsCard) {
       metaEl.textContent = `${file.name} • ${fmt(pageCount)} pages`;
       metaEl.title = metaEl.textContent;
 
-      // show total & reset progress bar
       prog.style.display='block'; prog.value=0;
       setStatus(`Loading pages… 0 / ${fmt(pageCount)}`);
 
-      await rebuildThumbs(doc);              // will update status each page
+      await rebuildThumbs(doc);
       await setPage(1, doc);
-// Smoothly jump to the Settings/Crop card on mobile (or tiny screens)
-if (settingsCard) {
-  const prefersNoMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-  const scrollOpts = prefersNoMotion
-    ? { behavior: 'auto',   block: 'start', inline: 'nearest' }
-    : { behavior: 'smooth', block: 'start', inline: 'nearest' };
 
-  // Touch devices OR very small screens
-  if (isTouch || window.innerWidth < 768) {
-    // Let layout fully settle before scrolling (avoids jumping while thumbs render)
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setTimeout(() => settingsCard.scrollIntoView(scrollOpts), 120);
-      });
-    });
-  }
-}
-
+      // after first paint, ensure Settings is visible on mobile
+      setTimeout(maybeScrollToSettings, 120);
 
       enableControls(true);
       setStatus('Ready.');
@@ -423,34 +393,21 @@ if (settingsCard) {
   window.addEventListener('resize',()=>{ if(bytesForActive()) setPage(currentPage); });
 
   async function rebuildThumbs(providedDoc=null){
-    const doc=providedDoc||await getActiveJsDoc(); 
+    const doc=providedDoc||await getActiveJsDoc();
     const pages=doc.numPages;
     thumbsEl.innerHTML='';
-
-    // update total (already set once) and drive status/progress per page
     for(let i=1;i<=pages;i++){
-      const p=await doc.getPage(i); 
+      const p=await doc.getPage(i);
       const v=p.getViewport({scale:.22});
-      const c=document.createElement('canvas'); 
-      const ctx=c.getContext('2d'); 
-      c.width=v.width; c.height=v.height;
+      const c=document.createElement('canvas'); const ctx=c.getContext('2d'); c.width=v.width; c.height=v.height;
+      await p.render({canvasContext:ctx,viewport:v}).promise; p.cleanup();
 
-      await p.render({canvasContext:ctx,viewport:v}).promise; 
-      p.cleanup();
-
-      const holder=document.createElement('div'); 
-      holder.className='thumb'; 
+      const holder=document.createElement('div'); holder.className='thumb';
       if(i===currentPage) holder.classList.add('active');
-      holder.appendChild(c); 
-      holder.title='Page '+i; 
-      holder.addEventListener('click',()=>setPage(i)); 
-      thumbsEl.appendChild(holder);
+      holder.appendChild(c); holder.title='Page '+i; holder.addEventListener('click',()=>setPage(i)); thumbsEl.appendChild(holder);
 
-      // NEW: live status + progress
       setStatus(`Loading pages… ${fmt(i)} / ${fmt(pages)}`);
-      if (pages > 0) { prog.value = Math.round((i/pages)*100); }
-
-      // let UI breathe on big docs
+      if (pages > 0) prog.value = Math.round((i/pages)*100);
       if (i % 8 === 0) await new Promise(r=>requestAnimationFrame(r));
     }
   }
@@ -687,9 +644,9 @@ if (settingsCard) {
       selection=null; selectionNorm=null; rectEl.style.display='none';
       clearBtn.disabled=true; applyBtn.disabled=true;
       backBtn.classList.add('show');
-
       downloadBtn.disabled = false;
 
+      maybeScrollToSettings();                 // ensure Settings in view on phones
       await rebuildThumbs(); prog.value=90;
       await setPage(currentPage);
       setStatus('Preview ready');
@@ -697,15 +654,17 @@ if (settingsCard) {
     }catch(err){ console.error(err); alert('Preview failed: '+(err?.message||err)); setStatus('Preview failed'); prog.style.display='none'; }
   });
 
+  // BACK TO ORIGINAL
   backBtn.addEventListener('click', async ()=>{
     if(!originalBytes) return;
     activeDoc='original';
     backBtn.classList.remove('show');
+    maybeScrollToSettings();                   // scroll before rebuilding
     await rebuildThumbs(); await setPage(currentPage);
     setStatus('Back to original');
   });
 
-  // DOWNLOAD (preview or fresh)
+  // DOWNLOAD
   downloadBtn.addEventListener('click', async ()=>{
     try{
       if(!originalBytes) return;
