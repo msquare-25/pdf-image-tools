@@ -991,3 +991,23 @@ footer a.small:hover{ text-decoration:underline; }
 }
 .crop-page #showPagesWrap input{ transform: translateY(1px); }
 .crop-page .upload-box.hide-pages #thumbs{ display:none; }
+
+
+/* ==== CROP page only =================================================== */
+
+/* Desktop layout kicks in as soon as width >= 900px (incl. “Desktop site”) */
+@media (min-width: 900px){
+  .crop-wrap .panel .grid-crop{
+    display: grid;
+    grid-template-columns: 320px 1fr 320px; /* Upload | Stage | Crop */
+    gap: 20px;
+    align-items: start;
+  }
+}
+
+/* Keep the one-column stack under 900px (normal mobile) */
+@media (max-width: 899.98px){
+  .crop-wrap .panel .grid-crop{ display: block; }
+  /* Hide page thumbnails on small screens (clean mobile UI) */
+  .crop-wrap #thumbs{ display: none; }
+}
