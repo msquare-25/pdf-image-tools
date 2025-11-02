@@ -54,6 +54,13 @@
       .crop-wrap .panel .grid-crop{grid-template-columns:1fr}
       .thumbs.small{flex-direction:row;flex-wrap:wrap;max-height:none}
     }
+
+    /* When the three boxes stack vertically, hide page thumbnails + the rule */
+.crop-wrap.stacked #thumbs,
+.crop-wrap.stacked .upload-box .rule { 
+  display: none !important;
+}
+
   </style>
 </head>
 
@@ -201,7 +208,26 @@
   const scopeSel=document.querySelector('#scope');
   const selPages=document.querySelector('#selPages');
 
-  /* ---------- touch: show Clear button only on phones ---------- */
+  // --- stacked layout detection (hide thumbs when Upload/Settings/Crop stack) ---
+const grid = document.querySelector('.grid-crop');   // the 3-column grid
+const wrap = document.querySelector('.crop-wrap');   // outer wrapper we toggle
+
+function syncStacked() {
+  if (!grid || !wrap) return;
+  // Count columns from computed grid definition (robust for desktop-site mode too)
+  const cols = getComputedStyle(grid).gridTemplateColumns
+    .split(' ')
+    .filter(Boolean).length;
+  wrap.classList.toggle('stacked', cols <= 1);
+}
+
+// run once + keep in sync on layout changes
+syncStacked();
+new ResizeObserver(syncStacked).observe(grid);
+window.addEventListener('resize', syncStacked);
+window.addEventListener('orientationchange', () => setTimeout(syncStacked, 60));
+
+    /* ---------- touch: show Clear button only on phones ---------- */
   const isTouch = window.matchMedia?.('(pointer: coarse)').matches
                || ('ontouchstart' in window)
                || (navigator.maxTouchPoints > 0);
