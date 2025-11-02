@@ -205,12 +205,12 @@
   const isTouch = window.matchMedia?.('(pointer: coarse)').matches
                || ('ontouchstart' in window)
                || (navigator.maxTouchPoints > 0);
-  
-// On touch screens (or small widths) force "All pages"
-if ((isTouch || window.innerWidth < 768) && scopeSel) {
-  scopeSel.value = 'all';
-  syncScopeInput();
-}
+
+  // On touch screens (or small widths) force "All pages"
+  if ((isTouch || window.innerWidth < 768) && scopeSel) {
+    scopeSel.value = 'all';
+    syncScopeInput();
+  }
 
   if (clearBtn) {
     if (isTouch) { clearBtn.hidden=false; clearBtn.textContent='Clear selection'; }
@@ -313,9 +313,8 @@ if ((isTouch || window.innerWidth < 768) && scopeSel) {
       outFileNameBase=cleanBase;
       metaEl.textContent=`${file.name} • loading…`; metaEl.title=metaEl.textContent;
 
-     // jump to Settings immediately on mobile (even while loading)
-jumpToSettings();   // <— immediate nudge so users see the loading state
-
+      // jump to Settings immediately on mobile (even while loading)
+      maybeScrollToSettings();
 
       originalBytes=new Uint8Array(await file.arrayBuffer());
       previewBytes=null; activeDoc='original';
@@ -330,7 +329,7 @@ jumpToSettings();   // <— immediate nudge so users see the loading state
       await rebuildThumbs(doc);
       await setPage(1, doc);
 
-      setTimeout(() => jumpToSettings(), 120); // ensure settings visible on phones
+      setTimeout(() => maybeScrollToSettings(), 120); // ensure settings visible on phones
       enableControls(true); setStatus('Ready.'); prog.style.display='none';
     }catch(err){ console.error(err); alert('PDF load failed: '+(err?.message||err)); setStatus('Error loading PDF.'); prog.style.display='none'; }
   }
