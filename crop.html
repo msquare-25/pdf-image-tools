@@ -56,11 +56,10 @@
     }
 
     /* When the three boxes stack vertically, hide page thumbnails + the rule */
-.crop-wrap.stacked #thumbs,
-.crop-wrap.stacked .upload-box .rule { 
-  display: none !important;
-}
-
+    .crop-wrap.stacked #thumbs,
+    .crop-wrap.stacked .upload-box .rule { 
+      display: none !important;
+    }
   </style>
 </head>
 
@@ -194,6 +193,24 @@
 <script>pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
 <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
+<!-- Samsung-safe download helper (use everywhere you trigger a download) -->
+<script>
+  function downloadBlobSafe(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename || 'download';
+    a.rel = 'noopener';
+    document.body.appendChild(a);   // required for Samsung Internet reliability
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 2500);                       // give time for download sheet to open
+  }
+</script>
+
 <script>
 (() => {
   const $ = (s) => document.querySelector(s);
@@ -209,30 +226,26 @@
   const selPages=document.querySelector('#selPages');
 
   // --- stacked layout detection (hide thumbs when Upload/Settings/Crop stack) ---
-const grid = document.querySelector('.grid-crop');   // the 3-column grid
-const wrap = document.querySelector('.crop-wrap');   // outer wrapper we toggle
+  const grid = document.querySelector('.grid-crop');   // the 3-column grid
+  const wrap = document.querySelector('.crop-wrap');   // outer wrapper we toggle
 
-function syncStacked() {
-  if (!grid || !wrap) return;
-  // Count columns from computed grid definition (robust for desktop-site mode too)
-  const cols = getComputedStyle(grid).gridTemplateColumns
-    .split(' ')
-    .filter(Boolean).length;
-  wrap.classList.toggle('stacked', cols <= 1);
-}
+  function syncStacked() {
+    if (!grid || !wrap) return;
+    const cols = getComputedStyle(grid).gridTemplateColumns
+      .split(' ')
+      .filter(Boolean).length;
+    wrap.classList.toggle('stacked', cols <= 1);
+  }
+  syncStacked();
+  new ResizeObserver(syncStacked).observe(grid);
+  window.addEventListener('resize', syncStacked);
+  window.addEventListener('orientationchange', () => setTimeout(syncStacked, 60));
 
-// run once + keep in sync on layout changes
-syncStacked();
-new ResizeObserver(syncStacked).observe(grid);
-window.addEventListener('resize', syncStacked);
-window.addEventListener('orientationchange', () => setTimeout(syncStacked, 60));
-
-    /* ---------- touch: show Clear button only on phones ---------- */
+  /* ---------- touch: show Clear button only on phones ---------- */
   const isTouch = window.matchMedia?.('(pointer: coarse)').matches
                || ('ontouchstart' in window)
                || (navigator.maxTouchPoints > 0);
 
-  // On touch screens (or small widths) force "All pages"
   if ((isTouch || window.innerWidth < 768) && scopeSel) {
     scopeSel.value = 'all';
     syncScopeInput();
@@ -339,7 +352,6 @@ window.addEventListener('orientationchange', () => setTimeout(syncStacked, 60));
       outFileNameBase=cleanBase;
       metaEl.textContent=`${file.name} • loading…`; metaEl.title=metaEl.textContent;
 
-      // jump to Settings immediately on mobile (even while loading)
       maybeScrollToSettings();
 
       originalBytes=new Uint8Array(await file.arrayBuffer());
@@ -355,7 +367,7 @@ window.addEventListener('orientationchange', () => setTimeout(syncStacked, 60));
       await rebuildThumbs(doc);
       await setPage(1, doc);
 
-      setTimeout(() => maybeScrollToSettings(), 120); // ensure settings visible on phones
+      setTimeout(() => maybeScrollToSettings(), 120);
       enableControls(true); setStatus('Ready.'); prog.style.display='none';
     }catch(err){ console.error(err); alert('PDF load failed: '+(err?.message||err)); setStatus('Error loading PDF.'); prog.style.display='none'; }
   }
@@ -661,11 +673,12 @@ window.addEventListener('orientationchange', () => setTimeout(syncStacked, 60));
 
       if(activeDoc==='preview' && previewBytes){
         const blob=new Blob([previewBytes],{type:'application/pdf'});
-        const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;
         let name=`${outFileNameBase}.cropped.pdf`;
         if(lastPreviewScope==='current')  name=`${outFileNameBase}-p${currentPage}.cropped.pdf`;
         if(lastPreviewScope==='selected') name=`${outFileNameBase}-selected.cropped.pdf`;
-        a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1500); setStatus('Downloaded.'); return;
+        downloadBlobSafe(blob, name);    // <-- Samsung-safe
+        setStatus('Downloaded.');
+        return;
       }
 
       if(!selectionNorm){ alert('Draw a crop box first.'); return; }
@@ -683,13 +696,12 @@ window.addEventListener('orientationchange', () => setTimeout(syncStacked, 60));
       const finalBytes=await buildCroppedBytes(selection,scopeArg);
       prog.value=70;
       const blob=new Blob([finalBytes],{type:'application/pdf'});
-      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;
 
       let name=`${outFileNameBase}.cropped.pdf`;
       if(scopeVal==='current')  name=`${outFileNameBase}-p${currentPage}.cropped.pdf`;
       if(scopeVal==='selected') name=`${outFileNameBase}-selected.cropped.pdf`;
 
-      a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+      downloadBlobSafe(blob, name);    // <-- Samsung-safe
       prog.value=100; setTimeout(()=>prog.style.display='none',200); setStatus('Done.');
     }catch(err){ console.error(err); alert('Download failed: '+(err?.message||err)); setStatus('Download failed'); }
   });
