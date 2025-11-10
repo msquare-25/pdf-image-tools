@@ -1,16 +1,8 @@
 {
   "cleanUrls": true,
+  "trailingSlash": false,
 
   "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Permissions-Policy", "value": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" }
-      ]
-    },
     {
       "source": "/(.*)\\.(css|js|mjs|png|jpg|jpeg|webp|gif|svg|ico|woff|woff2)",
       "headers": [
@@ -18,10 +10,22 @@
       ]
     },
     {
-      "source": "/(.*)\\.(html|xml|txt)",
+      "source": "/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache" }
+        { "key": "Cache-Control", "value": "no-cache" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Permissions-Policy", "value": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()" },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' blob: data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self';"
+        }
       ]
     }
+  ],
+
+  "redirects": [
+    { "source": "/:path.html", "destination": "/:path", "permanent": true }
   ]
 }
