@@ -4,7 +4,7 @@
    - Bypass Google Ads/Analytics so ads work normally
    - Only handles same-origin GET requests
 */
-const VERSION = 'v1.1.0';
+const VERSION = 'v1.1.2';
 const STATIC_CACHE = `static-${VERSION}`;
 const RUNTIME_CACHE = `runtime-${VERSION}`;
 
