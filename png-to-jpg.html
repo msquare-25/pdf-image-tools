@@ -245,6 +245,26 @@
     );
     cancelBtn.addEventListener('click', () => { cancelFlag = true; });
 
+    // ---- helper: safe single-image download (no fetch on data URLs) ----
+function downloadSingleFromCanvas(canvas, filenameBase, quality) {
+  return new Promise((resolve) => {
+    const filename = (filenameBase || 'image') + '.jpg';
+    canvas.toBlob((blob) => {
+      if (!blob) return resolve(null);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(a.href);
+        a.remove();
+        resolve(blob);
+      }, 120);
+    }, 'image/jpeg', quality);
+  });
+}
+
     // === core conversion ===
     async function runConvert() {
       if (files.length === 0) return;
@@ -294,11 +314,12 @@
         const base = (f.name || 'image').replace(/\.[^.]+$/, '') || 'image';
         const fileName = base + '.jpg';
 
-        if (files.length === 1) {
-          // single file → direct jpg
-          singleBlob = await (await fetch(dataUrl)).blob();
-          singleName = fileName;
-        } else {
+if (files.length === 1) {
+  // single file → direct jpg (safe way)
+  setStatus('Saving JPG…');
+  await downloadSingleFromCanvas(canvas, (f.name || 'image').replace(/\.[^.]+$/, ''), quality);
+} else {
+
           // batch → zip
           zip.file(fileName, dataUrl.split(',')[1], { base64: true });
         }
@@ -310,14 +331,11 @@
       }
 
       // download
-      if (files.length === 1 && singleBlob) {
-        setStatus('Saving JPG…');
-        downloadBlob(singleBlob, singleName);
-             } else {
-        setStatus('Packaging ZIP…');
-        const blob = await zip.generateAsync({ type: 'blob' });
-        downloadBlob(blob, 'png-to-jpg.zip');
-             }
+if (files.length > 1) {
+  setStatus('Packaging ZIP…');
+  const blob = await zip.generateAsync({ type: 'blob' });
+  downloadBlob(blob, 'png-to-jpg.zip');
+}
 
       setStatus('Done.');
       convertBtn.disabled = false;
