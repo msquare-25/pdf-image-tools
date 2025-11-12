@@ -17,7 +17,17 @@
 <meta property="og:image" content="https://pdfimagelab.com/og/default.png" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="theme-color" content="#0b0f14">
-  
+
+  <!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha512-+Z7Qd8/..." crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  } else {
+    console.error('PDF.js not loaded');
+  }
+</script>
+
 </head>
 <body class="merge-page">
 
