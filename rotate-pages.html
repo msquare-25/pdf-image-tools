@@ -42,14 +42,25 @@
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="theme-color" content="#0b0f14">
 
-  <!-- PDF.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha512-+Z7Qd8/..." crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- PDF.js (reader) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
   if (window.pdfjsLib) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  } else {
-    console.error('PDF.js not loaded');
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
   }
+</script>
+
+<!-- pdf-lib (writer: for merge/delete/reorder/rotate/crop/compress) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<!-- existing scripts below -->
+<script defer src="/site.js"></script>
+<script defer src="/assets/seo.js"></script>
+<!-- (tool-specific JS if any) -->
+
 </script>
 
 </head>
