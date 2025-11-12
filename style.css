@@ -1011,3 +1011,17 @@ footer a.small:hover{ text-decoration:underline; }
   /* Hide page thumbnails on small screens (clean mobile UI) */
   .crop-wrap #thumbs{ display: none; }
 }
+
+/* Image→PDF: keep Page size + Orientation on one line (stack only on small screens) */
+.controls-pair{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  gap: 12px;
+  align-items: end;              /* align selects nicely */
+  justify-items: center;         /* keeps both centered in the card */
+  max-width: 460px;
+  margin: 0 auto;
+}
+@media (max-width: 640px){
+  .controls-pair{ grid-template-columns: 1fr; } /* phone: stack */
+}
