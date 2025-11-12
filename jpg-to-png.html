@@ -124,9 +124,6 @@
 
   </div>
 
-  <!-- libs -->
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-
   <!-- page script -->
   <script>
     const $ = (s) => document.querySelector(s);
@@ -250,12 +247,15 @@
         const base = (f.name || 'image').replace(/\.[^.]+$/, '') || 'image';
         const fileName = (keepNameEl?.checked ? base : 'image') + '.png';
 
-        if (files.length === 1) {
-          singleBlob = await (await fetch(dataUrl)).blob();
-          singleName = fileName;
-        } else {
-          zip.file(fileName, dataUrl.split(',')[1], { base64: true });
-        }
+if (files.length === 1) {
+  // use canvas.toBlob instead of fetch(dataURL) to avoid "Failed to fetch"
+  singleBlob = await new Promise((resolve) => {
+    canvas.toBlob((b) => resolve(b), 'image/png');
+  });
+  singleName = fileName;
+} else {
+  zip.file(fileName, dataUrl.split(',')[1], { base64: true });
+}
 
         i++;
         setStatus(`Converted ${i} / ${files.length}`);
