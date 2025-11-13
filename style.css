@@ -1061,4 +1061,11 @@ footer a.small:hover{ text-decoration:underline; }
   .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
 }
 
+/* Header brand text fine-tune */
+.site-header .brand .home-link span:last-child{
+  font-size: 1.4rem;        /* bigger text */
+  font-weight: 900;
+  letter-spacing: .28px;
+  line-height: 1.05;
+}
 
