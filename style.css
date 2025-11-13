@@ -1042,11 +1042,9 @@ footer a.small:hover{ text-decoration:underline; }
   padding: 4px 8px;
   border-radius: 8px;
 }
-
 .home-link:hover {
   opacity: 0.85;
 }
-
 /* logo circle (placeholder – looks clean even empty) */
 .home-link .logo {
   width: 22px;
@@ -1055,14 +1053,12 @@ footer a.small:hover{ text-decoration:underline; }
   border-radius: 50%;
   display: inline-block;
 }
-
 /* ensures header center alignment stays correct */
 .site-header .container.bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-
 /* keeps nav and brand aligned on all devices */
 .brand {
   display: flex;
