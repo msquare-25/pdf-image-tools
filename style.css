@@ -1011,3 +1011,20 @@ footer a.small:hover{ text-decoration:underline; }
   /* Hide page thumbnails on small screens (clean mobile UI) */
   .crop-wrap #thumbs{ display: none; }
 }
+
+/* Image→PDF: keep "Page size" + "Orientation" on one line */
+.image-to-pdf-page .row-nowrap{
+  display:flex;
+  flex-wrap: nowrap;              /* don't wrap on desktop */
+  gap: 12px;
+  align-items: flex-end;
+  justify-content: center;
+}
+.image-to-pdf-page .row-nowrap .block{
+  flex: 1 1 0;                    /* let both share the row evenly */
+  min-width: 0;                   /* prevent forced wrapping */
+}
+/* on small screens, allow wrapping */
+@media (max-width: 700px){
+  .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
+}
