@@ -188,7 +188,19 @@
     function setProgress(done,total){ prog.value = total ? Math.round(done/total*100) : 0; }
     function showError(t){ errEl.style.display='block'; errEl.textContent = String(t); }
     function clearError(){ errEl.style.display='none'; errEl.textContent=''; }
-    function updateMeta(){ metaEl.textContent = fileBuf ? `${pageCount} pages • ${selected.size} selected` : 'No file'; btnExport.disabled = !fileBuf || !selected.size; }
+    
+    function updateMeta(){
+  const hasFile = !!fileBuf;
+  const sel = selected.size;
+  // text
+  metaEl.textContent = hasFile
+    ? `${pageCount} pages • ${sel} selected`
+    : 'No file';
+  // buttons
+  btnExport.disabled = !hasFile || !sel;  // export only when some pages selected
+  btnRanges.disabled = !hasFile;         // Mark by ranges enabled when file loaded
+  btnClear.disabled = !hasFile || !sel;  // Clear selection needs file + some selection
+}
 
     function thumbCard(i, canvas){
       const wrap = document.createElement('div'); wrap.className='thumb';
@@ -239,11 +251,17 @@
     drop.addEventListener('drop', e => handleFile(e.dataTransfer?.files?.[0]));
 
     // Clear
-    clearBtn.addEventListener('click', () => {
-      fileBuf = null; pageCount = 0; selected.clear();
-      pagesEl.innerHTML = ''; metaEl.textContent = 'No file'; setStatus('Idle…'); setProgress(0,0);
-      clearBtn.disabled = true; btnExport.disabled = true; fileEl.value = '';
-    });
+clearBtn.addEventListener('click', () => {
+  fileBuf = null;
+  pageCount = 0;
+  selected.clear();
+  pagesEl.innerHTML = '';
+  setStatus('Idle…');
+  setProgress(0, 0);
+  clearBtn.disabled = true;
+  fileEl.value = '';
+  updateMeta();   // meta text + badha buttons ne disable kare
+});
 
     // Range helpers
     function parseRanges(txt){
