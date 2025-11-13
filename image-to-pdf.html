@@ -94,8 +94,9 @@
           <section class="panel card box" aria-label="Setting" style="text-align:center;">
             <h2 class="title">Setting</h2>
 
-<div class="controls-pair">
-  <label class="block">Page size
+<!-- Row: Page size + Orientation (same line as Margins/Fit style) -->
+<div class="row" style="display:flex;gap:12px;align-items:flex-end;justify-content:center;margin-top:0;">
+  <label class="block" style="min-width:180px;">Page size
     <select id="pageSize" class="select-lg">
       <option value="A4">A4 (210×297 mm)</option>
       <option value="Letter">Letter (8.5×11 in)</option>
@@ -104,14 +105,13 @@
     </select>
   </label>
 
-  <label class="block">Orientation
+  <label class="block" style="min-width:160px;">Orientation
     <select id="orientation" class="select-lg">
       <option value="portrait">Portrait</option>
       <option value="landscape">Landscape</option>
     </select>
   </label>
 </div>
-
 
             <div class="row" style="display:flex;gap:12px;align-items:flex-end;justify-content:center;margin-top:10px;">
               <label class="block" style="min-width:140px;">Margins (mm)
