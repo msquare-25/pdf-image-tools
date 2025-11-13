@@ -210,11 +210,20 @@
       function showError(t){ errEl.style.display='block'; errEl.textContent = String(t); }
       function clearError(){ errEl.style.display='none'; errEl.textContent=''; }
       function updateMeta(){
-        metaEl.textContent = fileBuf ? `${pageCount} pages` : 'No file';
-        btnExport.disabled = !fileBuf;
-        btnAllL.disabled = !fileBuf; btnAllR.disabled = !fileBuf;
-        btnApplyRanges.disabled = !fileBuf; btnClearRot.disabled = !fileBuf;
-      }
+function updateMeta(){
+  const hasFile = !!fileBuf;
+  const hasRotation = hasFile && rotations.some(deg => (deg % 360) !== 0);
+
+  // text
+  metaEl.textContent = hasFile ? `${pageCount} pages` : 'No file';
+
+  // buttons
+  btnExport.disabled      = !hasRotation;  // download only after some rotation
+  btnAllL.disabled        = !hasFile;
+  btnAllR.disabled        = !hasFile;
+  btnApplyRanges.disabled = !hasFile;
+  btnClearRot.disabled    = !hasRotation;
+}
 
       function parseRanges(txt){
         const out = new Set();
@@ -254,6 +263,7 @@
           canvas.style.transform = `rotate(${deg}deg)`;
           right.textContent = `${deg}°`;
           updateResetVisibility();
+          updateMeta();
         }
 
         bL.addEventListener('click', ()=>{ rotations[i] = ( (rotations[i]||0) + 270 ) % 360; apply(); });
@@ -313,6 +323,7 @@ function rotateAll(delta){
   pagesEl.querySelectorAll('canvas').forEach((cv, idx)=> cv.style.transform = `rotate(${rotations[idx]}deg)`);
   pagesEl.querySelectorAll('.rot').forEach((el, idx)=> el.textContent = `${rotations[idx]}°`);
   updateResetVisibility();
+  updateMeta();
 }
       btnAllL.addEventListener('click', ()=>rotateAll(-90));
       btnAllR.addEventListener('click', ()=>rotateAll(+90));
@@ -332,6 +343,7 @@ function rotateAll(delta){
         pagesEl.querySelectorAll('canvas').forEach((cv, idx)=> cv.style.transform = `rotate(${rotations[idx]}deg)`);
         pagesEl.querySelectorAll('.rot').forEach((el, idx)=> el.textContent = `${rotations[idx]}°`);
         updateResetVisibility();
+        updateMeta();
       });
 
       // Reset rotation
@@ -340,6 +352,7 @@ btnClearRot.addEventListener('click', ()=>{
   pagesEl.querySelectorAll('canvas').forEach(cv=> cv.style.transform = 'rotate(0deg)');
   pagesEl.querySelectorAll('.rot').forEach(el=> el.textContent = '0°');
   updateResetVisibility();
+  updateMeta();
 });
 
       // Build & Download (preserves any existing page rotation, adds our delta)
