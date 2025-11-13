@@ -1029,46 +1029,4 @@ footer a.small:hover{ text-decoration:underline; }
   .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
 }
 
-/* clickable brand logo + text (PDFimageLab) */
-.brand{
-  display:flex;
-  align-items:center;
-}
 
-/* main clickable area */
-.home-link{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  text-decoration:none;
-  padding:4px 6px;
-  border-radius:10px;
-
-  font-weight:800;
-  font-size:1.28rem;      /* bigger text */
-  letter-spacing:.3px;
-  
-  /* gradient text */
-  background:linear-gradient(90deg, var(--brand-1), var(--brand-2));
-  -webkit-background-clip:text;
-  color:transparent;
-}
-
-/* square gradient logo box */
-.home-link .logo{
-  width:28px;
-  height:28px;
-  border-radius:10px;
-  background:linear-gradient(135deg, var(--brand-1), var(--brand-2));
-  flex-shrink:0;
-}
-
-/* keep text vertically centered */
-.home-link span:last-child{
-  line-height:1.1;
-}
-
-/* subtle hover */
-.home-link:hover{
-  opacity:.9;
-}
