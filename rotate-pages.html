@@ -253,6 +253,7 @@
           const deg = rotations[i] || 0;
           canvas.style.transform = `rotate(${deg}deg)`;
           right.textContent = `${deg}°`;
+          updateResetVisibility();
         }
 
         bL.addEventListener('click', ()=>{ rotations[i] = ( (rotations[i]||0) + 270 ) % 360; apply(); });
@@ -297,6 +298,7 @@
         fileBuf = null; pageCount = 0; rotations = [];
         pagesEl.innerHTML = ''; metaEl.textContent='No file'; setStatus('Idle…');
         clearBtn.disabled = true; updateMeta(); fileEl.value = '';
+        updateResetVisibility();
       });
 
       // Drag & Drop
