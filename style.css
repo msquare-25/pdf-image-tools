@@ -1029,38 +1029,46 @@ footer a.small:hover{ text-decoration:underline; }
   .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
 }
 
-/* clickable brand link */
-.home-link {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-  color: inherit;
-  font-weight: 600;
-  font-size: 1.15rem;
-  letter-spacing: 0.3px;
-  padding: 4px 8px;
-  border-radius: 8px;
+/* clickable brand logo + text (PDFimageLab) */
+.brand{
+  display:flex;
+  align-items:center;
 }
-.home-link:hover {
-  opacity: 0.85;
+
+/* main clickable area */
+.home-link{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  text-decoration:none;
+  padding:4px 6px;
+  border-radius:10px;
+
+  font-weight:800;
+  font-size:1.28rem;      /* bigger text */
+  letter-spacing:.3px;
+  
+  /* gradient text */
+  background:linear-gradient(90deg, var(--brand-1), var(--brand-2));
+  -webkit-background-clip:text;
+  color:transparent;
 }
-/* logo circle (placeholder – looks clean even empty) */
-.home-link .logo {
-  width: 22px;
-  height: 22px;
-  background: linear-gradient(135deg, #6a3df3, #af59ff);
-  border-radius: 50%;
-  display: inline-block;
+
+/* square gradient logo box */
+.home-link .logo{
+  width:28px;
+  height:28px;
+  border-radius:10px;
+  background:linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  flex-shrink:0;
 }
-/* ensures header center alignment stays correct */
-.site-header .container.bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+
+/* keep text vertically centered */
+.home-link span:last-child{
+  line-height:1.1;
 }
-/* keeps nav and brand aligned on all devices */
-.brand {
-  display: flex;
-  align-items: center;
+
+/* subtle hover */
+.home-link:hover{
+  opacity:.9;
 }
