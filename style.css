@@ -657,67 +657,6 @@ select::-ms-expand{ display:none; }
   margin-top: 14px;
 }
 
-/* --- Home page polish --- */
-
-/* Centered header on home (no gradient) */
-.home-header {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  text-align: center;
-  padding: 24px 16px 18px;              /* thodu short, clean */
-  background: var(--surface);           /* <<< gradient hataavi didho */
-  border-bottom: 1px solid var(--border);
-}
-.home-header h1 {
-  margin: 0;
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: #1f2a54;
-}
-.home-header p {
-  margin-top: 4px;
-  font-size: 0.96rem;
-  color: #374151;
-}
-
-/* “Open” buttons purple */
-.card a.btn,
-.card button,
-.tool-card button {
-  background-color: #7e22ce !important;
-  color: #fff !important;
-  border: none;
-  border-radius: 8px;
-  padding: 6px 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  text-decoration: none;
-  display: inline-block;
-}
-.card a.btn:hover,
-.card button:hover {
-  background-color: #9333ea !important;
-}
-
-/* Center footer links */
-footer {
-  text-align: center;
-  padding: 24px 0 40px;
-}
-footer a.small {
-  color: #4b5563;
-  text-decoration: none;
-  margin: 0 6px;
-}
-footer a.small:hover {
-  text-decoration: underline;
-}
-
-/* --- Home page: show only one header (logo+title) and polish --- */
-
 /* Hide the global nav/header on home */
 .home .site-header { display: none; }
 
@@ -797,7 +736,7 @@ footer a.small:hover{ text-decoration:underline; }
 
 /* --- Home: compact layout to fit more above the fold --- */
 
-/* shrink the gradient header */
+/* shrink the header on smaller screens */
 .home-header{
   padding: 18px 14px 14px;      /* was ~48/36 */
 }
@@ -939,6 +878,17 @@ footer a.small:hover{ text-decoration:underline; }
     height: 1px;
   }
 }
+
+/* Home SEO / FAQ section: keep text in a nice center column */
+.home-seo{
+  max-width: 720px;
+  margin: 40px auto 56px;
+  padding: 0 24px 24px;
+}
+.home-seo h2{
+  margin-top: 0;
+}
+
 
 /* ==== Crop page only ==== */
 
