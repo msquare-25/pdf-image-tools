@@ -1061,4 +1061,22 @@ footer a.small:hover{ text-decoration:underline; }
   .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
 }
 
+/* Homepage SEO section */
+.home-seo {
+  max-width: 800px;
+  margin: 3rem auto 4rem;
+  padding: 0 1.5rem;
+}
+
+.home-seo h2 {
+  margin-top: 2rem;
+}
+
+.home-seo ul {
+  padding-left: 1.2rem;
+}
+
+.home-seo p {
+  margin-top: 0.75rem;
+}
 
