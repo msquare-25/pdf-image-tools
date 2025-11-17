@@ -667,7 +667,7 @@ select::-ms-expand{ display:none; }
   flex-direction: column;
   text-align: center;
   padding: 40px 16px 32px;
-  background: var(--bg);
+  background: linear-gradient(135deg, #b3e5fc, #e1bee7);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 .home-header h1 {
@@ -729,7 +729,7 @@ footer a.small:hover {
   text-align:center;
   gap:8px;
   padding:48px 16px 36px;
-  background: var(--bg);
+  background: linear-gradient(135deg, #b3e5fc, #e1bee7);
   border-bottom: 1px solid rgba(0,0,0,.05);
 }
 .home-header .logo{
@@ -738,7 +738,7 @@ footer a.small:hover {
   display:inline-block;
   border-radius:12px;
   /* your existing logo gradient */
-  background: var(--bg);
+  background: radial-gradient(100% 100% at 0% 0%, #6ee7f9 0%, #6f4de6 100%);
   box-shadow: 0 6px 18px rgba(111,77,230,.25);
 }
 .home-header .logo.xl{
@@ -870,7 +870,7 @@ footer a.small:hover{ text-decoration:underline; }
     top: 0;
     z-index: 20;
     /* soft bg so tabs don’t look cut when scrolled */
-    background: var(--bg);
+    background: linear-gradient(135deg, #b3e5fc, #e1bee7);
     padding: 6px 0;
   }
 
