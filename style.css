@@ -1062,33 +1062,52 @@ footer a.small:hover{ text-decoration:underline; }
 }
 
 
-/* Homepage SEO / FAQ block layout */
-.home-seo {
-  max-width: 880px;
+/* Homepage SEO / FAQ block layout – clean centered column */
+.home-seo{
+  max-width: 900px;
   margin: 32px auto 48px;
-  padding: 0 20px;
+  padding: 22px 24px 28px;
+  background: rgba(255,255,255,0.8);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
 }
 
-.home-seo h2 {
-  margin-top: 24px;
-  margin-bottom: 8px;
+/* headings */
+.home-seo h2{
+  margin-top: 6px;
+  margin-bottom: 10px;
+  font-size: 1.25rem;
 }
-
-.home-seo h3 {
+.home-seo h3{
   margin-top: 18px;
   margin-bottom: 4px;
+  font-size: 1.05rem;
 }
 
-.home-seo ul {
+/* text & list */
+.home-seo p{
+  margin-top: 6px;
+  margin-bottom: 4px;
+  line-height: 1.6;
+}
+.home-seo ul{
   margin-top: 8px;
+  margin-bottom: 8px;
   padding-left: 1.25rem;
 }
-
-.home-seo li + li {
+.home-seo li + li{
   margin-top: 4px;
 }
 
-.home-seo p {
-  margin-top: 6px;
-  line-height: 1.6;
+/* links row at bottom */
+.home-seo p a{
+  font-weight: 600;
+}
+
+/* mobile: thodu tight */
+@media (max-width: 640px){
+  .home-seo{
+    margin: 24px 12px 32px;
+    padding: 18px 16px 22px;
+  }
 }
