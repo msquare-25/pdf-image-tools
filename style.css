@@ -721,7 +721,7 @@ footer a.small:hover {
 /* Hide the global nav/header on home */
 .home .site-header { display: none; }
 
-/* Centered gradient banner with logo + title */
+/* Centered banner with logo + title (no gradient) */
 .home-header{
   display:flex;
   flex-direction:column;
@@ -729,18 +729,19 @@ footer a.small:hover {
   text-align:center;
   gap:8px;
   padding:48px 16px 36px;
-  background: linear-gradient(135deg, #b3e5fc, #e1bee7);
+  background: var(--surface);  /* <<< CLEAN BG */
   border-bottom: 1px solid rgba(0,0,0,.05);
 }
+
 .home-header .logo{
   width:36px;
   height:36px;
   display:inline-block;
   border-radius:12px;
-  /* your existing logo gradient */
-  background: radial-gradient(100% 100% at 0% 0%, #6ee7f9 0%, #6f4de6 100%);
-  box-shadow: 0 6px 18px rgba(111,77,230,.25);
+  background: var(--surface); /* simple bg */
+  box-shadow: 0 6px 18px rgba(111,77,230,.15);
 }
+
 .home-header .logo.xl{
   width:44px;
   height:44px;
@@ -870,7 +871,7 @@ footer a.small:hover{ text-decoration:underline; }
     top: 0;
     z-index: 20;
     /* soft bg so tabs don’t look cut when scrolled */
-    background: linear-gradient(135deg, #b3e5fc, #e1bee7);
+    background: var(--surface);  /* <<< no gradient */
     padding: 6px 0;
   }
 
