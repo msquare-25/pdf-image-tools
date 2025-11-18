@@ -48,8 +48,7 @@ main{ padding:22px 0 40px; }
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--surface); /* plain white */
-  box-shadow: var(--shadow-sm);
+  background: var(--bg); /* Use page background color */
   backdrop-filter: none;
 }
 .site-header .bar{
