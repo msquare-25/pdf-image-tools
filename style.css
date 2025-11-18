@@ -951,19 +951,30 @@ footer a.small:hover{ text-decoration:underline; }
   .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
 }
 
-
-/* --- Home Page Scroll Fix: Remove sticky header border/shadow on scroll --- */
-/* Target the main header container when on the home page (where the line appears) */
-.home .site-header {
+/* --- Home Page Scroll Fix: Ensure absolute flatness when scrolling down --- */
+/* 1. Target the main header container with high specificity (where the line/color comes from) */
+.site-header {
+    /* Remove the sticky line */
     border-bottom: none !important; 
-    background: var(--bg) !important; /* Use the default page background color */
+    /* Use the main page background color (var(--bg) is the color of the rest of the page) */
+    background: var(--bg) !important; 
+    /* Remove any shadow that makes it look like a new layer */
     box-shadow: none !important;
     backdrop-filter: none !important;
 }
 
-/* Target the tool tabs wrap specifically, in case it becomes sticky */
-.home .site-header .tool-tabs-wrap{
+/* 2. Target the tool-tabs wrapper, which is also sticky/visible on scroll */
+.tool-tabs-wrap{
     background: var(--bg) !important;
-    border-bottom: none !important;
     box-shadow: none !important;
+    border: none !important;
+}
+
+/* 3. Ensure the mobile-specific sticky rule is also flat (from line 427 of style.css) */
+@media (max-width: 540px){
+    .tool-tabs-wrap{
+        background: var(--bg) !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
 }
