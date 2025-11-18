@@ -949,30 +949,23 @@ footer a.small:hover{ text-decoration:underline; }
   .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
 }
 
-/* --- FINAL FIX: Ensure ALL sticky elements on HOME page blend seamlessly --- */
-/* 1. Target the main site-header on the home page (if it somehow becomes visible) */
+
+/* --- ડેસ્કટોપ સ્ક્રોલિંગ ફિક્સ: હોમ પેજ પર sticky header ને સંપૂર્ણપણે છુપાવો/ભેળવી દો --- */
+/* 1. હોમ પેજ પર, site-header ને સંપૂર્ણપણે છુપાવો (આ માત્ર ડેસ્કટોપને અસર કરશે) */
 .home .site-header {
+    display: none !important; /* ખાતરી કરો કે તે દેખાય જ નહીં */
+}
+
+/* 2. જો તે કોઈ કારણસર દેખાય તો પણ, તેના બેકગ્રાઉન્ડ અને શાડોને દૂર કરો */
+.home .site-header,
+.home .tool-tabs-wrap {
     background: var(--bg) !important; 
     box-shadow: none !important;
     border: none !important;
     backdrop-filter: none !important;
 }
 
-/* 2. Target the tool-tabs-wrap (the most likely element causing the flash/color change) */
-.home .site-header .tool-tabs-wrap {
-    background: var(--bg) !important;
-    box-shadow: none !important;
-    border: none !important;
-}
-
-/* 3. Target the scroll arrows and their masks (if they are causing a visual break) */
-.home .site-header .tool-scroll,
-.home .site-header .tool-tabs-wrap::before,
-.home .site-header .tool-tabs-wrap::after {
-    background: var(--bg) !important;
-}
-
-/* 4. Ensure mobile sticky rule matches the page background color */
+/* 3. Ensure mobile sticky rule matches the page background color */
 @media (max-width: 540px){
     .home .tool-tabs-wrap{
         background: var(--bg) !important;
