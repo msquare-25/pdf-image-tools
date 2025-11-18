@@ -950,3 +950,26 @@ footer a.small:hover{ text-decoration:underline; }
   .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
 }
 
+/* --- Home Page Scroll Fix: Override Header Styling to be flat --- */
+/* Target the main header on the home page specifically */
+.home .site-header {
+    border-bottom: none !important; /* Removes the line */
+    background: var(--bg) !important; /* Removes the white background color */
+    box-shadow: none !important; /* Removes any shadow */
+}
+
+/* Ensure the sticky tool wrapper also conforms */
+.home .tool-tabs-wrap{
+    border-bottom: none !important;
+    background: var(--bg) !important;
+    box-shadow: none !important;
+}
+
+/* Ensure the mobile-specific sticky rule also conforms */
+@media (max-width: 540px){
+    .home .tool-tabs-wrap{
+        background: var(--bg) !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
