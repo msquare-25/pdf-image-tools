@@ -48,7 +48,9 @@ main{ padding:22px 0 40px; }
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--bg); /* Use page background color */
+  background: var(--surface); /* plain white */
+  border-bottom: 1px solid rgba(148,163,184,.30);
+  box-shadow: var(--shadow-sm);
   backdrop-filter: none;
 }
 .site-header .bar{
@@ -261,11 +263,11 @@ label.inline{ display:flex; align-items:center; gap:8px; }
 .tool-scroll{
   position:absolute; top:50%; transform:translateY(-50%);
   width:34px; height:34px; border-radius:999px;
-  border:1px solid var(--border); background:var(--bg); color:var(--text);
+  border:1px solid var(--border); background:var(--surface); color:var(--text);
   font-weight:900; line-height:1; display:grid; place-items:center;
-  /* box-shadow:var(--shadow-sm); */ box-shadow:none; cursor:pointer; z-index:2; opacity:.9;
+  box-shadow:var(--shadow-sm); cursor:pointer; z-index:2; opacity:.9;
 }
-.tool-scroll:hover{ box-shadow:none !important; transform:translateY(-50%) scale(1.05); }
+.tool-scroll:hover{ box-shadow:var(--shadow-md); transform:translateY(-50%) scale(1.05); }
 .tool-scroll:disabled{ opacity:.35; cursor:not-allowed; }
 .tool-left{ left:8px; } .tool-right{ right:8px; }
 
@@ -277,8 +279,8 @@ label.inline{ display:flex; align-items:center; gap:8px; }
 .tool-tabs-wrap::after{
   content:""; position:absolute; top:0; bottom:0; width:40px; z-index:1; pointer-events:none;
 }
-.tool-tabs-wrap::before{ left:0;  background:linear-gradient(90deg, var(--bg), transparent); }
-.tool-tabs-wrap::after { right:0; background:linear-gradient(270deg, var(--bg), transparent); }
+.tool-tabs-wrap::before{ left:0;  background:linear-gradient(90deg, var(--surface), transparent); }
+.tool-tabs-wrap::after { right:0; background:linear-gradient(270deg, var(--surface), transparent); }
 
 /* Tooltips */
 .tool-tabs a{ position:relative; }
@@ -949,19 +951,4 @@ footer a.small:hover{ text-decoration:underline; }
   .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
 }
 
-/* --- ULTIMATE FIX: Force Kill Sticky Header on Home Page --- */
-/* આ કોડ site-header ને સ્ક્રીન પરથી, મેમરીમાંથી અને લેઆઉટમાંથી સંપૂર્ણપણે દૂર કરશે */
-body.home .site-header,
-body.home .tool-tabs-wrap {
-    display: none !important;        /* દેખાય જ નહીં */
-    visibility: hidden !important;   /* અદ્રશ્ય થઈ જાય */
-    position: static !important;     /* Sticky વર્તન બંધ (સૌથી મહત્વનું) */
-    height: 0 !important;            /* ઊંચાઈ ઝીરો */
-    width: 0 !important;             /* પહોળાઈ ઝીરો */
-    opacity: 0 !important;           /* પારદર્શક */
-    pointer-events: none !important; /* ક્લિક પણ ન થાય */
-    z-index: -9999 !important;       /* બધાની પાછળ ધકેલી દો */
-    border: none !important;         /* કોઈ બોર્ડર નહીં */
-    box-shadow: none !important;     /* કોઈ પડછાયો નહીં */
-    background: transparent !important; /* કોઈ કલર નહીં */
-}
+
