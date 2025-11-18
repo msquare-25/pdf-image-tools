@@ -949,3 +949,28 @@ footer a.small:hover{ text-decoration:underline; }
 @media (max-width: 700px){
   .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
 }
+
+/* --- Final Fix: Force Sticky Header on Home Page to Match Body Background --- */
+/* Target the header and force it to adopt the page background color (--bg) */
+.home .site-header {
+    background: var(--bg) !important; 
+    box-shadow: none !important;
+    border: none !important;
+    backdrop-filter: none !important;
+}
+
+/* Ensure the tool-tabs-wrap (which also gets sticky/appears on scroll) is transparent */
+.home .tool-tabs-wrap{
+    background: var(--bg) !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* Ensure the mobile-specific rule is also flat */
+@media (max-width: 540px){
+    .home .tool-tabs-wrap{
+        background: var(--bg) !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
