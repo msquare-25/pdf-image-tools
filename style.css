@@ -950,20 +950,13 @@ footer a.small:hover{ text-decoration:underline; }
 }
 
 
-/* --- અંતિમ ફિક્સ: હોમ પેજ પરના કલર બ્રેકને દૂર કરો (મુખ્ય કન્ટેન્ટ) --- */
+/* --- FINAL FIX: Home Page પર Sticky Header ને સંપૂર્ણપણે બંધ કરો --- */
 
-/* 1. ખાતરી કરો કે મુખ્ય કન્ટેન્ટ સેક્શન (જ્યાં ટૂલ કાર્ડ્સ છે) પારદર્શક છે */
-.home main section:first-child {
-    background: transparent !important;
-    padding-top: 0 !important; /* જો વધારાનું padding હોય તો દૂર કરો */
+/* body.home ક્લાસનો ઉપયોગ કરીને ખાતરી કરો કે તે છુપાયેલો રહે */
+body.home .site-header {
+    display: none !important; 
 }
 
-/* 2. જો મુખ્ય <main> એલિમેન્ટમાં કોઈ વધારાનો બેકગ્રાઉન્ડ હોય તો તેને પણ દૂર કરો */
-.home main {
-    background: transparent !important;
-}
-
-/* 3. હોમ પેજ ગ્રીડને પણ પારદર્શક રાખો */
-.home .tools-grid {
-    background: transparent !important;
+body.home .tool-tabs-wrap {
+    display: none !important;
 }
