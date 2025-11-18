@@ -951,6 +951,4 @@ footer a.small:hover{ text-decoration:underline; }
   .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
 }
 
-.home main{
-  background: var(--bg);
-}
+
