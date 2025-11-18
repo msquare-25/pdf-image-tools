@@ -950,3 +950,7 @@ footer a.small:hover{ text-decoration:underline; }
 @media (max-width: 700px){
   .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
 }
+
+.home main{
+  background: var(--bg);
+}
