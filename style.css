@@ -263,7 +263,7 @@ label.inline{ display:flex; align-items:center; gap:8px; }
   width:34px; height:34px; border-radius:999px;
   border:1px solid var(--border); background:var(--bg); color:var(--text);
   font-weight:900; line-height:1; display:grid; place-items:center;
-  box-shadow:var(--shadow-sm); cursor:pointer; z-index:2; opacity:.9;
+  /* box-shadow:var(--shadow-sm); */ box-shadow:none; cursor:pointer; z-index:2; opacity:.9;
 }
 .tool-scroll:hover{ box-shadow:var(--shadow-md); transform:translateY(-50%) scale(1.05); }
 .tool-scroll:disabled{ opacity:.35; cursor:not-allowed; }
