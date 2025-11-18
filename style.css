@@ -277,8 +277,8 @@ label.inline{ display:flex; align-items:center; gap:8px; }
 .tool-tabs-wrap::after{
   content:""; position:absolute; top:0; bottom:0; width:40px; z-index:1; pointer-events:none;
 }
-.tool-tabs-wrap::before{ left:0;  background:linear-gradient(90deg, var(--surface), transparent); }
-.tool-tabs-wrap::after { right:0; background:linear-gradient(270deg, var(--surface), transparent); }
+.tool-tabs-wrap::before{ left:0;  background:linear-gradient(90deg, var(--bg), transparent); }
+.tool-tabs-wrap::after { right:0; background:linear-gradient(270deg, var(--bg), transparent); }
 
 /* Tooltips */
 .tool-tabs a{ position:relative; }
@@ -950,26 +950,3 @@ footer a.small:hover{ text-decoration:underline; }
 }
 
 
-/* --- ડેસ્કટોપ સ્ક્રોલિંગ ફિક્સ: હોમ પેજ પર sticky header ને સંપૂર્ણપણે છુપાવો/ભેળવી દો --- */
-/* 1. હોમ પેજ પર, site-header ને સંપૂર્ણપણે છુપાવો (આ માત્ર ડેસ્કટોપને અસર કરશે) */
-.home .site-header {
-    display: none !important; /* ખાતરી કરો કે તે દેખાય જ નહીં */
-}
-
-/* 2. જો તે કોઈ કારણસર દેખાય તો પણ, તેના બેકગ્રાઉન્ડ અને શાડોને દૂર કરો */
-.home .site-header,
-.home .tool-tabs-wrap {
-    background: var(--bg) !important; 
-    box-shadow: none !important;
-    border: none !important;
-    backdrop-filter: none !important;
-}
-
-/* 3. Ensure mobile sticky rule matches the page background color */
-@media (max-width: 540px){
-    .home .tool-tabs-wrap{
-        background: var(--bg) !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-}
