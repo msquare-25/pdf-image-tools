@@ -949,14 +949,19 @@ footer a.small:hover{ text-decoration:underline; }
   .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
 }
 
-
-/* --- FINAL FIX: Home Page પર Sticky Header ને સંપૂર્ણપણે બંધ કરો --- */
-
-/* body.home ક્લાસનો ઉપયોગ કરીને ખાતરી કરો કે તે છુપાયેલો રહે */
-body.home .site-header {
-    display: none !important; 
-}
-
+/* --- ULTIMATE FIX: Force Kill Sticky Header on Home Page --- */
+/* આ કોડ site-header ને સ્ક્રીન પરથી, મેમરીમાંથી અને લેઆઉટમાંથી સંપૂર્ણપણે દૂર કરશે */
+body.home .site-header,
 body.home .tool-tabs-wrap {
-    display: none !important;
+    display: none !important;        /* દેખાય જ નહીં */
+    visibility: hidden !important;   /* અદ્રશ્ય થઈ જાય */
+    position: static !important;     /* Sticky વર્તન બંધ (સૌથી મહત્વનું) */
+    height: 0 !important;            /* ઊંચાઈ ઝીરો */
+    width: 0 !important;             /* પહોળાઈ ઝીરો */
+    opacity: 0 !important;           /* પારદર્શક */
+    pointer-events: none !important; /* ક્લિક પણ ન થાય */
+    z-index: -9999 !important;       /* બધાની પાછળ ધકેલી દો */
+    border: none !important;         /* કોઈ બોર્ડર નહીં */
+    box-shadow: none !important;     /* કોઈ પડછાયો નહીં */
+    background: transparent !important; /* કોઈ કલર નહીં */
 }
