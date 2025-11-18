@@ -952,3 +952,18 @@ footer a.small:hover{ text-decoration:underline; }
 }
 
 
+/* --- Home Page Scroll Fix: Remove sticky header border/shadow on scroll --- */
+/* Target the main header container when on the home page (where the line appears) */
+.home .site-header {
+    border-bottom: none !important; 
+    background: var(--bg) !important; /* Use the default page background color */
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+}
+
+/* Target the tool tabs wrap specifically, in case it becomes sticky */
+.home .site-header .tool-tabs-wrap{
+    background: var(--bg) !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
