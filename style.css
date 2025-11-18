@@ -950,19 +950,20 @@ footer a.small:hover{ text-decoration:underline; }
 }
 
 
-/* --- અંતિમ ફિક્સ: હોમ પેજ પરના કલર બ્રેકને દૂર કરો (ગ્રેડિયન્ટની નીચે) --- */
+/* --- અંતિમ ફિક્સ: હોમ પેજ પરના કલર બ્રેકને દૂર કરો (મુખ્ય કન્ટેન્ટ) --- */
 
-/* મુખ્ય કન્ટેન્ટને હેડર સાથે ચોક્કસ રીતે જોડવા માટે */
-main {
-    padding-top: 0 !important; /* મુખ્ય કન્ટેન્ટનું વધારાનું padding દૂર કરો */
+/* 1. ખાતરી કરો કે મુખ્ય કન્ટેન્ટ સેક્શન (જ્યાં ટૂલ કાર્ડ્સ છે) પારદર્શક છે */
+.home main section:first-child {
+    background: transparent !important;
+    padding-top: 0 !important; /* જો વધારાનું padding હોય તો દૂર કરો */
 }
 
-/* હોમ ગ્રીડને હેડરની નીચે સીધું શરૂ કરો */
-.home-grid {
-    margin-top: 20px !important; /* થોડું ઉપર ખસેડો */
+/* 2. જો મુખ્ય <main> એલિમેન્ટમાં કોઈ વધારાનો બેકગ્રાઉન્ડ હોય તો તેને પણ દૂર કરો */
+.home main {
+    background: transparent !important;
 }
 
-/* જો હેડરનું બેકગ્રાઉન્ડ દેખાતું હોય તો તેને સંપૂર્ણપણે પારદર્શક કરો */
-.home-header {
+/* 3. હોમ પેજ ગ્રીડને પણ પારદર્શક રાખો */
+.home .tools-grid {
     background: transparent !important;
 }
