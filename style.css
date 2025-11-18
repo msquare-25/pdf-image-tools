@@ -43,13 +43,15 @@ button,input,select,textarea{ font:inherit; color:inherit; }
 .container{ max-width:var(--container); margin:0 auto; padding:0 20px; }
 main{ padding:22px 0 40px; }
 
-/* Header + TOP TOOLS BAR */
+/* Header + TOP TOOLS BAR – clean white, no gradient */
 .site-header{
-  position:sticky; top:0; z-index:50;
-  background:linear-gradient(90deg, rgba(124,58,237,.15), rgba(6,182,212,.15)), rgba(255,255,255,.55);
-  border-bottom:1px solid rgba(255,255,255,.35);
-  backdrop-filter:blur(10px);
-  box-shadow:var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--surface); /* plain white */
+  border-bottom: 1px solid rgba(148,163,184,.30);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: none;
 }
 .site-header .bar{
   display:flex; align-items:center; justify-content:space-between; gap:12px;
