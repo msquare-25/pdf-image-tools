@@ -43,15 +43,13 @@ button,input,select,textarea{ font:inherit; color:inherit; }
 .container{ max-width:var(--container); margin:0 auto; padding:0 20px; }
 main{ padding:22px 0 40px; }
 
-/* Header + TOP TOOLS BAR – clean white, no gradient */
+/* Header + TOP TOOLS BAR */
 .site-header{
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: var(--surface); /* plain white */
-  border-bottom: 1px solid rgba(148,163,184,.30);
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: none;
+  position:sticky; top:0; z-index:50;
+  background:linear-gradient(90deg, rgba(124,58,237,.15), rgba(6,182,212,.15)), rgba(255,255,255,.55);
+  border-bottom:1px solid rgba(255,255,255,.35);
+  backdrop-filter:blur(10px);
+  box-shadow:var(--shadow-sm);
 }
 .site-header .bar{
   display:flex; align-items:center; justify-content:space-between; gap:12px;
@@ -662,6 +660,45 @@ select::-ms-expand{ display:none; }
 /* Hide the global nav/header on home */
 .home .site-header { display: none; }
 
+/* Centered banner with logo + title (no gradient) */
+.home-header{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  gap:8px;
+  padding:48px 16px 36px;
+  background: var(--surface);  /* <<< CLEAN BG */
+  border-bottom: 1px solid rgba(0,0,0,.05);
+}
+
+.home-header .logo{
+  width:36px;
+  height:36px;
+  display:inline-block;
+  border-radius:12px;
+  background: var(--surface); /* simple bg */
+  box-shadow: 0 6px 18px rgba(111,77,230,.15);
+}
+
+.home-header .logo.xl{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+}
+.home-header h1{
+  margin: 4px 0 0;
+  font-size: 2rem;
+  font-weight: 800;
+  color:#1f2a54;
+  letter-spacing: .2px;
+}
+.home-header p{
+  margin:0;
+  font-size:1rem;
+  color:#374151;
+}
+
 /* Cards grid on home (if not already present) */
 .home-grid{
   display:grid;
@@ -696,6 +733,21 @@ select::-ms-expand{ display:none; }
 footer{ text-align:center; padding:24px 0 40px; }
 footer a.small{ color:#4b5563; text-decoration:none; margin:0 6px; }
 footer a.small:hover{ text-decoration:underline; }
+
+/* --- Home: compact layout to fit more above the fold --- */
+
+/* shrink the header on smaller screens */
+.home-header{
+  padding: 18px 14px 14px;      /* was ~48/36 */
+}
+.home-header h1{
+  font-size: 1.65rem;            /* was 2rem */
+  margin: 0 0 2px;
+}
+.home-header p{
+  font-size: .95rem;             /* was 1rem */
+  opacity: .95;
+}
 
 /* tighter grid */
 .home-grid{
@@ -741,6 +793,14 @@ footer a.small:hover{ text-decoration:underline; }
     max-width: 1220px;
     grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); /* was 240 */
   }
+}
+
+/* for 1366×768-ish laptops, squeeze slightly more */
+@media (max-height: 820px){
+  .home-header{ padding: 14px 12px 10px; }
+  .home .card{ padding: 12px; }
+  .home .card p{ margin-bottom: 10px; }
+  .home .card .btn{ padding: 4px 10px; }
 }
 
 /* --- Mobile: make tool-tabs scroll cleanly and show the last item fully --- */
@@ -950,5 +1010,3 @@ footer a.small:hover{ text-decoration:underline; }
 @media (max-width: 700px){
   .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
 }
-
-
