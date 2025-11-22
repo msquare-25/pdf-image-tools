@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
 
-# Don’t block legal pages; they help trust.
 Sitemap: https://pdfimagelab.com/sitemap.xml
