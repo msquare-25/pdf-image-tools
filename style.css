@@ -1059,3 +1059,30 @@ footer a.small:hover{ text-decoration:underline; }
 @media (max-width: 700px){
   .image-to-pdf-page .row-nowrap{ flex-wrap: wrap; }
 }
+
+
+/* Mobile fixes for blog page */
+@media (max-width: 768px) {
+
+  /* Cards become full width */
+  .grid.grid-2 {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .grid.grid-2 .card {
+    width: 100% !important;
+  }
+
+  /* Sidebar moves below and full width */
+  .row {
+    display: block !important;
+  }
+
+  aside.card {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-top: 20px;
+  }
+}
