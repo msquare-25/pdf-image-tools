@@ -45,6 +45,10 @@
       title: "PNG → JPG — Quick Converter",
       desc: "Convert PNG to JPG with adjustable quality. Batch-friendly and private.",
     },
+    "/heic-to-jpg-png": {
+      title: "HEIC → JPG/PNG — HEIC Converter",
+      desc: "Convert HEIC photos from iPhone or iPad to JPG or PNG directly in your browser. No uploads, fully private.",
+    },
     "/jpg-to-png": {
       title: "JPG → PNG — Lossless Converter",
       desc: "Convert JPG to lossless PNG (ZIP). Everything stays on your device.",
