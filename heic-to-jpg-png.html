@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="description" content="Free, fast, and private HEIC to JPG/PNG converter — everything runs in your browser (no uploads).">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HEIC → JPG/PNG — Client-side</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/style.css" />
+  <script defer src="/site.js"></script>
+  <script defer src="/assets/seo.js"></script>
+  <meta name="color-scheme" content="light dark" />
+
+  <link rel="canonical" href="https://pdfimagelab.com/heic-to-jpg-png" />
+  <meta property="og:title" content="HEIC to JPG/PNG — PDF Image Lab" />
+  <meta property="og:description" content="Convert HEIC photos (from iPhone/iPad) to JPG or PNG directly in your browser. Private, fast, and free." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://pdfimagelab.com/heic-to-jpg-png" />
+
+</head>
+<body class="tool-page">
+<header class="site-header">
+  <div class="container bar">
+    <div class="brand">
+      <a href="/" class="home-link">
+        <span class="logo"></span>
+        <span>PDFimageLab</span>
+      </a>
+    </div>
+
+    <div class="container tool-tabs-wrap">
+      <button class="tool-scroll tool-left" aria-label="Scroll tools left" title="Scroll left">‹</button>
+      <nav class="tool-tabs" role="navigation" aria-label="Tools">
+        <a href="/merge">Merge PDF</a>
+        <a href="/delete-pages">Delete pages</a>
+        <a href="/rotate-pages">Rotate PDF</a>
+        <a href="/reorder-pages">Reorder PDF</a>
+        <a href="/crop">Crop PDF</a>
+        <a href="/compress">Compress PDF</a>
+        <a href="/pdf-to-images">PDF → Images</a>
+        <a href="/image-to-pdf">Image → PDF</a>
+        <a href="/jpg-to-png">JPG → PNG</a>
+        <a href="/png-to-jpg">PNG → JPG</a>
+        <a href="/heic-to-jpg-png" class="active">HEIC → JPG/PNG</a>
+      </nav>
+      <button class="tool-scroll tool-right" aria-label="Scroll tools right" title="Scroll right">›</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <!-- ===== 3-Box Panel ===== -->
+    <aside class="panel">
+      <div class="grid-3">
+
+        <!-- 1) Upload -->
+        <section class="panel card box upload-box theme-center" id="dropzone" aria-label="Upload">
+          <h2 class="title">Upload</h2>
+          <p class="muted">Drag &amp; drop HEIC images here</p>
+          <label for="file" class="btn gradient big">Browse HEIC</label>
+          <input id="file" type="file" accept=".heic,.heif,image/heic,image/heif" multiple hidden />
+          <div class="pill mt-2" id="meta">No file</div>
+          <button class="btn subtle mt-1" id="clearBtn" disabled>Clear</button>
+          <div class="small mt-2">Everything runs in your browser (no uploads).</div>
+        </section>
+
+        <!-- 2) Settings -->
+        <section class="panel card box settings-box theme-center" aria-label="Conversion Settings">
+          <h2 class="title">Settings</h2>
+
+          <label class="block mt-1">
+            Output format
+            <select id="format" class="mt-1">
+              <option value="jpg" selected>JPG (smaller, universal)</option>
+              <option value="png">PNG (lossless, larger)</option>
+            </select>
+          </label>
+
+          <div id="jpgSettings" class="mt-2">
+            <label class="block">JPG quality
+              <input id="quality" type="range" min="0.5" max="0.99" step="0.01" value="0.92" />
+            </label>
+            <div class="small" id="qLabel">Quality: 0.92 (higher = better &amp; larger)</div>
+          </div>
+
+          <div class="small mt-2">
+            Converts iPhone / iPad HEIC photos to clean JPG or PNG files on your device. No server, no tracking.
+          </div>
+        </section>
+
+        <!-- 3) Action / Download -->
+        <section class="panel card box action-box theme-center" aria-label="Convert & Download">
+          <h2 class="title">Download</h2>
+
+          <progress id="prog" max="100" value="0" class="w-100"></progress>
+          <div id="status" class="small">Idle…</div>
+
+          <div class="row center mt-2" style="gap:10px">
+            <button id="convertBtn" class="btn" disabled>Convert &amp; Download</button>
+            <button id="cancelBtn" class="btn ghost" style="display:none">Cancel</button>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <!-- ===== Title + How it works ===== -->
+    <section class="tool-copy">
+      <h1>HEIC to JPG or PNG — free, fast, private</h1>
+      <p>
+        Drop your <strong>.heic</strong> photos from iPhone, iPad, or Mac and instantly convert them
+        to <strong>JPG</strong> or <strong>PNG</strong>. Everything happens locally in your browser,
+        so your images never leave your device.
+      </p>
+
+      <h2>How to convert HEIC to JPG/PNG</h2>
+      <ol>
+        <li>Upload one or more HEIC files using drag &amp; drop or the “Browse HEIC” button.</li>
+        <li>Choose your preferred output format (JPG or PNG).</li>
+        <li>Optionally adjust JPG quality with the slider.</li>
+        <li>Click <strong>Convert &amp; Download</strong> to save your images.</li>
+      </ol>
+
+      <p class="small mt-2">
+        Tip: JPG is best for smaller file sizes and sharing; PNG is ideal when you want lossless images.
+      </p>
+      <p class="sub mt-1">Privacy: No uploads. Everything stays on your device.</p>
+    </section>
+
+  </div>
+
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.5.7/dist/heic2any.min.js"></script>
+
+  <!-- page script -->
+  <script>
+    const $ = (s) => document.querySelector(s);
+
+    // Elements
+    const fileInput   = $('#file');
+    const dropzone    = $('#dropzone');
+    const meta        = $('#meta');
+    const clearBtn    = $('#clearBtn');
+    const convertBtn  = $('#convertBtn');
+    const cancelBtn   = $('#cancelBtn');
+    const prog        = $('#prog');
+    const statusEl    = $('#status');
+    const formatEl    = $('#format');
+    const jpgSettings = $('#jpgSettings');
+    const qualityEl   = $('#quality');
+    const qLabel      = $('#qLabel');
+
+    // State
+    /** @type {File[]} */
+    let files = [];
+    let cancelFlag = false;
+
+    // Helpers
+    function updateMeta(){
+      if(files.length === 0){
+        meta.textContent = 'No file';
+        clearBtn.disabled = true;
+        convertBtn.disabled = true;
+        convertBtn.classList.remove('primary-blue');
+      }else{
+        meta.textContent = \`\${files.length} HEIC image\${files.length>1?'s':''}\`;
+        clearBtn.disabled = false;
+        convertBtn.disabled = false;
+        convertBtn.classList.add('primary-blue');
+      }
+    }
+    function setStatus(txt){ statusEl.textContent = txt; }
+    function setProgress(done, total){
+      if(total <= 0){ prog.max = 100; prog.value = 0; return; }
+      prog.max = 100;
+      prog.value = Math.round((done/total)*100);
+    }
+    function downloadBlob(blob, filename){
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    }
+
+    // JPG quality label
+    if (qualityEl && qLabel) {
+      qualityEl.addEventListener('input', () => {
+        const v = parseFloat(qualityEl.value || '0.92').toFixed(2);
+        qLabel.textContent = \`Quality: \${v} (higher = better & larger)\`;
+      });
+    }
+
+    // Format toggle (show/hide JPG settings)
+    function refreshFormatUI(){
+      if (!jpgSettings) return;
+      if (formatEl.value === 'jpg') {
+        jpgSettings.style.display = '';
+      } else {
+        jpgSettings.style.display = 'none';
+      }
+    }
+    formatEl.addEventListener('change', refreshFormatUI);
+    refreshFormatUI();
+
+    // File select
+    fileInput.addEventListener('change', (e) => {
+      addFiles(Array.from(e.target.files || []));
+      fileInput.value = '';
+    });
+
+    function addFiles(list){
+      for(const f of list){
+        if(!f) continue;
+        const name = f.name || '';
+        if(
+          f.type === 'image/heic' ||
+          f.type === 'image/heif' ||
+          /\.heic$/i.test(name) ||
+          /\.heif$/i.test(name)
+        ){
+          files.push(f);
+        }
+      }
+      updateMeta();
+    }
+
+    // Clear
+    clearBtn.addEventListener('click', () => {
+      files = [];
+      updateMeta();
+      setStatus('Idle…');
+      setProgress(0,0);
+    });
+
+    // Drag & drop
+    ['dragenter','dragover'].forEach(ev =>
+      dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('dropping'); })
+    );
+    ['dragleave','drop'].forEach(ev =>
+      dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('dropping'); })
+    );
+    dropzone.addEventListener('drop', (e) => {
+      const list = Array.from(e.dataTransfer?.files || []);
+      addFiles(list);
+    });
+
+    // Convert
+    convertBtn.addEventListener('click', () =>
+      runConvert().catch(err => {
+        console.error(err);
+        alert('Conversion failed: ' + (err?.message || err));
+        setStatus('Error.');
+        convertBtn.disabled = false;
+        cancelBtn.style.display = 'none';
+      })
+    );
+    cancelBtn.addEventListener('click', () => { cancelFlag = true; });
+
+    // Core conversion
+    async function runConvert(){
+      if (files.length === 0) return;
+
+      const outFormat = (formatEl.value === 'png') ? 'png' : 'jpg';
+      const mime = outFormat === 'png' ? 'image/png' : 'image/jpeg';
+      const quality = outFormat === 'jpg'
+        ? Math.max(0.5, Math.min(0.99, parseFloat(qualityEl.value || '0.92')))
+        : undefined;
+
+      convertBtn.disabled = true;
+      cancelBtn.style.display = 'inline-flex';
+      cancelFlag = false;
+
+      setStatus(\`Converting \${files.length} file\${files.length>1?'s':''}…\`);
+      setProgress(0, files.length);
+
+      const zip = new JSZip();
+      let i = 0;
+      let singleBlob = null;
+      let singleName = '';
+
+      for (const f of files) {
+        if (cancelFlag) throw new Error('Cancelled');
+
+        setStatus(\`Converting \${i+1} / \${files.length}…\`);
+
+        const opts = { blob: f, toType: mime };
+        if (quality && outFormat === 'jpg') {
+          opts.quality = quality;
+        }
+
+        const result = await heic2any(opts);
+        const blob = result instanceof Blob ? result : result[0];
+        const base = (f.name || 'image').replace(/\.[^.]+$/, '') || 'image';
+        const fileName = base + (outFormat === 'png' ? '.png' : '.jpg');
+
+        if (files.length === 1) {
+          singleBlob = blob;
+          singleName = fileName;
+        } else {
+          zip.file(fileName, blob);
+        }
+
+        i++;
+        setProgress(i, files.length);
+        await new Promise(r => setTimeout(r, 0)); // yield
+      }
+
+      if (cancelFlag) {
+        throw new Error('Cancelled');
+      }
+
+      if (files.length === 1 && singleBlob) {
+        setStatus('Saving file…');
+        downloadBlob(singleBlob, singleName);
+      } else {
+        setStatus('Packaging ZIP…');
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const zipName = outFormat === 'png' ? 'heic-to-png.zip' : 'heic-to-jpg.zip';
+        downloadBlob(zipBlob, zipName);
+      }
+
+      setStatus('Done.');
+      convertBtn.disabled = false;
+      cancelBtn.style.display = 'none';
+    }
+
+    // init
+    updateMeta();
+  </script>
+</main>
+</body>
+</html>
