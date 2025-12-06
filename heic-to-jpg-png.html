@@ -73,10 +73,13 @@
 
           <label class="block mt-1">
             Output format
-            <select id="format" class="mt-1">
-              <option value="jpg" selected>JPG (smaller, universal)</option>
-              <option value="png">PNG (lossless, larger)</option>
-            </select>
+<div class="select-wrap">
+  <select id="format">
+    <option value="jpg">JPG (smaller, universal)</option>
+    <option value="png">PNG (lossless, larger)</option>
+  </select>
+  <span class="select-arrow"></span>
+</div>
           </label>
 
           <div id="jpgSettings" class="mt-2">
