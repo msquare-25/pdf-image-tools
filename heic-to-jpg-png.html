@@ -139,30 +139,18 @@
 
   </div>
 
-  <!-- libs -->
-  <script src="heic2any.min.js"></script>
-  
-  <!-- page script -->
-    <!-- libs are loaded dynamically inside the page script -->
 
+    <!-- libs -->
+  <script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.1/index.min.js" 
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer">
+  </script>
+
+  <!-- page script -->
   <script>
     (function () {
       const $ = (s) => document.querySelector(s);
-
-        loadHeic2Any._promise = new Promise((resolve, reject) => {
-          script.async = true;
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error('Failed to load heic2any library'));
-          document.head.appendChild(script);
-        });
-
-        await loadHeic2Any._promise;
-
-        if (!window.heic2any) {
-          throw new Error('heic2any is not available after loading script');
-        }
-        return window.heic2any;
-      }
 
       // Elements
       const fileInput   = $('#file');
@@ -183,7 +171,6 @@
       let files = [];
       let cancelFlag = false;
 
-      // Helpers
       function updateMeta() {
         if (!files.length) {
           meta.textContent = 'No file';
@@ -232,19 +219,15 @@
         });
       }
 
-      // Format toggle (show/hide JPG settings)
+      // Format toggle
       function refreshFormatUI() {
         if (!jpgSettings) return;
-        if (formatEl.value === 'jpg') {
-          jpgSettings.style.display = '';
-        } else {
-          jpgSettings.style.display = 'none';
-        }
+        jpgSettings.style.display = formatEl.value === 'jpg' ? '' : 'none';
       }
       formatEl.addEventListener('change', refreshFormatUI);
       refreshFormatUI();
 
-      // ---------- File selection (upload) ----------
+      // ---------- File selection ----------
       fileInput.addEventListener('change', (e) => {
         files = Array.from(e.target.files || []);
         updateMeta();
@@ -301,6 +284,7 @@
           cancelBtn.style.display = 'none';
         })
       );
+
       cancelBtn.addEventListener('click', () => {
         cancelFlag = true;
       });
@@ -312,17 +296,18 @@
           return;
         }
 
-        // Only HEIC/HEIF files for conversion
         const heicFiles = files.filter((f) =>
           /\.hei[cf]$/i.test((f.name || ''))
         );
 
         if (!heicFiles.length) {
           setStatus('No HEIC/HEIF files found. Please select .heic or .heif images.');
-          alert(
-            'This tool only converts HEIC/HEIF images.\nPlease pick photos with a .heic or .heif extension.'
-          );
+          alert('This tool only converts HEIC/HEIF images.\nPlease pick photos with a .heic or .heif extension.');
           return;
+        }
+
+        if (typeof window.heic2any !== 'function') {
+          throw new Error('HEIC engine failed to load (heic2any not available).');
         }
 
         const outFormat = formatEl.value === 'png' ? 'png' : 'jpg';
@@ -353,13 +338,10 @@
             opts.quality = quality;
           }
 
-          // 🔑 heic2any ne yaha load kariye
-          const heic2anyFn = window.heic2any;
-          const result = await heic2anyFn(opts);
+          const result = await window.heic2any(opts);   // <- cdnjs global
 
           const blob = result instanceof Blob ? result : result[0];
-          const base =
-            (f.name || 'image').replace(/\.[^.]+$/, '') || 'image';
+          const base = (f.name || 'image').replace(/\.[^.]+$/, '') || 'image';
           const fileName = base + (outFormat === 'png' ? '.png' : '.jpg');
 
           downloadBlob(blob, fileName);
