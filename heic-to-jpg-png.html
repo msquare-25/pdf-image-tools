@@ -149,19 +149,7 @@
     (function () {
       const $ = (s) => document.querySelector(s);
 
-      // --- heic2any loader (CDN thi dynamic load) ---
-      async function loadHeic2Any() {
-        if (window.heic2any) return window.heic2any;
-
-        // ek j var load thai, pachi same promise reuse
-        if (loadHeic2Any._promise) {
-          await loadHeic2Any._promise;
-          return window.heic2any;
-        }
-
         loadHeic2Any._promise = new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://unpkg.com/heic2any'; // official CDN
           script.async = true;
           script.onload = () => resolve();
           script.onerror = () => reject(new Error('Failed to load heic2any library'));
@@ -366,7 +354,7 @@
           }
 
           // 🔑 heic2any ne yaha load kariye
-          const heic2anyFn = await loadHeic2Any();
+          const heic2anyFn = window.heic2any;
           const result = await heic2anyFn(opts);
 
           const blob = result instanceof Blob ? result : result[0];
