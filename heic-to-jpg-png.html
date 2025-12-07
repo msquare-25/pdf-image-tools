@@ -61,7 +61,13 @@
           <h2 class="title">Upload</h2>
           <p class="muted">Drag &amp; drop HEIC images here</p>
           <label for="file" class="btn gradient big">Browse HEIC</label>
-          <input id="file" type="file" accept=".heic,.heif,image/heic,image/heif" multiple hidden />
+          <input
+            id="file"
+            type="file"
+            accept=".heic,.heif,image/heic,image/heif,image/*"
+            multiple
+            hidden
+          />
           <div class="pill mt-2" id="meta">No file</div>
           <button class="btn subtle mt-1" id="clearBtn" disabled>Clear</button>
           <div class="small mt-2">Everything runs in your browser (no uploads).</div>
