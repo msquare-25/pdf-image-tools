@@ -139,7 +139,6 @@
   </div>
 
   <!-- libs -->
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/heic2any@0.5.7/dist/heic2any.min.js"></script>
 
   <script>
@@ -295,7 +294,7 @@
 
     // ---------- Core conversion ----------
 
-    async function runConvert() {
+        async function runConvert() {
       if (!files.length) {
         setStatus('No files loaded. Please add at least one HEIC/HEIF file.');
         return;
@@ -332,10 +331,7 @@
       );
       setProgress(0, heicFiles.length);
 
-      const zip = new JSZip();
       let i = 0;
-      let singleBlob = null;
-      let singleName = '';
 
       for (const f of heicFiles) {
         if (cancelFlag) throw new Error('Cancelled');
@@ -353,12 +349,8 @@
           (f.name || 'image').replace(/\.[^.]+$/, '') || 'image';
         const fileName = base + (outFormat === 'png' ? '.png' : '.jpg');
 
-        if (heicFiles.length === 1) {
-          singleBlob = blob;
-          singleName = fileName;
-        } else {
-          zip.file(fileName, blob);
-        }
+        // 🔥 direct download per file – no JSZip needed
+        downloadBlob(blob, fileName);
 
         i++;
         setProgress(i, heicFiles.length);
@@ -369,21 +361,11 @@
         throw new Error('Cancelled');
       }
 
-      if (heicFiles.length === 1 && singleBlob) {
-        setStatus('Saving file…');
-        downloadBlob(singleBlob, singleName);
-      } else {
-        setStatus('Packaging ZIP…');
-        const zipBlob = await zip.generateAsync({ type: 'blob' });
-        const zipName =
-          outFormat === 'png' ? 'heic-to-png.zip' : 'heic-to-jpg.zip';
-        downloadBlob(zipBlob, zipName);
-      }
-
       setStatus('Done.');
       convertBtn.disabled = false;
       cancelBtn.style.display = 'none';
     }
+
 
     // Init
     updateMeta();
