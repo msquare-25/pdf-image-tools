@@ -139,7 +139,6 @@
 
   </div>
 
-
     <!-- libs -->
     <script src="heic2any.min.js"></script>
 
@@ -167,6 +166,7 @@
       let files = [];
       let cancelFlag = false;
 
+      // Helpers
       function updateMeta() {
         if (!files.length) {
           meta.textContent = 'No file';
@@ -215,7 +215,7 @@
         });
       }
 
-      // Format toggle
+      // Format toggle (show/hide JPG settings)
       function refreshFormatUI() {
         if (!jpgSettings) return;
         jpgSettings.style.display = formatEl.value === 'jpg' ? '' : 'none';
@@ -292,6 +292,7 @@
           return;
         }
 
+        // Only HEIC/HEIF files for conversion
         const heicFiles = files.filter((f) =>
           /\.hei[cf]$/i.test((f.name || ''))
         );
@@ -303,7 +304,7 @@
         }
 
         if (typeof window.heic2any !== 'function') {
-          throw new Error('HEIC engine failed to load (heic2any not available).');
+          throw new Error('HEIC engine not available (heic2any not loaded).');
         }
 
         const outFormat = formatEl.value === 'png' ? 'png' : 'jpg';
@@ -334,8 +335,7 @@
             opts.quality = quality;
           }
 
-          const result = await window.heic2any(opts);   // <- cdnjs global
-
+          const result = await window.heic2any(opts);
           const blob = result instanceof Blob ? result : result[0];
           const base = (f.name || 'image').replace(/\.[^.]+$/, '') || 'image';
           const fileName = base + (outFormat === 'png' ? '.png' : '.jpg');
@@ -361,6 +361,7 @@
       setStatus('Idle…');
     })();
   </script>
+
 </main>
 </body>
 </html>
