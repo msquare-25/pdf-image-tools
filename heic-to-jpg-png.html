@@ -290,73 +290,71 @@
 
       // ---------- Core conversion ----------
       async function runConvert() {
-        if (!files.length) {
-          setStatus('No files loaded. Please add at least one HEIC/HEIF file.');
-          return;
-        }
-
-        // Only HEIC/HEIF files for conversion
-        const heicFiles = files.filter((f) =>
-          /\.hei[cf]$/i.test((f.name || ''))
-        );
-
-        if (!heicFiles.length) {
-          setStatus('No HEIC/HEIF files found. Please select .heic or .heif images.');
-          alert(
-            'This tool only converts HEIC/HEIF images.\nPlease pick photos with a .heic or .heif extension.'
-          );
-          return;
-        }
-
-        const outFormat = formatEl.value === 'png' ? 'png' : 'jpg';
-        const mime = outFormat === 'png' ? 'image/png' : 'image/jpeg';
-        const quality =
-          outFormat === 'jpg'
-            ? Math.max(0.5, Math.min(0.99, parseFloat(qualityEl.value || '0.92')))
-            : undefined;
-
-        convertBtn.disabled = true;
-        cancelBtn.style.display = 'inline-flex';
-        cancelFlag = false;
-
-        setStatus(
-          `Converting ${heicFiles.length} HEIC image${heicFiles.length > 1 ? 's' : ''}…`
-        );
-        setProgress(0, heicFiles.length);
-
-        let i = 0;
-
-        for (const f of heicFiles) {
-          if (cancelFlag) throw new Error('Cancelled');
-
-          setStatus(`Converting ${i + 1} / ${heicFiles.length}…`);
-
-          const opts = { blob: f, toType: mime };
-          if (quality && outFormat === 'jpg') {
-            opts.quality = quality;
-          }
-
-          const result = await heic2any(opts);
-          const blob = result instanceof Blob ? result : result[0];
-          const base =
-            (f.name || 'image').replace(/\.[^.]+$/, '') || 'image';
-          const fileName = base + (outFormat === 'png' ? '.png' : '.jpg');
-
-          downloadBlob(blob, fileName);
-
-          i++;
-          setProgress(i, heicFiles.length);
-          await new Promise((r) => setTimeout(r, 0));
-        }
-
-        if (cancelFlag) {
-          throw new Error('Cancelled');
-        }
-
-        setStatus('Done.');
-        convertBtn.disabled = false;
-        cancelBtn.style.display = 'none';
+      if (!files.length) {
+        setStatus('No files loaded.');
+        return;
       }
+
+      // Filter only HEIC files
+      const heicFiles = files.filter((f) =>
+        /\.hei[cf]$/i.test((f.name || ''))
+      );
+
+      if (!heicFiles.length) {
+        alert('Please select .heic files only.');
+        return;
+      }
+
+      const outFormat = formatEl.value === 'png' ? 'png' : 'jpg';
+      const mime = outFormat === 'png' ? 'image/png' : 'image/jpeg';
+      const quality = parseFloat(qualityEl.value || '0.92');
+
+      convertBtn.disabled = true;
+      cancelBtn.style.display = 'inline-flex';
+      cancelFlag = false;
+
+      setStatus(`Starting conversion...`);
+      setProgress(0, heicFiles.length);
+
+      let i = 0;
+
+      for (const f of heicFiles) {
+        if (cancelFlag) {
+            setStatus('Cancelled.');
+            break;
+        }
+
+        setStatus(`Converting ${i + 1} / ${heicFiles.length} (Processing... may take time)`);
+
+        try {
+            // Conversion logic with error catching
+            const blobResult = await heic2any({
+                blob: f,
+                toType: mime,
+                quality: quality
+            });
+
+            // Handle if result is array or single blob
+            const finalBlob = Array.isArray(blobResult) ? blobResult[0] : blobResult;
+            
+            const baseName = (f.name || 'image').replace(/\.[^.]+$/, '');
+            const fileName = `${baseName}.${outFormat}`;
+
+            downloadBlob(finalBlob, fileName);
+            
+            i++;
+            setProgress(i, heicFiles.length);
+
+        } catch (err) {
+            console.error("Conversion Failed for file:", f.name, err);
+            alert(`Error converting ${f.name}. Check Console (F12) for details.`);
+        }
+      }
+
+      setStatus(cancelFlag ? 'Cancelled.' : 'All Done.');
+      convertBtn.disabled = false;
+      cancelBtn.style.display = 'none';
+    }
 
       // Init
       updateMeta();
