@@ -214,21 +214,23 @@
       fileInput.value = '';
     });
 
-    function addFiles(list){
-      for(const f of list){
-        if(!f) continue;
-        const name = f.name || '';
-        if(
-          f.type === 'image/heic' ||
-          f.type === 'image/heif' ||
-          /\.heic$/i.test(name) ||
-          /\.heif$/i.test(name)
-        ){
-          files.push(f);
-        }
-      }
-      updateMeta();
+function addFiles(list) {
+  let added = 0;
+  for (const f of list) {
+    if (!f) continue;
+    const name = f.name || "";
+    // HEIC/HEIF detect only by extension (more reliable on Windows/Chrome)
+    if (/\.hei[cf]$/i.test(name)) {
+      files.push(f);
+      added++;
     }
+  }
+  if (!added) {
+    setStatus("Only HEIC/HEIF images are supported. Please select .heic or .heif files.");
+  }
+  updateMeta();
+}
+
 
     // Clear
     clearBtn.addEventListener('click', () => {
