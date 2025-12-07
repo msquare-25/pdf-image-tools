@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>HEIC Test</title>
+</head>
+<body>
+  <h1>HEIC Test</h1>
+
+  <input id="file" type="file" accept=".heic,.heif,image/heic,image/heif" />
+  <button id="btn">Convert to JPG</button>
+  <p id="log"></p>
+
+  <script src="heic2any.min.js"></script>
+  <script>
+    const fileInput = document.getElementById('file');
+    const btn = document.getElementById('btn');
+    const log = document.getElementById('log');
+
+    btn.addEventListener('click', async () => {
+      const f = fileInput.files[0];
+      if (!f) {
+        alert("Select one HEIC file first.");
+        return;
+      }
+      log.textContent = "Converting…";
+
+      if (typeof window.heic2any !== 'function') {
+        alert("heic2any NOT loaded!");
+        return;
+      }
+
+      try {
+        console.log("DEBUG TEST: calling heic2any", f);
+        const res = await window.heic2any({
+          blob: f,
+          toType: "image/jpeg",
+          quality: 0.9
+        });
+        console.log("DEBUG TEST: result", res);
+
+        const blob = res instanceof Blob ? res : res[0];
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = "test-output.jpg";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          URL.revokeObjectURL(a.href);
+          a.remove();
+        }, 1500);
+
+        log.textContent = "Done!";
+      } catch (e) {
+        console.error("DEBUG TEST: error", e);
+        alert("Error in test page: " + (e && e.message ? e.message : e));
+        log.textContent = "Error: " + (e && e.message ? e.message : e);
+      }
+    });
+  </script>
+</body>
+</html>
