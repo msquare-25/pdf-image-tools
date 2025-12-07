@@ -221,21 +221,21 @@
     });
 
 function addFiles(list) {
-  let added = 0;
   for (const f of list) {
     if (!f) continue;
-    const name = f.name || "";
-    // HEIC/HEIF detect only by extension (more reliable on Windows/Chrome)
-    if (/\.hei[cf]$/i.test(name)) {
-      files.push(f);
-      added++;
-    }
+    // Upload time par filter nathi — badha files add kariye
+    files.push(f);
   }
-  if (!added) {
-    setStatus("Only HEIC/HEIF images are supported. Please select .heic or .heif files.");
-  }
+
   updateMeta();
+
+  if (!files.length) {
+    setStatus("No files added. Please select at least one file.");
+  } else {
+    setStatus("Ready to convert. Click Convert & Download.");
+  }
 }
+
 
 
     // Clear
@@ -272,71 +272,84 @@ function addFiles(list) {
 
     // Core conversion
     async function runConvert(){
-      if (files.length === 0) return;
+  if (files.length === 0) {
+    setStatus("No files loaded. Please add at least one HEIC/HEIF file.");
+    return;
+  }
 
-      const outFormat = (formatEl.value === 'png') ? 'png' : 'jpg';
-      const mime = outFormat === 'png' ? 'image/png' : 'image/jpeg';
-      const quality = outFormat === 'jpg'
-        ? Math.max(0.5, Math.min(0.99, parseFloat(qualityEl.value || '0.92')))
-        : undefined;
+  // Only keep HEIC/HEIF for actual conversion
+  const heicFiles = files.filter(f => /\.hei[cf]$/i.test((f.name || "")));
 
-      convertBtn.disabled = true;
-      cancelBtn.style.display = 'inline-flex';
-      cancelFlag = false;
+  if (!heicFiles.length) {
+    setStatus("No HEIC/HEIF files found. Please select .heic or .heif images.");
+    alert("This tool only converts HEIC/HEIF images.\nPlease pick photos with .heic or .heif extension.");
+    return;
+  }
 
-      setStatus(\`Converting \${files.length} file\${files.length>1?'s':''}…\`);
-      setProgress(0, files.length);
+  const outFormat = (formatEl.value === 'png') ? 'png' : 'jpg';
+  const mime = outFormat === 'png' ? 'image/png' : 'image/jpeg';
+  const quality = outFormat === 'jpg'
+    ? Math.max(0.5, Math.min(0.99, parseFloat(qualityEl.value || '0.92')))
+    : undefined;
 
-      const zip = new JSZip();
-      let i = 0;
-      let singleBlob = null;
-      let singleName = '';
+  convertBtn.disabled = true;
+  cancelBtn.style.display = 'inline-flex';
+  cancelFlag = false;
 
-      for (const f of files) {
-        if (cancelFlag) throw new Error('Cancelled');
+  setStatus(`Converting ${heicFiles.length} HEIC image${heicFiles.length>1?'s':''}…`);
+  setProgress(0, heicFiles.length);
 
-        setStatus(\`Converting \${i+1} / \${files.length}…\`);
+  const zip = new JSZip();
+  let i = 0;
+  let singleBlob = null;
+  let singleName = '';
 
-        const opts = { blob: f, toType: mime };
-        if (quality && outFormat === 'jpg') {
-          opts.quality = quality;
-        }
+  for (const f of heicFiles) {
+    if (cancelFlag) throw new Error('Cancelled');
 
-        const result = await heic2any(opts);
-        const blob = result instanceof Blob ? result : result[0];
-        const base = (f.name || 'image').replace(/\.[^.]+$/, '') || 'image';
-        const fileName = base + (outFormat === 'png' ? '.png' : '.jpg');
+    setStatus(`Converting ${i+1} / ${heicFiles.length}…`);
 
-        if (files.length === 1) {
-          singleBlob = blob;
-          singleName = fileName;
-        } else {
-          zip.file(fileName, blob);
-        }
-
-        i++;
-        setProgress(i, files.length);
-        await new Promise(r => setTimeout(r, 0)); // yield
-      }
-
-      if (cancelFlag) {
-        throw new Error('Cancelled');
-      }
-
-      if (files.length === 1 && singleBlob) {
-        setStatus('Saving file…');
-        downloadBlob(singleBlob, singleName);
-      } else {
-        setStatus('Packaging ZIP…');
-        const zipBlob = await zip.generateAsync({ type: 'blob' });
-        const zipName = outFormat === 'png' ? 'heic-to-png.zip' : 'heic-to-jpg.zip';
-        downloadBlob(zipBlob, zipName);
-      }
-
-      setStatus('Done.');
-      convertBtn.disabled = false;
-      cancelBtn.style.display = 'none';
+    const opts = { blob: f, toType: mime };
+    if (quality && outFormat === 'jpg') {
+      opts.quality = quality;
     }
+
+    const result = await heic2any(opts);
+    const blob = result instanceof Blob ? result : result[0];
+    const base = (f.name || 'image').replace(/\.[^.]+$/, '') || 'image';
+    const fileName = base + (outFormat === 'png' ? '.png' : '.jpg');
+
+    if (heicFiles.length === 1) {
+      singleBlob = blob;
+      singleName = fileName;
+    } else {
+      zip.file(fileName, blob);
+    }
+
+    i++;
+    setProgress(i, heicFiles.length);
+    await new Promise(r => setTimeout(r, 0));
+  }
+
+  if (cancelFlag) {
+    throw new Error('Cancelled');
+  }
+
+  if (heicFiles.length === 1 && singleBlob) {
+    setStatus('Saving file…');
+    downloadBlob(singleBlob, singleName);
+  } else {
+    setStatus('Packaging ZIP…');
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const zipName = outFormat === 'png' ? 'heic-to-png.zip' : 'heic-to-jpg.zip';
+    downloadBlob(zipBlob, zipName);
+  }
+
+  setStatus('Done.');
+  convertBtn.disabled = false;
+  cancelBtn.style.display = 'none';
+}
+
 
     // init
     updateMeta();
