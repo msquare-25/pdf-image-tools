@@ -52,7 +52,7 @@ main{ padding:22px 0 40px; }
   box-shadow:var(--shadow-sm);
 }
 .site-header .bar{
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  display:flex; align-items:center; justify-content:flex-start; gap:12px;
   padding:12px 0;
 }
 /* Brand / logo area */
