@@ -1086,3 +1086,63 @@ footer a.small:hover{ text-decoration:underline; }
     margin-top: 20px;
   }
 }
+
+/* ===== Blog pages (desktop friendly layout) ===== */
+
+.blog-page main {
+  max-width: 860px;      /* content ni width limit */
+  margin: 0 auto;        /* center ma lai java */
+  padding: 32px 16px 64px;
+  line-height: 1.7;
+}
+
+/* Hero section */
+.blog-page .hero {
+  margin-bottom: 24px;
+}
+
+.blog-page .hero .title {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.blog-page .hero .sub {
+  font-size: 1.05rem;
+  max-width: 720px;
+}
+
+/* Main card */
+.blog-page .card {
+  padding: 24px 24px 40px;
+}
+
+/* Headings / text spacing */
+.blog-page h2.title {
+  margin-top: 28px;
+  margin-bottom: 10px;
+}
+
+.blog-page p,
+.blog-page .sub {
+  font-size: 1.02rem;
+  margin-bottom: 14px;
+}
+
+/* Lists */
+.blog-page ul.sub,
+.blog-page ol.sub {
+  margin-left: 20px;
+  margin-bottom: 18px;
+}
+
+/* Mobile – keep it simple */
+@media (max-width: 768px) {
+  .blog-page main {
+    max-width: 100%;
+    padding: 16px 12px 40px;
+  }
+
+  .blog-page .hero .title {
+    font-size: 1.6rem;
+  }
+}
