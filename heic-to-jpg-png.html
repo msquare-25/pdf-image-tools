@@ -13,7 +13,7 @@
   <script defer src="/assets/seo.js"></script>
 
   <style>
-    /* Error Box Style - Jo error aave to screen par dekhay */
+    /* Error Box Style */
     #debug-error {
       display: none;
       background: #ffe6e6;
@@ -37,7 +37,7 @@
     <div class="brand">
       <a href="/" class="home-link"><span class="logo"></span><span>PDFimageLab</span></a>
     </div>
-    </div>
+  </div>
 </header>
 
 <main>
@@ -88,16 +88,16 @@
 
   <script>
     console.log("Applying Security Patch...");
-    // Browser ne kaho ke Worker dead chhe, etle library Main Thread par chale
+    // Force Main Thread (Disable Worker to bypass strict CSP)
     try {
         window.Worker = undefined;
     } catch(e) { console.error(e); }
   </script>
 
-  <script src="heic2any.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.3/heic2any.min.js"></script>
   
   <script>
-    // Error Catcher (Screen par batavshe)
+    // Error Catcher
     window.onerror = function(msg, url, line) {
         const errBox = document.getElementById('debug-error');
         errBox.style.display = 'block';
@@ -109,7 +109,7 @@
         // Library Check
         if (typeof heic2any === 'undefined') {
             document.getElementById('debug-error').style.display = 'block';
-            document.getElementById('debug-error').innerHTML = "⚠️ ERROR: 'heic2any.min.js' not found.<br>Please ensure the file is uploaded to the same folder.";
+            document.getElementById('debug-error').innerHTML = "⚠️ ERROR: Library failed to load.<br>Check your internet connection.";
             return;
         }
 
@@ -162,7 +162,7 @@
             if (!files.length) return;
             
             convertBtn.disabled = true;
-            statusEl.textContent = "Initializing (Screen may freeze)...";
+            statusEl.textContent = "Processing (Wait)...";
             
             const quality = parseFloat(qualityEl.value);
             const format = formatEl.value;
@@ -171,14 +171,13 @@
             let i = 0;
             for (const f of files) {
                 try {
-                    // Check extension
                     if (!/\.hei[cf]$/i.test(f.name)) {
-                        i++; continue; // Skip non-heic
+                        i++; continue; 
                     }
 
                     statusEl.textContent = `Converting ${f.name}...`;
                     
-                    // Run Conversion (Main Thread)
+                    // Run Conversion
                     const result = await heic2any({
                         blob: f,
                         toType: mime,
@@ -187,7 +186,6 @@
 
                     const finalBlob = Array.isArray(result) ? result[0] : result;
                     
-                    // Download Trigger
                     const url = URL.createObjectURL(finalBlob);
                     const a = document.createElement('a');
                     a.href = url;
@@ -195,13 +193,10 @@
                     document.body.appendChild(a);
                     a.click();
                     
-                    // Cleanup
                     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
                     
                     i++;
                     prog.value = (i / files.length) * 100;
-
-                    // Nano-delay to update UI
                     await new Promise(r => setTimeout(r, 50));
 
                 } catch (err) {
