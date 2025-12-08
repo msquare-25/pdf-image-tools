@@ -1091,7 +1091,7 @@ footer a.small:hover{ text-decoration:underline; }
 @media (min-width: 900px) {
   /* Blog page main title + intro */
   main > .hero {
-    max-width: 840px;          /* article card jetli approx width */
+    max-width: 9600px;          /* article card jetli approx width */
     margin: 32px auto 24px;    /* center + thodu top/bottom space */
     padding: 0 16px;           /* left/right breath for text */
   }
@@ -1099,7 +1099,7 @@ footer a.small:hover{ text-decoration:underline; }
   /* Main article card width thodi slim & centered (hero pachhino card) */
   main > .hero + .card,
   main > .hero + .card.container {
-    max-width: 840px;
+    max-width: 960px;
     margin: 0 auto 40px;   /* center + nicheno gap */
   }
 }
