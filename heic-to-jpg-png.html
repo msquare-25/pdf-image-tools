@@ -1,256 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>HEIC → JPG/PNG | PDFImageLab</title>
-<link rel="stylesheet" href="../style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEIC to JPG/PNG Converter</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; }
+        .container { max-width: 500px; margin: auto; border: 2px dashed #ccc; padding: 30px; border-radius: 10px; }
+        select, button { padding: 10px; margin: 10px; font-size: 16px; }
+        button { background-color: #28a745; color: white; border: none; cursor: pointer; }
+        button:disabled { background-color: #ccc; }
+        #status { margin-top: 20px; font-weight: bold; }
+        #downloadBtn { display: none; margin-top: 20px; text-decoration: none; background: #007bff; color: white; padding: 10px 20px; border-radius: 5px; }
+    </style>
 </head>
+<body>
 
-<body class="tool-page">
+    <div class="container">
+        <h2>HEIC to Image Converter</h2>
+        
+        <input type="file" id="fileInput" accept=".heic" />
+        <br><br>
 
-<header class="site-header">
-  <div class="container bar">
-      <a href="/" class="brand">
-          <span class="logo"></span>
-          <span>PDFImageLab</span>
-      </a>
-  </div>
+        <label>Format: </label>
+        <select id="formatSelect">
+            <option value="image/jpeg">JPG</option>
+            <option value="image/png">PNG</option>
+        </select>
+        <br>
 
-  <div class="container tool-tabs-wrap">
-      <nav class="tool-tabs" aria-label="Tools">
-          <a href="/image-to-pdf">Image → PDF</a>
-          <a href="/pdf-to-images">PDF → Images</a>
-          <a href="/compress">Compress PDF</a>
-          <a href="/crop">Crop PDF</a>
-          <a href="/merge">Merge PDF</a>
-          <a href="/png-to-jpg">PNG → JPG</a>
-          <a href="/jpg-to-png">JPG → PNG</a>
-          <a href="/delete-pages">Delete pages</a>
-          <a href="/reorder-pages">Reorder PDF</a>
-          <a href="/rotate-pages">Rotate PDF</a>
+        <button id="convertBtn" onclick="convertToImage()">Convert Now</button>
 
-          <a href="/heic-to-jpg-png" class="active">HEIC → JPG/PNG</a>
-      </nav>
-  </div>
-</header>
+        <p id="status"></p>
+        <a id="downloadBtn" download="converted-image">Download Image</a>
+    </div>
 
-<main class="wrap">
+    <script src="library.js"></script>
 
-<!-- Upload Panel -->
-<section class="panel card box theme-center" aria-label="Upload">
-  <h2 class="title">Upload</h2>
+    <script>
+        function convertToImage() {
+            const fileInput = document.getElementById('fileInput');
+            const format = document.getElementById('formatSelect').value;
+            const status = document.getElementById('status');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const convertBtn = document.getElementById('convertBtn');
 
-  <div id="dropzone" class="dropzone">
-      Drag & drop HEIC images here
-  </div>
+            // Jo file select na kari hoy to
+            if (fileInput.files.length === 0) {
+                alert("Please select a HEIC file first!");
+                return;
+            }
 
-  <div class="btn-row mt-1">
-      <label class="btn gradient big">
-          Browse HEIC
-          <input type="file" id="file" accept=".heic,.heif,image/heif,image/heic" multiple hidden>
-      </label>
+            const file = fileInput.files[0];
 
-      <div id="meta" class="small mt-1">No file</div>
+            // Processing chalu chhe evo message
+            status.innerText = "Converting... Please wait.";
+            convertBtn.disabled = true;
+            downloadBtn.style.display = 'none';
 
-      <button id="clearBtn" class="btn subtle mt-1" disabled>Clear</button>
-  </div>
-
-  <p class="small mt-2">Everything runs in your browser (no uploads).</p>
-</section>
-
-
-<!-- Settings Panel -->
-<section class="panel card box theme-center" aria-label="Settings">
-  <h2 class="title">Settings</h2>
-
-  <label class="block mt-1">Choose output format</label>
-  <select id="format" class="select">
-      <option value="jpg">JPG (smaller, universal)</option>
-      <option value="png">PNG (lossless, larger)</option>
-  </select>
-
-  <div id="jpgSettings" class="mt-2">
-      <label class="block">JPG quality</label>
-      <input id="quality" type="range" min="0.5" max="0.99" step="0.01" value="0.92">
-      <div id="qLabel" class="small mt-1">Quality: 0.92</div>
-  </div>
-</section>
-
-
-<!-- Download Panel -->
-<section class="panel card box action-box theme-center" aria-label="Download">
-  <h2 class="title">Download</h2>
-
-  <progress id="prog" max="1" value="0" class="w-100"></progress>
-  <div id="status" class="small mt-1">Idle…</div>
-
-  <div class="mt-2">
-      <button id="convertBtn" class="btn primary-blue" disabled>Convert & Download</button>
-      <button id="cancelBtn" class="btn subtle" style="display:none;">Cancel</button>
-  </div>
-</section>
-
-
-</main>
-
-<!-- Load HEIC LIBRARY (locally stored by YOU) -->
-<script src="heic2any.min.js"></script>
-
-<!-- Tool Logic -->
-<script>
-(function () {
-
-  const $ = (s) => document.querySelector(s);
-
-  const fileInput   = $('#file');
-  const dropzone    = $('#dropzone');
-  const meta        = $('#meta');
-  const clearBtn    = $('#clearBtn');
-  const convertBtn  = $('#convertBtn');
-  const cancelBtn   = $('#cancelBtn');
-  const prog        = $('#prog');
-  const statusEl    = $('#status');
-  const formatEl    = $('#format');
-  const jpgSettings = $('#jpgSettings');
-  const qualityEl   = $('#quality');
-  const qLabel      = $('#qLabel');
-
-  let files = [];
-  let cancelFlag = false;
-
-
-  function setStatus(msg) { statusEl.textContent = msg; }
-  function setProgress(done, total) {
-    prog.max = total || 1;
-    prog.value = done || 0;
-  }
-
-  function updateMeta() {
-    if (!files.length) {
-      meta.textContent = "No file";
-      clearBtn.disabled = true;
-      convertBtn.disabled = true;
-    } else if (files.length === 1) {
-      meta.textContent = files[0].name;
-      clearBtn.disabled = false;
-      convertBtn.disabled = false;
-    } else {
-      meta.textContent = files.length + " files selected";
-      clearBtn.disabled = false;
-      convertBtn.disabled = false;
-    }
-  }
-
-  // JPG quality label
-  if (qualityEl && qLabel) {
-    qualityEl.addEventListener("input", () => {
-      qLabel.textContent = "Quality: " + Number(qualityEl.value).toFixed(2);
-    });
-  }
-
-  // PNG → hide quality
-  formatEl.addEventListener("change", () => {
-    jpgSettings.style.display = formatEl.value === 'jpg' ? '' : 'none';
-  });
-
-
-  // File input select
-  fileInput.addEventListener('change', e => {
-    let all = [...e.target.files];
-    files = all.filter(f => /\.(heic|heif)$/i.test(f.name));
-    updateMeta();
-    setStatus('Ready to convert.');
-  });
-
-  // Drag & drop
-  ['dragover','dragenter'].forEach(ev => {
-    dropzone.addEventListener(ev, e => {
-      e.preventDefault();
-      dropzone.classList.add('dropping');
-    });
-  });
-  ['dragleave','drop'].forEach(ev => {
-    dropzone.addEventListener(ev, e => {
-      e.preventDefault();
-      dropzone.classList.remove('dropping');
-    });
-  });
-  dropzone.addEventListener("drop", e => {
-    let all = [...e.dataTransfer.files];
-    files = all.filter(f => /\.(heic|heif)$/i.test(f.name));
-    updateMeta();
-    setStatus("Ready to convert.");
-  });
-
-  clearBtn.addEventListener('click', () => {
-    files = [];
-    updateMeta();
-    setStatus("Idle…");
-  });
-
-
-  // ---------------- MAIN CONVERSION ----------------
-  convertBtn.addEventListener('click', async () => {
-
-    if (typeof heic2any === "undefined") {
-      alert("❌ HEIC engine not loaded.\nCheck your heic2any.min.js file.");
-      return;
-    }
-
-    if (!files.length) return;
-
-    const outExt = formatEl.value;
-    const isPng  = outExt === 'png';
-    const quality = Number(qualityEl.value || 0.92);
-
-    convertBtn.disabled = true;
-    cancelFlag = false;
-    cancelBtn.style.display = "inline-flex";
-
-    setStatus("Converting…");
-    setProgress(0, files.length);
-
-    let done = 0;
-
-    for (const f of files) {
-      if (cancelFlag) break;
-
-      try {
-        const blob = await heic2any({
-          blob: f,
-          toType: isPng ? "image/png" : "image/jpeg",
-          quality: isPng ? undefined : quality
-        });
-
-        // DOWNLOAD
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = f.name.replace(/\.(heic|heif)$/i, "") + "." + outExt;
-        a.click();
-
-      } catch (err) {
-        console.error(err);
-        alert("Conversion failed: " + err);
-      }
-
-      done++;
-      setProgress(done, files.length);
-      setStatus(`Converting ${done} / ${files.length}…`);
-    }
-
-    setStatus("Done.");
-    convertBtn.disabled = false;
-    cancelBtn.style.display = "none";
-  });
-
-  cancelBtn.addEventListener('click', () => {
-    cancelFlag = true;
-    setStatus("Canceled.");
-  });
-
-})();
-</script>
+            // HEIC Library no upyog
+            heic2any({
+                blob: file,
+                toType: format,
+                quality: 0.8 // 0 thi 1 ni vache quality (0.8 etle 80%)
+            })
+            .then(function (conversionResult) {
+                // Success thay tyare
+                status.innerText = "Conversion Successful!";
+                
+                // Download link banavvi
+                const url = URL.createObjectURL(conversionResult);
+                
+                // Extension nakki karvu (jpg ke png)
+                const extension = format === "image/jpeg" ? "jpg" : "png";
+                
+                downloadBtn.href = url;
+                downloadBtn.download = `converted-image.${extension}`;
+                downloadBtn.style.display = 'inline-block';
+                convertBtn.disabled = false;
+            })
+            .catch(function (e) {
+                // Error aave tyare
+                console.error(e);
+                status.innerText = "Error: Could not convert file.";
+                convertBtn.disabled = false;
+            });
+        }
+    </script>
 
 </body>
 </html>
