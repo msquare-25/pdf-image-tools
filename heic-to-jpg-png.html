@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   
-  <meta http-equiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: gap: content: blob:; style-src 'self' 'unsafe-inline'; script-src * 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src * 'self' 'unsafe-inline' 'unsafe-eval' blob:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: gap: content: blob:; style-src 'self' 'unsafe-inline'; script-src * 'self' 'unsafe-inline' 'unsafe-eval' blob: https://unpkg.com; worker-src * 'self' 'unsafe-inline' 'unsafe-eval' blob:;">
   
   <title>HEIC → JPG/PNG — PDF Image Lab</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -88,16 +88,15 @@
 
   <script>
     console.log("Applying Security Patch...");
-    // Force Main Thread (Disable Worker to bypass strict CSP)
+    // Bypass CSP Worker restrictions
     try {
         window.Worker = undefined;
     } catch(e) { console.error(e); }
   </script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.3/heic2any.min.js"></script>
+  <script src="https://unpkg.com/heic2any@0.0.4/dist/heic2any.min.js"></script>
   
   <script>
-    // Error Catcher
     window.onerror = function(msg, url, line) {
         const errBox = document.getElementById('debug-error');
         errBox.style.display = 'block';
@@ -109,7 +108,7 @@
         // Library Check
         if (typeof heic2any === 'undefined') {
             document.getElementById('debug-error').style.display = 'block';
-            document.getElementById('debug-error').innerHTML = "⚠️ ERROR: Library failed to load.<br>Check your internet connection.";
+            document.getElementById('debug-error').innerHTML = "⚠️ ERROR: Library failed to load from unpkg.<br>Please try checking your internet or firewall.";
             return;
         }
 
@@ -127,7 +126,6 @@
         
         let files = [];
 
-        // UI Updates
         formatEl.addEventListener('change', () => {
              jpgSettings.style.display = formatEl.value === 'jpg' ? '' : 'none';
         });
@@ -139,13 +137,11 @@
              statusEl.textContent = files.length ? "Ready." : "Idle...";
         }
 
-        // File Selection
         fileInput.addEventListener('change', (e) => {
             files = Array.from(e.target.files || []);
             updateMeta();
         });
 
-        // Drag & Drop
         dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dropping'); });
         dropzone.addEventListener('dragleave', (e) => { e.preventDefault(); dropzone.classList.remove('dropping'); });
         dropzone.addEventListener('drop', (e) => {
@@ -157,12 +153,11 @@
 
         clearBtn.addEventListener('click', () => { files = []; updateMeta(); prog.value=0; });
 
-        // Conversion Logic
         convertBtn.addEventListener('click', async () => {
             if (!files.length) return;
             
             convertBtn.disabled = true;
-            statusEl.textContent = "Processing (Wait)...";
+            statusEl.textContent = "Processing...";
             
             const quality = parseFloat(qualityEl.value);
             const format = formatEl.value;
@@ -177,7 +172,6 @@
 
                     statusEl.textContent = `Converting ${f.name}...`;
                     
-                    // Run Conversion
                     const result = await heic2any({
                         blob: f,
                         toType: mime,
