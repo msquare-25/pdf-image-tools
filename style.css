@@ -1087,3 +1087,23 @@ footer a.small:hover{ text-decoration:underline; }
   }
 }
 
+/* Blog article layout – center hero above card (desktop) */
+@media (min-width: 900px) {
+  /* Blog page main title + intro */
+  main > .hero {
+    max-width: 840px;          /* article card jetli approx width */
+    margin: 32px auto 24px;    /* center + thodu top/bottom space */
+    padding: 0 16px;           /* left/right breath for text */
+  }
+
+  /* Main article card width thodi slim & centered */
+  main > .card.container {
+    max-width: 840px;
+  }
+}
+
+/* Intro line (subtitle) thodi readable & eye-catchy */
+main > .hero .sub {
+  max-width: 44rem;   /* bohot lambo line na thai */
+  color: var(--muted);
+}
