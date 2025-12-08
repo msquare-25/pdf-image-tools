@@ -1087,25 +1087,24 @@ footer a.small:hover{ text-decoration:underline; }
   }
 }
 
-/* Blog article layout – center hero above card (desktop) */
 @media (min-width: 900px) {
-  /* Blog page main title + intro */
+  /* Blog title + intro same width as homepage */
   main > .hero {
-    max-width: 9600px;          /* article card jetli approx width */
-    margin: 32px auto 24px;    /* center + thodu top/bottom space */
-    padding: 0 16px;           /* left/right breath for text */
+    max-width: var(--container);
+    margin: 32px auto 24px;
+    padding: 0 16px;
   }
 
-  /* Main article card width thodi slim & centered (hero pachhino card) */
+  /* Hero pachhino card same container width */
   main > .hero + .card,
   main > .hero + .card.container {
-    max-width: 960px;
-    margin: 0 auto 40px;   /* center + nicheno gap */
+    max-width: var(--container);
+    margin: 0 auto 40px;
   }
 }
 
-/* Intro line (subtitle) thodi readable & eye-catchy */
+/* Subtitle */
 main > .hero .sub {
-  max-width: 44rem;   /* bohot lambo line na thai */
+  max-width: 44rem;
   color: var(--muted);
 }
