@@ -331,6 +331,10 @@
 
           setStatus(`Converting ${i + 1} / ${heicFiles.length}…`);
 
+          // ➤➤➤ AA LINE ADD KARO (Aa security bypass karshe) ➤➤➤
+        delete window.Worker;  
+        // --------------------------------------------------------
+          
           const opts = { blob: f, toType: mime };
           if (quality && outFormat === 'jpg') {
             opts.quality = quality;
