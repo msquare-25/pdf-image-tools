@@ -31,25 +31,25 @@
         <span>PDFimageLab</span>
       </a>
     </div>
-  </div>
-
-  <div class="container tool-tabs-wrap">
-    <button aria-label="Scroll tools left" class="tool-scroll tool-left">‹</button>
-    <nav class="tool-tabs" role="navigation">
-      <a href="/merge">Merge PDF</a>
-      <a href="/delete-pages">Delete pages</a>
-      <a href="/rotate-pages">Rotate PDF</a>
-      <a href="/reorder-pages">Reorder PDF</a>
-      <a href="/crop">Crop PDF</a>
-      <a href="/compress">Compress PDF</a>
-      <a href="/pdf-to-images">PDF → Images</a>
-      <a href="/image-to-pdf">Image → PDF</a>
-      <a href="/jpg-to-png">JPG → PNG</a>
-      <a href="/png-to-jpg">PNG → JPG</a>
-    </nav>
-    <button aria-label="Scroll tools right" class="tool-scroll tool-right">›</button>
+    <div class="container tool-tabs-wrap">
+      <button class="tool-scroll tool-left" aria-label="Scroll tools left">‹</button>
+      <nav class="tool-tabs" role="navigation" aria-label="Tools">
+        <a data-tip="Make a PDF from images" href="/image-to-pdf">Image → PDF</a>
+        <a data-tip="Export pages as PNG/JPG" href="/pdf-to-images">PDF → Images</a>
+        <a data-tip="Reduce PDF file size" href="/compress">Compress PDF</a>
+        <a data-tip="Cut margins or select an area" href="/crop">Crop PDF</a>
+        <a data-tip="Combine multiple PDFs into one" href="/merge">Merge PDF</a>
+        <a data-tip="Convert PNG to JPG" href="/png-to-jpg">PNG → JPG</a>
+        <a data-tip="Convert JPG to PNG" href="/jpg-to-png">JPG → PNG</a>
+        <a class="active" data-tip="Remove pages you don’t need" href="/delete-pages">Delete pages</a>
+        <a data-tip="Drag &amp; reorder pages" href="/reorder-pages">Reorder PDF</a>
+        <a data-tip="Rotate pages left/right" href="/rotate-pages">Rotate PDF</a>
+      </nav>
+      <button class="tool-scroll tool-right" aria-label="Scroll tools right">›</button>
+    </div>
   </div>
 </header>
+
 
 <main>
   <section class="hero mb-4">
