@@ -289,6 +289,8 @@
         const im=document.createElement('img'); im.src=URL.createObjectURL(img.blob); im.alt=img.name; im.onload=()=>URL.revokeObjectURL(im.src);
         im.draggable = false;
         im.addEventListener('contextmenu', e => e.preventDefault());
+        im.addEventListener('dragstart', e => e.preventDefault());
+        im.addEventListener('pointerdown', e => e.preventDefault(), { passive: false });
         box.appendChild(im);
 
 const meta = document.createElement('div');
