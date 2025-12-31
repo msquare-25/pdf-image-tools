@@ -289,18 +289,19 @@
         const im=document.createElement('img'); im.src=URL.createObjectURL(img.blob); im.alt=img.name; im.onload=()=>URL.revokeObjectURL(im.src);
         box.appendChild(im);
 
-        const meta = document.createElement('div');
-        meta.className = 'gmeta';
-        
-        const left = document.createElement('span');
-        left.textContent = `#${i+1}`;
-        
-        const right = document.createElement('span');
-        right.className = 'fname';
-        right.textContent = img.name || `image_${i+1}`;          // filename shown
-        right.title = `${img.w}×${img.h}`;                       // dimensions as hover tooltip
-        
-        meta.append(left, right);
+const meta = document.createElement('div');
+meta.className = 'gmeta';
+
+/* 👇 NEW CODE – CORRECT */
+const left = document.createElement('span');
+left.textContent = `${i + 1}. `;   // no #, space after number
+
+const right = document.createElement('span');
+right.className = 'fname';
+right.textContent = img.name || `image_${i + 1}`;
+right.title = `${img.w}×${img.h}`;
+
+meta.append(left, right);
 
         // DnD reorder
         card.addEventListener('dragstart', ev => ev.dataTransfer.setData('text/plain', String(i)));
