@@ -1117,3 +1117,28 @@ main > .hero .sub {
   white-space: nowrap;
   text-align: right;
 }
+
+/* === Image→PDF gallery meta: uniform height & alignment === */
+.gmeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;              /* force same height for all */
+  line-height: 22px;
+  overflow: hidden;
+}
+
+.gmeta span:first-child {
+  flex: 0 0 auto;            /* page number fixed */
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.gmeta .fname {
+  flex: 1 1 auto;
+  min-width: 0;              /* REQUIRED for ellipsis in flex */
+  overflow: hidden;
+  white-space: nowrap;       /* single line only */
+  text-overflow: ellipsis;
+}
+
