@@ -295,19 +295,22 @@
             fromIndex = Number(card.dataset.idx);
           }, { passive: true });
         
-          card.addEventListener('touchmove', (e) => {
-            if (!active) return;
-            const t = e.touches[0];
-            const over = getCardFromPoint(t.clientX, t.clientY);
-            if (!over) return;
-        
-            const toIndex = Number(over.dataset.idx);
-            if (Number.isNaN(fromIndex) || Number.isNaN(toIndex) || fromIndex === toIndex) return;
-        
-            moveItem(fromIndex, toIndex);
-            renderAll(); // re-renders + updates indices; stop this gesture
-            active = false;
-          }, { passive: true });
+card.addEventListener('touchmove', (e) => {
+  if (!active) return;
+  e.preventDefault();                 // stop page scroll while reordering
+
+  const t = e.touches[0];
+  const over = getCardFromPoint(t.clientX, t.clientY);
+  if (!over) return;
+
+  const toIndex = Number(over.dataset.idx);
+  if (Number.isNaN(fromIndex) || Number.isNaN(toIndex) || fromIndex === toIndex) return;
+
+  moveItem(fromIndex, toIndex);
+  renderAll();
+  active = false;
+}, { passive: false });
+
         
           card.addEventListener('touchend', () => { active = false; }, { passive: true });
           card.addEventListener('touchcancel', () => { active = false; }, { passive: true });
