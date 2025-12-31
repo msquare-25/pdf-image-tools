@@ -1191,3 +1191,11 @@ main > .hero .sub {
   -webkit-user-select: none;
   user-select: none;
 }
+
+/* Mobile: allow drag to start even when user touches the image */
+@media (pointer: coarse){
+  .image-to-pdf-page .gthumb,
+  .image-to-pdf-page .gthumb img{
+    pointer-events: none;     /* touch goes to the draggable card */
+  }
+}
