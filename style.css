@@ -1207,3 +1207,7 @@ main > .hero .sub {
     transform: scale(1.02);
   }
 }
+
+@media (pointer: coarse){
+  .image-to-pdf-page .gitem { touch-action: none; }
+}
