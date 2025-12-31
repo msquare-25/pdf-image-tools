@@ -281,6 +281,38 @@
       images.forEach((img,i)=>{
         const card=document.createElement('div'); card.className='gitem'; card.draggable=true; card.dataset.idx=i;
 
+        const isTouch = window.matchMedia('(pointer: coarse)').matches;
+        if (isTouch) {
+          // disable HTML5 drag on touch devices
+          card.draggable = false;
+        
+          let active = false;
+          let fromIndex = i;
+        
+          card.addEventListener('touchstart', (e) => {
+            // allow touch reorder start from anywhere (image included)
+            active = true;
+            fromIndex = Number(card.dataset.idx);
+          }, { passive: true });
+        
+          card.addEventListener('touchmove', (e) => {
+            if (!active) return;
+            const t = e.touches[0];
+            const over = getCardFromPoint(t.clientX, t.clientY);
+            if (!over) return;
+        
+            const toIndex = Number(over.dataset.idx);
+            if (Number.isNaN(fromIndex) || Number.isNaN(toIndex) || fromIndex === toIndex) return;
+        
+            moveItem(fromIndex, toIndex);
+            renderAll(); // re-renders + updates indices; stop this gesture
+            active = false;
+          }, { passive: true });
+        
+          card.addEventListener('touchend', () => { active = false; }, { passive: true });
+          card.addEventListener('touchcancel', () => { active = false; }, { passive: true });
+        }
+
         const rm=document.createElement('button'); rm.className='rm'; rm.type='button'; rm.textContent='×';
         rm.title='Remove this image';
         rm.addEventListener('click', (e)=>{ e.stopPropagation(); images.splice(i,1); renderAll(); });
@@ -324,6 +356,16 @@ meta.append(left, right);
         galleryEl.appendChild(card);
       });
     }
+      function moveItem(from, to){
+      if (from === to || from < 0 || to < 0 || from >= images.length || to >= images.length) return;
+      const [item] = images.splice(from, 1);
+      images.splice(to, 0, item);
+      }
+      
+      function getCardFromPoint(x, y){
+        const el = document.elementFromPoint(x, y);
+        return el && el.closest ? el.closest('.gitem') : null;
+      }
     function renderAll(){ renderGallery(); updateMeta(); }
 
     // ---- Decoding helpers
