@@ -1185,3 +1185,9 @@ main > .hero .sub {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.image-to-pdf-page .gthumb img{
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
