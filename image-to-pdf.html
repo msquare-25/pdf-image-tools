@@ -287,6 +287,8 @@
 
         const box=document.createElement('div'); box.className='gthumb';
         const im=document.createElement('img'); im.src=URL.createObjectURL(img.blob); im.alt=img.name; im.onload=()=>URL.revokeObjectURL(im.src);
+        im.draggable = false;
+        im.addEventListener('contextmenu', e => e.preventDefault());
         box.appendChild(im);
 
 const meta = document.createElement('div');
