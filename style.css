@@ -1199,3 +1199,11 @@ main > .hero .sub {
     pointer-events: none;     /* touch goes to the draggable card */
   }
 }
+
+/* Mobile touch reorder: visual cue */
+@media (pointer: coarse){
+  .image-to-pdf-page .gitem.touch-dragging{
+    outline: 2px solid var(--brand-1);
+    transform: scale(1.02);
+  }
+}
