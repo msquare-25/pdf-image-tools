@@ -1142,3 +1142,46 @@ main > .hero .sub {
   text-overflow: ellipsis;
 }
 
+/* ===== Image→PDF: responsive thumbs grid + stable filename on real mobile ===== */
+.image-to-pdf-page .thumbs-grid{
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* Mobile: 5 columns nai, 3 columns (real device ma best) */
+@media (max-width: 640px){
+  .image-to-pdf-page .thumbs-grid{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+/* Very small phones: 2 columns */
+@media (max-width: 380px){
+  .image-to-pdf-page .thumbs-grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Meta line: always single-line, no wrap, consistent on mobile */
+.image-to-pdf-page .gmeta{
+  display: grid;
+  grid-template-columns: auto 1fr;  /* number | filename */
+  align-items: center;
+  column-gap: 6px;
+  height: 22px;
+  line-height: 22px;
+  overflow: hidden;
+}
+
+.image-to-pdf-page .gmeta span:first-child{
+  white-space: nowrap;
+}
+
+.image-to-pdf-page .gmeta .fname{
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
