@@ -1117,7 +1117,3 @@ main > .hero .sub {
   white-space: nowrap;
   text-align: right;
 }
-.gmeta span:first-child {
-  color: var(--muted);
-}
-
