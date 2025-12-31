@@ -1108,3 +1108,12 @@ main > .hero .sub {
   max-width: 44rem;
   color: var(--muted);
 }
+
+/* Image→PDF thumbs: show filename nicely */
+.gmeta .fname{
+  max-width: 120px;        /* adjust if you want more */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
