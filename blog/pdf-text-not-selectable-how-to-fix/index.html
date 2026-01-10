@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <title>PDF Opens but Text Is Not Selectable or Searchable? How to Fix It</title>
+  <meta name="description" content="Can’t select, copy, or search text in a PDF? Learn why it happens (scanned vs digital PDFs), how to check if a PDF has a text layer, and practical fixes/workarounds using browser-based tools." />
+  <link rel="canonical" href="https://pdfimagelab.com/blog/pdf-text-not-selectable-how-to-fix" />
+
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+
+<header class="site-header">
+  <div class="container bar">
+    <div class="brand">
+      <a href="/" class="home-link">
+        <span class="logo"></span>
+        <span>PDFimageLab</span>
+      </a>
+    </div>
+    <div class="container tool-tabs-wrap">
+      <button class="tool-scroll tool-left" aria-label="Scroll tools left">‹</button>
+      <nav class="tool-tabs" role="navigation" aria-label="Tools">
+        <a data-tip="Make a PDF from images" href="/image-to-pdf">Image → PDF</a>
+        <a data-tip="Export pages as PNG/JPG" href="/pdf-to-images">PDF → Images</a>
+        <a data-tip="Reduce PDF file size" href="/compress">Compress PDF</a>
+        <a data-tip="Cut margins or select an area" href="/crop">Crop PDF</a>
+        <a data-tip="Combine multiple PDFs into one" href="/merge">Merge PDF</a>
+        <a data-tip="Convert PNG to JPG" href="/png-to-jpg">PNG → JPG</a>
+        <a data-tip="Convert JPG to PNG" href="/jpg-to-png">JPG → PNG</a>
+        <a data-tip="Remove pages you don’t need" href="/delete-pages">Delete pages</a>
+        <a data-tip="Drag &amp; reorder pages" href="/reorder-pages">Reorder PDF</a>
+        <a data-tip="Rotate pages left/right" href="/rotate-pages">Rotate PDF</a>
+      </nav>
+      <button class="tool-scroll tool-right" aria-label="Scroll tools right">›</button>
+    </div>
+  </div>
+</header>
+
+<main class="container" style="margin-top:28px;">
+
+  <h1>PDF Opens but Text Is Not Selectable or Searchable? How to Fix It</h1>
+
+  <p class="subtle" style="max-width:900px;">
+    If you can open a PDF but cannot <strong>select</strong>, <strong>copy</strong>, or <strong>search</strong> text,
+    the PDF is usually a <strong>scan (image-only)</strong> — not a real text document.
+    This guide explains why it happens, how to confirm it, and what you can do to fix or work around it.
+  </p>
+
+  <section class="card" style="margin-top:18px;">
+    <h2>Why text is not selectable in many PDFs</h2>
+    <ul style="line-height:1.9;">
+      <li><strong>Scanned PDF:</strong> pages are images (like photos). There is no text layer to select.</li>
+      <li><strong>Camera PDF:</strong> created from photos/screenshots — again, image-only pages.</li>
+      <li><strong>Protected PDF:</strong> some PDFs disable copying (permission settings).</li>
+      <li><strong>Broken text layer:</strong> rare case where PDF structure is damaged.</li>
+    </ul>
+    <p class="subtle">
+      Most cases are simple: the PDF is a picture of text, not actual text.
+    </p>
+  </section>
+
+  <section class="card" style="margin-top:18px;">
+    <h2>How to check if your PDF has a real text layer</h2>
+    <ol style="line-height:1.9;">
+      <li>Open the PDF in your browser or PDF viewer.</li>
+      <li>Try selecting a single word with your mouse/finger.</li>
+      <li>Try searching (Ctrl+F) for a word you can see.</li>
+    </ol>
+    <p class="subtle">
+      If selection does not work and search finds nothing, it is likely a scanned/image-only PDF.
+    </p>
+  </section>
+
+  <section class="card" style="margin-top:18px;">
+    <h2>What you can fix vs what you cannot (important)</h2>
+    <ul style="line-height:1.9;">
+      <li><strong>You can fix:</strong> page order, blank pages, margins, rotation, and file size.</li>
+      <li><strong>You cannot “convert” images into selectable text</strong> without OCR (text recognition).</li>
+    </ul>
+    <p class="subtle">
+      Many sites claim “make text selectable” but they are essentially running OCR. If you need selectable/searchable text,
+      you need an OCR step somewhere.
+    </p>
+  </section>
+
+  <section class="card" style="margin-top:18px;">
+    <h2>Practical fixes &amp; workarounds (using PDFImageLab tools)</h2>
+
+    <h3 style="margin-top:10px;">Fix 1: Clean the scanned PDF (margins, rotation, extra pages)</h3>
+    <ol style="line-height:1.9;">
+      <li>Remove blank/extra pages using <a href="/delete-pages"><strong>Delete pages</strong></a>.</li>
+      <li>Rotate wrong pages using <a href="/rotate-pages"><strong>Rotate PDF</strong></a>.</li>
+      <li>Crop scanner borders using <a href="/crop"><strong>Crop PDF</strong></a>.</li>
+      <li>Compress for size limits using <a href="/compress"><strong>Compress PDF</strong></a>.</li>
+    </ol>
+    <p class="subtle">
+      This does not make text selectable, but it makes the PDF clean and acceptable for portals and sharing.
+    </p>
+
+    <h3 style="margin-top:12px;">Fix 2: Rebuild the PDF (sometimes fixes “broken” selection)</h3>
+    <p class="subtle" style="line-height:1.9;">
+      If a PDF behaves strangely (selection is broken due to structure issues), try converting it to images and rebuilding:
+      use <a href="/pdf-to-images"><strong>PDF → Images</strong></a> and then
+      <a href="/image-to-pdf"><strong>Image → PDF</strong></a>.
+    </p>
+
+    <h3 style="margin-top:12px;">Fix 3: If you truly need selectable/searchable text</h3>
+    <ul style="line-height:1.9;">
+      <li>Ask the sender for the original digital PDF (exported from Word/Google Docs) instead of a scan.</li>
+      <li>If only a scan exists, you will need an OCR step (text recognition) using a trusted solution.</li>
+    </ul>
+    <p class="subtle">
+      If you do OCR, always confirm the recognized text is accurate before using it for official submissions.
+    </p>
+  </section>
+
+  <section class="card" style="margin-top:18px;">
+    <h2>Final checklist</h2>
+    <ul style="line-height:1.9;">
+      <li>PDF opens normally and pages are correctly oriented.</li>
+      <li>Margins are cropped (no unnecessary borders).</li>
+      <li>File size meets email/portal limits.</li>
+      <li>If selectable text is required, you have the original digital PDF or an OCR step.</li>
+    </ul>
+  </section>
+
+  <section class="home-seo container" style="margin-top:40px;">
+    <h3>Related guides</h3>
+    <ul style="line-height:1.8;">
+      <li><a href="/blog/clean-up-scanned-pdf">How to clean up a scanned PDF</a></li>
+      <li><a href="/blog/fix-blurry-pdf">How to fix blurry or low-quality PDFs</a></li>
+      <li><a href="/blog/pdf-corrupted-not-opening-how-to-fix">PDF Corrupted or Not Opening? How to Fix “This File Is Damaged” Errors</a></li>
+      <li><a href="/blog/why-pdf-upload-fails-government-portals">Why PDF Upload Fails on Government Portals (And How to Fix It)</a></li>
+    </ul>
+  </section>
+
+  <div style="margin:50px 0 30px; text-align:center;" class="subtle">
+    <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a>
+  </div>
+
+</main>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Why can’t I select or copy text from a PDF?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Most often the PDF is a scan or photo-based PDF where each page is an image. Image-only PDFs do not have a real text layer, so you cannot select, copy, or search text."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I make a scanned PDF searchable?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "To make a scanned PDF searchable, you need OCR (text recognition). Without OCR, you can clean the PDF (crop, rotate, delete pages, compress) but the text will remain non-selectable."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I fix a PDF where text selection is broken?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "If the PDF has structural issues, rebuilding it can help. Convert the PDF to images and then create a new PDF from those images. This does not create selectable text, but it can fix display or page issues."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What can I do if a portal requires a readable PDF but not selectable text?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Clean the PDF by deleting extra pages, rotating incorrect pages, cropping margins, and compressing for size limits. This improves readability and upload success even if the PDF is image-only."
+      }
+    }
+  ]
+}
+</script>
+
+</body>
+</html>
