@@ -1,12 +1,12 @@
 (async function(){
   'use strict';
-  window.AJIO_V2_LAYOUT_VERSION='v8-bottom-right-cell';
+  window.AJIO_V2_LAYOUT_VERSION='v8-horizontal-bottom-band';
   const source='/assets/ajio-v2-final-v5.js?v=20260626-5';
   const lineGroups=`function lineGroups(items){
     const p=(items||[]).map(i=>sanitizeSku(i.sku)+(qty(i.qty)>1?' ('+qty(i.qty)+')':'')).filter(Boolean);
     const n=p.length;
     if(n<=1)return p.length?[p]:[];
-    if(n===2)return[[p[0]],[p[1]]];
+    if(n===2)return[[p[0],p[1]]];
     if(n===3)return[[p[0],p[1]],[p[2]]];
     if(n===4)return[[p[0],p[1]],[p[2],p[3]]];
     if(n<=6)return[p.slice(0,3),p.slice(3)];
@@ -15,62 +15,37 @@
   }`;
   const stampLabel=`function stampLabel(page,row,font){
     const {width,height}=page.getSize();
-    let skuUnits=[];
+    let groups=[];
     let orderLine='';
     if(row.stampData&&row.confidence!=='UNSAFE'){
-      skuUnits=(row.stampData.skuItems||[]).map(i=>cleanLine(sanitizeSku(i.sku)+(qty(i.qty)>1?' ('+qty(i.qty)+')':''))).filter(Boolean);
+      groups=lineGroups(row.stampData.skuItems).map(g=>g.map(cleanLine).filter(Boolean)).filter(g=>g.length);
       orderLine=cleanLine(row.bagBarcode||row.matchedOrder||'');
     }else{
-      skuUnits=['MANUAL CHECK'];
+      groups=[['MANUAL CHECK']];
       orderLine=cleanLine(row.matchedOrder||'');
     }
 
-    // AJIO bottom-right writable cell: keep text inside the right-side column.
-    // Long SKU lists wrap upward, not into the return/consignor address area.
-    const rightAnchor=width*.936;
-    const minX=width*.715;
-    const bottomBase=height*.060;
-    const topLimit=height*.350;
+    const rightAnchor=width*.965;
+    const minX=width*.30;
+    const bottomBase=height*.045;
+    const topLimit=height*.175;
     const maxW=rightAnchor-minX;
-    const maxH=topLimit-bottomBase;
     const measure=(t,s)=>font.widthOfTextAtSize(t,s);
-
-    function packLines(units,size){
-      const lines=[];
-      let cur='';
-      for(const unit of units){
-        const next=cur?cur+' + '+unit:unit;
-        if(cur && measure(next,size)>maxW){
-          lines.push(cur);
-          cur=unit;
-        }else{
-          cur=next;
-        }
-      }
-      if(cur)lines.push(cur);
-      if(orderLine)lines.push(orderLine);
-      return lines.map(cleanLine).filter(Boolean);
-    }
-
+    const lines=groups.map(g=>cleanLine(g.join(' + '))).filter(Boolean).concat(orderLine?[orderLine]:[]).filter(Boolean);
     let fit=null;
-    for(let size=7.2;size>=3.6;size-=.2){
-      const lines=packLines(skuUnits,size);
-      const lh=size+2.8;
+    for(let size=7.4;size>=3.2;size-=.15){
+      const lh=size+2.55;
       const w=Math.max(25,...lines.map(t=>measure(t,size)));
       const h=(lines.length-1)*lh+size;
-      if(w<=maxW && h<=maxH){fit={lines,size,lh,w,h};break;}
+      if(w<=maxW && bottomBase+h<=topLimit){fit={lines,size,lh,w,h};break;}
     }
     if(!fit){
-      const size=3.4,lh=6.0;
-      const lines=packLines(skuUnits,size);
+      const size=3.1,lh=5.5;
       fit={lines,size,lh,w:Math.min(maxW,Math.max(25,...lines.map(t=>measure(t,size)))),h:(lines.length-1)*lh+size};
     }
-
     const x=Math.max(minX,rightAnchor-fit.w);
-    let yb=bottomBase;
-    if(yb+fit.h>topLimit)yb=Math.max(height*.018,topLimit-fit.h);
-
-    page.drawRectangle({x:x-3,y:yb-2.5,width:Math.min(maxW,fit.w)+6,height:fit.h+6,color:PDFLib.rgb(1,1,1),opacity:.97});
+    const yb=bottomBase;
+    page.drawRectangle({x:x-3,y:yb-2,width:Math.min(maxW,fit.w)+6,height:fit.h+5,color:PDFLib.rgb(1,1,1),opacity:.97});
     fit.lines.forEach((t,i)=>page.drawText(t,{x,y:yb+(fit.lines.length-1-i)*fit.lh,size:fit.size,font,color:PDFLib.rgb(0,0,0)}));
   }`;
   try{
@@ -83,12 +58,12 @@
     code=code.replace(/function stampLabel\(page,row,font\)\{[\s\S]*?\}\nasync function createFinalPdf/,stampLabel+'\nasync function createFinalPdf');
     if(code===before)throw new Error('Stamp layout patch did not apply');
     const s=document.createElement('script');
-    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v8-runtime.js';
+    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v8-horizontal-runtime.js';
     document.body.appendChild(s);
     const st=document.getElementById('status');
-    if(st)st.textContent='V8 bottom-right layout loaded. Upload Label and Excel files.';
+    if(st)st.textContent='V8 horizontal bottom layout loaded. Upload Label and Excel files.';
   }catch(err){
     console.error(err);
-    alert('AJIO V2 v8 engine failed to load. Please hard refresh and try again.');
+    alert('AJIO V2 engine failed to load. Please hard refresh and try again.');
   }
 })();
