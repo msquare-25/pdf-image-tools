@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AJIO Label Invoice Sorter — PDFImageLab</title>
-  <meta name="description" content="Arrange AJIO labels and invoices into one packing-ready PDF. Match labels with invoices, enrich from AJIO Excel, print SKU and bag barcode or order number on labels, and sort by bag barcode for faster dispatch." />
+  <meta name="description" content="Arrange AJIO labels and invoices into one packing-ready PDF. Match labels with invoices, enrich from AJIO Excel, print Seller SKU and forward bag barcode on labels, and sort by bag barcode or SKU when barcode is missing." />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="canonical" href="https://pdfimagelab.com/ajio-label-invoice-sorter" />
   <link rel="stylesheet" href="/style.css" />
-  <script defer src="/site.js?v=20260626-live-ajio"></script>
-  <script defer src="/assets/seo.js"></script>
+  <script defer src="/site.js?v=20260627-ajio2"></script>
+  <script defer src="/assets/seo.js?v=20260627-ajio2"></script>
   <meta name="color-scheme" content="light dark" />
   <meta name="theme-color" content="#0b0f14" />
 
@@ -84,7 +84,7 @@
       <div class="grid-3">
         <section class="panel card box upload-box theme-center">
           <h2 class="title">Upload</h2>
-          <p class="muted">Upload AJIO Label PDF, optional Invoice PDF, and AJIO Excel.</p>
+          <p class="muted">Upload AJIO Label PDF, Invoice PDF, and AJIO Excel.</p>
           <label for="labelPdf" class="btn gradient big">Label PDF</label>
           <input id="labelPdf" type="file" accept="application/pdf,.pdf" multiple hidden />
           <label for="invoicePdf" class="btn subtle mt-1">Invoice PDF</label>
@@ -93,7 +93,7 @@
           <input id="excelFile" type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" multiple hidden />
           <div class="ajio-upload-list">
             <div class="ajio-file-pill" id="labelName">Label PDF: not selected</div>
-            <div class="ajio-file-pill" id="invoiceName">Invoice PDF: optional / not selected</div>
+            <div class="ajio-file-pill" id="invoiceName">Invoice PDF: not selected</div>
             <div class="ajio-file-pill" id="excelName">Excel: not selected</div>
           </div>
           <button class="btn subtle mt-2" id="clearBtn">Clear</button>
@@ -103,8 +103,8 @@
         <section class="panel card box setting-box theme-center">
           <h2 class="title">Setting</h2>
           <div class="ajio-note small">
-            <strong>Default sort:</strong> Forward bag barcode sequence.<br />
-            If bag barcode is blank, the tool uses SKU A-Z and prints the FN order number in the barcode line.
+            <strong>Default sort:</strong> Forward bag barcode sequence when barcode is available.<br />
+            If bag barcode is blank, the order is sorted by SKU and generated without bag barcode marking.
           </div>
           <hr class="soft" />
           <div class="small muted" style="text-align:left">
@@ -113,14 +113,14 @@
         </section>
 
         <section class="panel card box action-box theme-center">
-          <h2 class="title">Generate</h2>
-          <div id="status" class="small">Upload Label and Excel files. Invoice is optional but recommended.</div>
+          <h2 class="title">Download</h2>
+          <div id="status" class="small">Upload Label, Invoice and Excel files.</div>
           <div class="ajio-progress" aria-hidden="true"><span id="progressBar"></span></div>
           <div class="row center mt-2" style="gap:10px;flex-wrap:wrap">
             <button id="runBtn" class="btn" disabled>Generate Final PDF</button>
             <button id="csvBtn" class="btn subtle" disabled>Download Report CSV</button>
           </div>
-          <div class="small mt-2">Output: label → invoice → label → invoice. If invoice is missing, only the label is included.</div>
+          <div class="small mt-2">Output: label → invoice → label → invoice. Labels without bag barcode are generated without bag barcode marking and a warning is shown before download.</div>
         </section>
       </div>
     </aside>
@@ -128,7 +128,7 @@
     <main class="panel">
       <p class="ajio-badge">Marketplace Tool · AJIO Packing Workflow</p>
       <h1 class="page-title">AJIO Label Invoice Sorter</h1>
-      <p class="sub">Arrange AJIO labels and invoices into one packing-ready PDF, sort by forward bag barcode, and stamp each label with Seller SKU plus bag barcode or FN order number.</p>
+      <p class="sub">Arrange AJIO labels and invoices into one packing-ready PDF, sort by forward bag barcode, and stamp each label with Seller SKU plus bag barcode.</p>
 
       <section class="card mt-3">
         <h2 class="title">How it works</h2>
@@ -136,9 +136,9 @@
           <li>Upload one or multiple AJIO Label PDFs, Invoice PDFs and bulk accepted Excel files.</li>
           <li>The tool reads Customer Order ID, Seller SKU ID, <strong>*Confirm Quantity</strong> and Forward Consignment Bar Code from AJIO Excel.</li>
           <li>Labels are matched by direct FN/AWB when possible. If barcode/text is not enough, customer details from the label are matched with invoice customer details.</li>
-          <li>If Excel is missing for an order but invoice is matched, SKU is taken from invoice and the FN order number is printed instead of bag barcode.</li>
-          <li>If Excel exists but bag barcode is blank, SKU comes from Excel and the FN order number is printed on the barcode line.</li>
-          <li>Final PDF is generated as label → invoice sequence and sorted by bag barcode for faster dispatch table arrangement.</li>
+          <li>If Excel is missing for an order but invoice is matched, SKU is taken from invoice and bag barcode marking stays blank.</li>
+          <li>If Excel exists but bag barcode is blank, SKU comes from Excel and bag barcode marking stays blank.</li>
+          <li>Final PDF is generated as label → invoice sequence. Orders with bag barcode use bag barcode sequence; orders without bag barcode use SKU sequence.</li>
         </ul>
         <p class="sub mt-1">Privacy: No uploads. Everything stays on your device.</p>
         <p class="small muted">Independent utility for marketplace sellers. Not affiliated with AJIO or Reliance Retail.</p>
@@ -148,7 +148,7 @@
         <h2 class="title">How to use</h2>
         <ol class="sub">
           <li>Upload all AJIO label PDFs for the orders you want to print.</li>
-          <li>Upload invoice PDFs when available. Invoice helps with customer-text matching and label → invoice output.</li>
+          <li>Upload invoice PDFs. Invoice PDF is required for label → invoice output and customer matching.</li>
           <li>Upload AJIO Excel files. Multiple Excel files are supported for split batches.</li>
           <li>Click <strong>Generate Final PDF</strong>.</li>
           <li>Check the validation report. If any label is marked unsafe, verify it manually before packing.</li>
@@ -158,7 +158,7 @@
       <section class="card mt-3">
         <h2 class="title">Important rules</h2>
         <ul class="sub">
-          <li>Default sorting is bag barcode. Orders without bag barcode are placed after barcode orders and sorted by SKU.</li>
+          <li>Orders with bag barcode are sorted by bag barcode. Orders without bag barcode are sorted by SKU.</li>
           <li>Multi-quantity SKU stamping is automatically wrapped and scaled inside the bottom-right label area.</li>
           <li>For 1+ quantity, the tool uses AJIO Excel Column U: <strong>*Confirm Quantity</strong>.</li>
           <li>Labels are not skipped. If a label cannot be safely matched, it is still included with manual-check marking.</li>
@@ -180,6 +180,6 @@
   </div>
 </main>
 
-<script src="/assets/ajio-v2-layout-loader-v12.js?v=20260627-1-forcepush"></script>
+<script src="/assets/ajio-v2-layout-loader-v14.js?v=20260627-2-live"></script>
 </body>
 </html>
