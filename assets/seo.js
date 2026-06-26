@@ -4,7 +4,7 @@
   const path = (location.pathname || '/').replace(/\/$/, '') || '/';
   const PAGES = {
     '/': { title: 'PDF & Image Tools — Fast, Private, Free', desc: 'All-in-one PDF & image utilities that run entirely in your browser. No uploads.' },
-    '/ajio-label-invoice-sorter': { title: 'AJIO Label Invoice Sorter — SKU & Bag Barcode', desc: 'Sort AJIO labels and invoices by bag barcode, print SKU and bag barcode on labels, and generate one packing-ready PDF in your browser.' }
+    '/ajio-label-invoice-sorter': { title: 'AJIO Label Invoice Sorter — Direct Barcode Match', desc: 'AJIO label and invoice matching using label AWB and order barcodes only.' }
   };
   const data = PAGES[path] || PAGES['/'];
   const canonicalUrl = ORIGIN + (path === '/' ? '/' : path);
@@ -25,9 +25,14 @@
   metaName('twitter:image', OG_IMAGE);
   if (path === '/ajio-label-invoice-sorter') {
     const run = () => {
-      const s = document.createElement('script');
-      s.src = '/assets/ajio-engine-v3.js?v=20260626-3';
-      document.body.appendChild(s);
+      const only = document.getElementById('onlyMatched');
+      if (only) {
+        only.checked = false;
+        const row = only.closest('label');
+        if (row) row.style.display = 'none';
+      }
+      const note = document.querySelector('.action-box .small.mt-2');
+      if (note) note.textContent = 'Output uses direct label AWB / order barcode matching only. No sequence guessing.';
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
     else run();
