@@ -135,7 +135,7 @@
         <ul class="sub">
           <li>Upload one or multiple AJIO Label PDFs, Invoice PDFs and bulk accepted Excel files.</li>
           <li>The tool reads Customer Order ID, Seller SKU ID, <strong>*Confirm Quantity</strong> and Forward Consignment Bar Code from AJIO Excel.</li>
-          <li>Labels are matched by direct FN/AWB when possible. If barcode/text is not enough, customer details from the label are matched with invoice customer details.</li>
+          <li>The tool matches labels and invoices to identify the correct FN/AWB. No files or customer details are uploaded or stored.</li>
           <li>If Excel is missing for an order but invoice is matched, SKU is taken from invoice and bag barcode marking stays blank.</li>
           <li>If Excel exists but bag barcode is blank, SKU comes from Excel and bag barcode marking stays blank.</li>
           <li>Final PDF is generated as label → invoice sequence. Orders with bag barcode use bag barcode sequence; orders without bag barcode use SKU sequence.</li>
@@ -158,9 +158,8 @@
       <section class="card mt-3">
         <h2 class="title">Important rules</h2>
         <ul class="sub">
+          <li>This tool is provided on an as-is basis. If AJIO changes the label, invoice or Excel format, or if any technical issue causes a label to remain unmatched or print incorrectly, the seller must verify the output before dispatch and report the issue for correction.</li>
           <li>Orders with bag barcode are sorted by bag barcode. Orders without bag barcode are sorted by SKU.</li>
-          <li>Multi-quantity SKU stamping is automatically wrapped and scaled inside the bottom-right label area.</li>
-          <li>For 1+ quantity, the tool uses AJIO Excel Column U: <strong>*Confirm Quantity</strong>.</li>
           <li>Labels are not skipped. If a label cannot be safely matched, it is still included with manual-check marking.</li>
         </ul>
       </section>
