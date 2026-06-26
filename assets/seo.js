@@ -26,7 +26,7 @@
   if (path === '/ajio-label-invoice-sorter') {
     const run = () => {
       const s = document.createElement('script');
-      s.src = '/assets/ajio-engine-v3.js?v=20260626-2';
+      s.src = '/assets/ajio-engine-v3.js?v=20260626-3';
       document.body.appendChild(s);
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
