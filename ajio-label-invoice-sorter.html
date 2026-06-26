@@ -22,7 +22,6 @@
   </script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.3/tesseract.min.js"></script>
   <script>
     if (window.pdfjsLib) {
       pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -308,17 +307,8 @@
     return { pdf, pages };
   }
 
-  function extractOrderId(text) { 
-  // FN pachi space hoy to pan read kari leshe
-  const m = clean(text).toUpperCase().match(/FN\s*\d{8,}/); 
-  return m ? m[0].replace(/\s+/g, '') : ''; 
-}
-
-function extractAwb(text) { 
-  const u = clean(text).toUpperCase(); 
-  const m = u.match(/SF\s*\d{6,}\s*AJI/) || u.match(/\b\d{10,16}\b/) || u.match(/AWB\s*NUMBER\s*[:\-]?\s*(SF\s*\d{6,}\s*AJI)/); 
-  return m ? (m[1] || m[0]).replace(/\s+/g, '') : ''; 
-}
+  function extractOrderId(text){ const m = clean(text).toUpperCase().match(/FN\d{8,}/); return m ? m[0] : ''; }
+  function extractAwb(text){ const u = clean(text).toUpperCase(); const m = u.match(/SF\d{6,}AJI/) || u.match(/\b\d{10,16}\b/) || u.match(/AWB\s*NUMBER\s*[:\-]?\s*(SF\d{6,}AJI)/); return m ? (m[1] || m[0]) : ''; }
   function addToIndex(map, key, value, duplicateList, duplicateLabel){ if (!key) return; if (map.has(key)) duplicateList.push(`${duplicateLabel}: ${key}`); else map.set(key, value); }
 
   async function renderPdfPageToCanvas(page, scale){
@@ -471,41 +461,18 @@ function extractAwb(text) {
     return { pages };
   }
 
-// OCR Mate navu function
-  async function readTextFromCanvasOCR(canvas) {
-    try {
-      const result = await Tesseract.recognize(canvas, 'eng');
-      return result.data.text;
-    } catch (e) {
-      console.error("OCR Failed:", e);
-      return '';
-    }
-  }
-
-  // Navu analyzeLabels function
   async function analyzeLabels(pdf, invoiceByAwb){
     const labels = [], byOrder = new Map(), byAwb = new Map(), duplicates = [];
-    
+    const zones = { awb:{ x:0.00, y:0.235, w:0.93, h:0.16, regex:/^(SF\d{6,}AJI|\d{10,16})$/i }, order:{ x:0.32, y:0.435, w:0.58, h:0.13, regex:/^FN\d{8,}$/i } };
     for (let i=1; i<=pdf.numPages; i++){
       const page = await pdf.getPage(i);
       const tc = await page.getTextContent();
       const text = tc.items.map(item => item.str || '').join(' ').replace(/\s+/g,' ').trim();
-      
       let orderId = extractOrderId(text), awb = extractAwb(text);
-      
-      // Jo Image format hoy to Tesseract vachse
-      if (!orderId || !awb) {
-        const canvas = await renderPdfPageToCanvas(page, 2.0); 
-        const ocrText = await readTextFromCanvasOCR(canvas);
-        
-        if (!orderId) orderId = extractOrderId(ocrText);
-        if (!awb) awb = extractAwb(ocrText);
-      }
-
-      if (!orderId && awb && invoiceByAwb.has(awb)) {
-        orderId = invoiceByAwb.get(awb).orderId;
-      }
-      
+      const canvas = await renderPdfPageToCanvas(page, 3.4);
+      if (!awb) awb = await decodeBarcodeCanvas(cropCanvas(canvas, zones.awb), zones.awb.regex);
+      if (!orderId) orderId = await decodeBarcodeCanvas(cropCanvas(canvas, zones.order), zones.order.regex);
+      if (!orderId && awb && invoiceByAwb.has(awb)) orderId = invoiceByAwb.get(awb).orderId;
       const info = { pageIndex:i-1, pageNumber:i, orderId, awb };
       labels.push(info);
       addToIndex(byOrder, orderId, info, duplicates, 'Duplicate label order');
