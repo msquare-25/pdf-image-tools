@@ -4,15 +4,30 @@
   const path = (location.pathname || '/').replace(/\/$/, '') || '/';
   const PAGES = {
     '/': { title: 'PDF & Image Tools — Fast, Private, Free', desc: 'All-in-one PDF & image utilities that run entirely in your browser. No uploads.' },
-    '/ajio-label-invoice-sorter': { title: 'AJIO Label Invoice Sorter — PDFImageLab', desc: 'Arrange AJIO labels and invoices into a packing-ready PDF with Excel SKU, quantity and forward bag barcode marking.' }
+    '/ajio-label-invoice-sorter': { title: 'AJIO Label Invoice Sorter — PDFImageLab', desc: 'Arrange AJIO labels and invoices into a packing-ready PDF with Excel SKU, quantity and forward bag barcode marking.' },
+    '/privacy': { title: 'Privacy Policy — PDFImageLab', desc: 'Privacy-first PDF, image and e-commerce tools that run in your browser whenever technically possible.' },
+    '/terms': { title: 'Terms of Use — PDFImageLab', desc: 'Terms and acceptable use for PDFImageLab browser-based PDF, image and e-commerce tools.' },
+    '/contact': { title: 'Contact Us — PDFImageLab', desc: 'Contact PDFImageLab for questions, feedback, suggestions or support related to our browser-based tools.' }
   };
-  const data = PAGES[path] || PAGES['/'];
+  const data = PAGES[path];
   const canonicalUrl = ORIGIN + (path === '/' ? '/' : path);
   function metaName(name, content) { let el = document.querySelector(`meta[name="${name}"]`); if (!el) { el = document.createElement('meta'); el.name = name; document.head.appendChild(el); } el.content = content; }
   function metaProp(prop, content) { let el = document.querySelector(`meta[property="${prop}"]`); if (!el) { el = document.createElement('meta'); el.setAttribute('property', prop); document.head.appendChild(el); } el.content = content; }
   function canonical(href) { let el = document.querySelector('link[rel="canonical"]'); if (!el) { el = document.createElement('link'); el.rel = 'canonical'; document.head.appendChild(el); } el.href = href; }
-  if (data.title) document.title = data.title;
-  canonical(canonicalUrl); metaName('description', data.desc); metaProp('og:title', data.title); metaProp('og:description', data.desc); metaProp('og:url', canonicalUrl); metaProp('og:type', 'website'); metaProp('og:image', OG_IMAGE); metaName('twitter:card', 'summary_large_image'); metaName('twitter:title', data.title); metaName('twitter:description', data.desc); metaName('twitter:image', OG_IMAGE);
+  if (data) {
+    if (data.title) document.title = data.title;
+    canonical(canonicalUrl);
+    metaName('description', data.desc);
+    metaProp('og:title', data.title);
+    metaProp('og:description', data.desc);
+    metaProp('og:url', canonicalUrl);
+    metaProp('og:type', 'website');
+    metaProp('og:image', OG_IMAGE);
+    metaName('twitter:card', 'summary_large_image');
+    metaName('twitter:title', data.title);
+    metaName('twitter:description', data.desc);
+    metaName('twitter:image', OG_IMAGE);
+  }
 
   if (path !== '/ajio-label-invoice-sorter') return;
 
