@@ -54,6 +54,22 @@
       });
     }
 
+    function countMissingBagRowsFromReport() {
+      var tbody = document.getElementById('reportRows');
+      if (!tbody) return 0;
+      var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+      var count = 0;
+      rows.forEach(function (tr) {
+        var cells = tr.querySelectorAll('td');
+        if (!cells || cells.length < 6) return;
+        var status = (cells[0].textContent || '').trim().toUpperCase();
+        var sku = (cells[4].textContent || '').trim();
+        var bag = (cells[5].textContent || '').trim();
+        if (status !== 'ERROR' && sku && sku !== '-' && (!bag || bag === '-')) count++;
+      });
+      return count;
+    }
+
     function installAjioNoOrderFallbackPatch() {
       if (!window.PDFLib || !PDFLib.PDFPage || !PDFLib.PDFPage.prototype || PDFLib.PDFPage.prototype.__ajioNoOrderFallbackPatch) return;
 
@@ -75,7 +91,7 @@
         var originalCreateObjectURL = window.URL.createObjectURL.bind(window.URL);
         window.URL.createObjectURL = function (obj) {
           if (obj && obj.type === 'application/pdf') {
-            var count = window.__AJIO_MISSING_BAG_MARKS || 0;
+            var count = Math.max(window.__AJIO_MISSING_BAG_MARKS || 0, countMissingBagRowsFromReport());
             if (count > 0 && !window.__AJIO_MISSING_BAG_WARNED) {
               window.__AJIO_MISSING_BAG_WARNED = true;
               alert('Warning: ' + count + ' order(s) do not have Forward Consignment Bag Barcode in Excel. These labels are generated without bag barcode marking.');
