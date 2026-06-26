@@ -9,7 +9,7 @@
       title: "PDF & Image Tools — Fast, Private, Free",
       desc: "All-in-one PDF & image utilities that run entirely in your browser: merge, crop, compress, convert, and more. No uploads. Fast and private.",
     },
-   
+
     "/image-to-pdf": {
       title: "Image → PDF — JPG/PNG/WebP/AVIF/HEIC to PDF",
       desc: "Convert JPG/PNG/WebP/AVIF/HEIC to a single PDF locally in your browser. Private, fast, and free.",
@@ -140,8 +140,8 @@
         return;
       }
       const proto = PDFLib.PDFPage.prototype;
-      if (proto.__ajioPlainStampPatch) { clearInterval(timer); return; }
-      proto.__ajioPlainStampPatch = true;
+      if (proto.__ajioPlainStampPatchV2) { clearInterval(timer); return; }
+      proto.__ajioPlainStampPatchV2 = true;
 
       const originalRectangle = proto.drawRectangle;
       const originalText = proto.drawText;
@@ -156,6 +156,29 @@
         return originalRectangle.apply(this, arguments);
       };
 
+      function drawTextHighlight(page, text, opts) {
+        try {
+          const s = page.getSize ? page.getSize() : null;
+          if (!s || !opts || typeof text !== "string") return;
+          const x = Number(opts.x || 0);
+          const y = Number(opts.y || 0);
+          const size = Number(opts.size || 9);
+          const isStampArea = x > s.width * 0.62 && y < s.height * 0.18;
+          const looksLikeSkuOrBag = /^[A-Z0-9][A-Z0-9_\-\/,. +]{2,45}$/i.test(text) || /^D?B?\d{8,16}$/i.test(text);
+          if (!isStampArea || !looksLikeSkuOrBag) return;
+          let textW = Math.min(s.width * 0.34, Math.max(40, text.length * size * 0.58));
+          if (opts.font && opts.font.widthOfTextAtSize) textW = Math.min(s.width * 0.34, Math.max(40, opts.font.widthOfTextAtSize(text, size)));
+          originalRectangle.call(page, {
+            x: Math.max(0, x - 4),
+            y: Math.max(0, y - 2),
+            width: textW + 8,
+            height: size + 5,
+            color: PDFLib.rgb(1,1,1),
+            opacity: 0.97
+          });
+        } catch(e) {}
+      }
+
       proto.drawText = function(text, opts){
         try {
           if (typeof text === "string" && (text.indexOf("SKU: ") === 0 || text.indexOf("BAG: ") === 0)) {
@@ -166,8 +189,10 @@
             const size = o.size || 9;
             o.x = s.width * 0.79;
             o.y = s.height * 0.022 + (isSku ? size + 4 : 0);
+            drawTextHighlight(this, cleanText, o);
             return originalText.call(this, cleanText, o);
           }
+          drawTextHighlight(this, text, opts || {});
         } catch(e) {}
         return originalText.apply(this, arguments);
       };
