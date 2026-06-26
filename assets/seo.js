@@ -9,7 +9,7 @@
       title: "PDF & Image Tools — Fast, Private, Free",
       desc: "All-in-one PDF & image utilities that run entirely in your browser: merge, crop, compress, convert, and more. No uploads. Fast and private.",
     },
-  
+   
     "/image-to-pdf": {
       title: "Image → PDF — JPG/PNG/WebP/AVIF/HEIC to PDF",
       desc: "Convert JPG/PNG/WebP/AVIF/HEIC to a single PDF locally in your browser. Private, fast, and free.",
@@ -53,6 +53,10 @@
     "/jpg-to-png": {
       title: "JPG → PNG — Lossless Converter",
       desc: "Convert JPG to lossless PNG (ZIP). Everything stays on your device.",
+    },
+    "/ajio-label-invoice-sorter": {
+      title: "AJIO Label Invoice Sorter — SKU & Bag Barcode",
+      desc: "Sort AJIO labels and invoices by bag barcode, stamp SKU and bag barcode on labels, and generate one packing-ready PDF in your browser.",
     },
     "/privacy": {
       title: "Privacy — No Uploads. No Retention.",
@@ -124,6 +128,52 @@
   ensureMetaName("twitter:title", data.title);
   ensureMetaName("twitter:description", data.desc);
   ensureMetaName("twitter:image", OG_IMAGE);
+
+  // ---------- AJIO stamp patch ----------
+  (function patchAjioStamp(){
+    if (path !== "/ajio-label-invoice-sorter") return;
+    let tries = 0;
+    const timer = setInterval(function(){
+      tries++;
+      if (!window.PDFLib || !PDFLib.PDFPage || !PDFLib.PDFPage.prototype) {
+        if (tries > 80) clearInterval(timer);
+        return;
+      }
+      const proto = PDFLib.PDFPage.prototype;
+      if (proto.__ajioPlainStampPatch) { clearInterval(timer); return; }
+      proto.__ajioPlainStampPatch = true;
+
+      const originalRectangle = proto.drawRectangle;
+      const originalText = proto.drawText;
+
+      proto.drawRectangle = function(opts){
+        try {
+          const s = this.getSize ? this.getSize() : null;
+          if (s && opts && opts.y < s.height * 0.09 && opts.height <= 55 && opts.width > s.width * 0.38 && opts.width < s.width * 0.60 && opts.x > s.width * 0.40) {
+            return this;
+          }
+        } catch(e) {}
+        return originalRectangle.apply(this, arguments);
+      };
+
+      proto.drawText = function(text, opts){
+        try {
+          if (typeof text === "string" && (text.indexOf("SKU: ") === 0 || text.indexOf("BAG: ") === 0)) {
+            const s = this.getSize ? this.getSize() : { width: 595, height: 842 };
+            const isSku = text.indexOf("SKU: ") === 0;
+            const cleanText = text.replace(/^SKU:\s*/, "").replace(/^BAG:\s*/, "");
+            const o = Object.assign({}, opts || {});
+            const size = o.size || 9;
+            o.x = s.width * 0.79;
+            o.y = s.height * 0.022 + (isSku ? size + 4 : 0);
+            return originalText.call(this, cleanText, o);
+          }
+        } catch(e) {}
+        return originalText.apply(this, arguments);
+      };
+      clearInterval(timer);
+    }, 100);
+  })();
 
   // ---------- JSON-LD (Website) ----------
   (function addLd(){
