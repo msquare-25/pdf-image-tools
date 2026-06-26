@@ -1,6 +1,6 @@
 (async function(){
   'use strict';
-  window.AJIO_V2_LAYOUT_VERSION='v12-forced-live-inset';
+  window.AJIO_V2_LAYOUT_VERSION='v12-forced-live-inset-order-fallback';
   const source='/assets/ajio-v2-final-v5.js?v=20260626-5';
   const lineGroups=`function lineGroups(items){
     const p=(items||[]).map(i=>sanitizeSku(i.sku)+(qty(i.qty)>1?' ('+qty(i.qty)+')':'')).filter(Boolean);
@@ -19,10 +19,10 @@
     let orderLine='';
     if(row.stampData&&row.confidence!=='UNSAFE'){
       groups=lineGroups(row.stampData.skuItems).map(g=>g.map(cleanLine).filter(Boolean)).filter(g=>g.length);
-      orderLine=cleanLine(row.bagBarcode||row.matchedOrder||'');
+      orderLine=cleanLine(row.bagBarcode || row.matchedOrder || (row.stampData&&row.stampData.orderId) || '');
     }else{
       groups=[['MANUAL CHECK']];
-      orderLine=cleanLine(row.matchedOrder||'');
+      orderLine=cleanLine(row.matchedOrder || (row.stampData&&row.stampData.orderId) || '');
     }
 
     const rightAnchor=width*.935;
@@ -34,7 +34,7 @@
     const lines=groups.map(g=>cleanLine(g.join(' + '))).filter(Boolean).concat(orderLine?[orderLine]:[]).filter(Boolean);
     let fit=null;
     for(let size=7.8;size>=3.35;size-=.15){
-    const lh=size+2.7;
+      const lh=size+2.7;
       const w=Math.max(25,...lines.map(t=>measure(t,size)));
       const h=(lines.length-1)*lh+size;
       if(w<=maxW && bottomBase+h<=topLimit){fit={lines,size,lh,w,h};break;}
@@ -58,10 +58,10 @@
     code=code.replace(/function stampLabel\(page,row,font\)\{[\s\S]*?\}\nasync function createFinalPdf/,stampLabel+'\nasync function createFinalPdf');
     if(code===before)throw new Error('Stamp layout patch did not apply');
     const s=document.createElement('script');
-    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v12-runtime.js';
+    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v12-order-fallback-runtime.js';
     document.body.appendChild(s);
     const st=document.getElementById('status');
-    if(st)st.textContent='V12 forced live inset layout loaded. Upload Label and Excel files.';
+    if(st)st.textContent='V12 order fallback layout loaded. Upload Label and Excel files.';
   }catch(err){
     console.error(err);
     alert('AJIO V2 v12 engine failed to load. Please hard refresh and try again.');
