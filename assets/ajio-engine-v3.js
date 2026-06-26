@@ -1,8 +1,8 @@
 (function(){
   'use strict';
   if ((location.pathname || '').replace(/\/$/, '') !== '/ajio-label-invoice-sorter') return;
-  if (window.__ajioMainEnginePatchV1) return;
-  window.__ajioMainEnginePatchV1 = true;
+  if (window.__ajioMainEnginePatchV2) return;
+  window.__ajioMainEnginePatchV2 = true;
 
   function boot(){
     const srcScript = Array.from(document.scripts).find(function(s){
@@ -26,6 +26,19 @@
     }
 
     let code = srcScript.textContent;
+
+    code = code.replace(
+      /function extractAwb\(text\)\{[\s\S]*?\}\n\s*function addToIndex/,
+      `function extractAwb(text){
+    const u = clean(text).toUpperCase();
+    const m = u.match(/\\bAWB(?:\\s*(?:NUMBER|NO|#))?\\s*[:\\-]?\\s*((?:SF\\d{6,}AJI)|(?:\\d{10,16}))\\b/i);
+    if (!m) return '';
+    const awb = clean(m[1]).toUpperCase();
+    if (!awb || /^0+$/.test(awb)) return '';
+    return awb;
+  }
+  function addToIndex`
+    );
 
     const newAnalyze = `async function analyzeLabels(pdf, invoiceByAwb){
     const labels = [], byOrder = new Map(), byAwb = new Map(), duplicates = [];
@@ -71,6 +84,65 @@
     const aEnd = code.indexOf('\n  async function analyzeAllLabels', aStart);
     if (aStart >= 0 && aEnd > aStart) code = code.slice(0, aStart) + newAnalyze + code.slice(aEnd);
 
+    const sequenceFallback = `      (function applyVerifiedSequenceFallback(){
+        const invoicesBySource = new Map();
+        invoiceIndex.invoices.forEach(inv => {
+          if (!invoicesBySource.has(inv.sourceIndex)) invoicesBySource.set(inv.sourceIndex, []);
+          invoicesBySource.get(inv.sourceIndex).push(inv);
+        });
+        invoicesBySource.forEach(list => list.sort((a,b) => a.pageIndex - b.pageIndex));
+
+        const labelsBySource = new Map();
+        labelIndex.labels.forEach(lbl => {
+          if (!labelsBySource.has(lbl.sourceIndex)) labelsBySource.set(lbl.sourceIndex, []);
+          labelsBySource.get(lbl.sourceIndex).push(lbl);
+        });
+        labelsBySource.forEach(list => list.sort((a,b) => a.pageIndex - b.pageIndex));
+
+        labelsBySource.forEach(labels => {
+          let best = null;
+          invoicesBySource.forEach((invoices, invSource) => {
+            const counts = new Map();
+            labels.forEach(lbl => {
+              if (!lbl.orderId) return;
+              const inv = invoiceIndex.byOrder.get(lbl.orderId);
+              if (!inv || inv.sourceIndex !== invSource) return;
+              const offset = inv.pageIndex - lbl.pageIndex;
+              const key = invSource + ':' + offset;
+              const cur = counts.get(key) || { invSource, offset, count:0 };
+              cur.count += 1;
+              counts.set(key, cur);
+            });
+            counts.forEach(cur => {
+              if (cur.count >= 2 && (!best || cur.count > best.count)) best = cur;
+            });
+          });
+          if (!best) return;
+          const invByPage = new Map((invoicesBySource.get(best.invSource) || []).map(inv => [inv.pageIndex, inv]));
+          labels.forEach(lbl => {
+            if (lbl.orderId) return;
+            const inv = invByPage.get(lbl.pageIndex + best.offset);
+            if (!inv || !inv.orderId) return;
+            lbl.orderId = inv.orderId;
+            lbl.awb = lbl.awb || inv.awb || '';
+            lbl.inferredBySequence = true;
+            if (!labelIndex.byOrder.has(lbl.orderId)) labelIndex.byOrder.set(lbl.orderId, lbl);
+            if (lbl.awb && !labelIndex.byAwb.has(lbl.awb)) labelIndex.byAwb.set(lbl.awb, lbl);
+          });
+        });
+      })();
+`;
+
+    code = code.replace(
+      "      setStatus('Matching orders…', 68);\n      const rows = excelRecords.map(rec => {",
+      "      setStatus('Matching orders…', 68);\n" + sequenceFallback + "      const rows = excelRecords.map(rec => {"
+    );
+
+    code = code.replace(
+      "if (invoice && label && invoice.awb && label.awb && invoice.awb !== label.awb) notes.push('AWB mismatch between label and invoice');",
+      "if (invoice && label && invoice.awb && label.awb && invoice.awb !== label.awb) notes.push('AWB mismatch between label and invoice');\n        if (label && label.inferredBySequence) notes.push('Label matched by verified file sequence');"
+    );
+
     code = code.replace(
       "if (!rec.label || !rec.invoice) { if (onlyMatched.checked) continue; else continue; }\n      const [labelPage] = await out.copyPages(labelDocs[rec.label.sourceIndex], [rec.label.pageIndex]);\n      out.addPage(labelPage);\n      stampLabel(labelPage, rec, fontBold, fontRegular);\n      const [invoicePage] = await out.copyPages(invoiceDocs[rec.invoice.sourceIndex], [rec.invoice.pageIndex]);\n      out.addPage(invoicePage);",
       "if (!rec.label) continue;\n      const [labelPage] = await out.copyPages(labelDocs[rec.label.sourceIndex], [rec.label.pageIndex]);\n      out.addPage(labelPage);\n      stampLabel(labelPage, rec, fontBold, fontRegular);\n      if (rec.invoice) {\n        const [invoicePage] = await out.copyPages(invoiceDocs[rec.invoice.sourceIndex], [rec.invoice.pageIndex]);\n        out.addPage(invoicePage);\n      }"
@@ -83,7 +155,7 @@
 
     code = code.replace(
       "      const sorted = sortRows(rows);",
-      "      const usedLabelKeys = new Set(rows.filter(r => r.label).map(r => r.label.sourceIndex + ':' + r.label.pageIndex));\n      labelIndex.labels.forEach((label, idx) => {\n        const key = label.sourceIndex + ':' + label.pageIndex;\n        if (usedLabelKeys.has(key)) return;\n        let invoice = null;\n        if (label.orderId) invoice = invoiceIndex.byOrder.get(label.orderId) || null;\n        if (!invoice && label.awb) invoice = invoiceIndex.byAwb.get(label.awb) || null;\n        const orderId = label.orderId || (invoice && invoice.orderId) || '';\n        const notes = ['Label included even though Excel match was not found'];\n        if (!invoice) notes.push('Invoice page not found');\n        rows.push({ orderId: orderId || ('LABEL ' + label.pageNumber), bagBarcode: '', sku: '', confirmQty: '', sequence: 999000 + idx, label, invoice, notes, status: invoice ? 'WARN' : 'ERROR' });\n      });\n\n      const sorted = sortRows(rows);"
+      "      const usedLabelKeys = new Set(rows.filter(r => r.label).map(r => r.label.sourceIndex + ':' + r.label.pageIndex));\n      labelIndex.labels.forEach((label, idx) => {\n        const key = label.sourceIndex + ':' + label.pageIndex;\n        if (usedLabelKeys.has(key)) return;\n        let invoice = null;\n        if (label.orderId) invoice = invoiceIndex.byOrder.get(label.orderId) || null;\n        if (!invoice && label.awb) invoice = invoiceIndex.byAwb.get(label.awb) || null;\n        const orderId = label.orderId || (invoice && invoice.orderId) || '';\n        const notes = ['Label included even though Excel match was not found'];\n        if (!invoice) notes.push('Invoice page not found');\n        if (label.inferredBySequence) notes.push('Label matched by verified file sequence');\n        rows.push({ orderId: orderId || ('LABEL ' + label.pageNumber), bagBarcode: '', sku: '', confirmQty: '', sequence: 999000 + idx, label, invoice, notes, status: invoice ? 'WARN' : 'ERROR' });\n      });\n\n      const sorted = sortRows(rows);"
     );
 
     code = code.replace(
