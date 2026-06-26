@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AJIO Sorter V2 Decode Test — PDFImageLab</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/style.css" />
+  <script defer src="/site.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script>
+    if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  </script>
+  <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js"></script>
+  <style>
+    .v2-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}.v2-list{display:grid;gap:8px;margin-top:12px}.v2-pill{font-size:12px;padding:8px 10px;border:1px solid rgba(148,163,184,.35);border-radius:10px;background:rgba(255,255,255,.04);word-break:break-word}.v2-progress{height:10px;border-radius:999px;background:rgba(148,163,184,.25);overflow:hidden;margin-top:12px}.v2-progress span{display:block;height:100%;width:0%;background:linear-gradient(90deg,#60a5fa,#34d399)}.v2-report-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:12px 0}.v2-stat{border:1px solid rgba(148,163,184,.35);border-radius:12px;padding:12px;background:rgba(255,255,255,.04)}.v2-stat strong{display:block;font-size:22px}.v2-stat span{font-size:12px;color:var(--muted,#94a3b8)}.v2-table-wrap{overflow:auto;border:1px solid rgba(148,163,184,.35);border-radius:12px;margin-top:12px}.v2-table{width:100%;border-collapse:collapse;font-size:12px;min-width:980px}.v2-table th,.v2-table td{border-bottom:1px solid rgba(148,163,184,.25);padding:8px;text-align:left;vertical-align:top}.v2-table th{background:rgba(148,163,184,.12);font-weight:800}.ok{color:#22c55e;font-weight:800}.bad{color:#ef4444;font-weight:800}.warn{color:#f59e0b;font-weight:800}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.debug-crops{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.debug-crops canvas{max-width:100%;border:1px solid rgba(148,163,184,.35);border-radius:8px;background:white}
+  </style>
+</head>
+<body>
+<header class="site-header"><div class="container bar"><div class="brand"><a href="/" class="home-link"><span class="logo"></span><span>PDFimageLab</span></a></div><div class="container tool-tabs-wrap"><nav class="tool-tabs"><a href="/ajio-label-invoice-sorter">AJIO Sorter Live</a><a class="active" href="/ajio-label-invoice-sorter-v2">AJIO V2 Decode Test</a></nav></div></div></header>
+<main><div class="wrap"><main class="panel">
+  <p class="ajio-badge">Hidden Test Page · AJIO Sorter V2</p>
+  <h1 class="page-title">AJIO Label Barcode Decode Test</h1>
+  <p class="sub">Phase 1 only: verify direct reading of the label AWB barcode and Order# barcode. No sequence guessing. No page-position guessing.</p>
+
+  <section class="card mt-3">
+    <div class="v2-grid">
+      <div>
+        <h2 class="title">Upload Label PDF</h2>
+        <p class="small muted">Upload one or multiple AJIO packing slip PDFs.</p>
+        <label for="labelPdf" class="btn gradient big">Label PDF</label>
+        <input id="labelPdf" type="file" accept="application/pdf,.pdf" multiple hidden />
+        <div class="v2-list"><div class="v2-pill" id="labelName">Label PDF: not selected</div></div>
+      </div>
+      <div>
+        <h2 class="title">Run Test</h2>
+        <p class="small muted">Target: every page should decode AWB or FN directly from the label barcode.</p>
+        <button id="runBtn" class="btn" disabled>Run Decode Test</button>
+        <button id="csvBtn" class="btn subtle" disabled>Download CSV</button>
+        <button id="clearBtn" class="btn subtle">Clear</button>
+        <div id="status" class="small mt-2">Upload label PDFs to start.</div>
+        <div class="v2-progress"><span id="progressBar"></span></div>
+      </div>
+      <div>
+        <h2 class="title">Rule</h2>
+        <div class="ajio-note small">Direct evidence only: top label barcode = AWB, middle Order# barcode = FN order number. Shipment barcode is ignored.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card mt-3" id="reportBox" style="display:none">
+    <h2 class="title">Decode Report</h2>
+    <div class="v2-report-grid" id="statGrid"></div>
+    <div class="small muted" id="reportNote"></div>
+    <div class="v2-table-wrap"><table class="v2-table"><thead><tr><th>Status</th><th>File</th><th>Page</th><th>AWB</th><th>Order ID</th><th>AWB Method</th><th>Order Method</th><th>Note</th></tr></thead><tbody id="reportRows"></tbody></table></div>
+  </section>
+</main></div></main>
+
+<script>
+(function(){
+  'use strict';
+  const $=s=>document.querySelector(s), clean=v=>String(v==null?'':v).replace(/\s+/g,' ').trim();
+  const labelInput=$('#labelPdf'), labelName=$('#labelName'), runBtn=$('#runBtn'), csvBtn=$('#csvBtn'), clearBtn=$('#clearBtn');
+  const statusEl=$('#status'), progressBar=$('#progressBar'), reportBox=$('#reportBox'), statGrid=$('#statGrid'), reportRows=$('#reportRows'), reportNote=$('#reportNote');
+  let files=[], results=[];
+  const awbRe=/^(?:SF\d{6,}AJI|\d{10,16})$/i, orderRe=/^FN\d{8,}$/i;
+  const awbZones=[
+    ['awb-top-tight',{x:.02,y:.22,w:.70,h:.17}],['awb-top-wide',{x:0,y:.18,w:.82,h:.24}],['awb-top-full',{x:0,y:.15,w:.96,h:.30}]
+  ];
+  const orderZones=[
+    ['order-tight',{x:.24,y:.45,w:.62,h:.105}],['order-wide',{x:.12,y:.40,w:.84,h:.18}],['order-full',{x:0,y:.37,w:1,h:.23}],['order-low',{x:.18,y:.49,w:.78,h:.10}]
+  ];
+  function setStatus(t,p){statusEl.textContent=t;if(typeof p==='number')progressBar.style.width=Math.max(0,Math.min(100,p))+'%';}
+  function esc(s){return clean(s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+  function updateUi(){labelName.textContent=files.length?`Label PDF: ${files.length} file(s) selected`:'Label PDF: not selected';runBtn.disabled=!files.length;csvBtn.disabled=!results.length;}
+  labelInput.addEventListener('change',e=>{files=Array.from(e.target.files||[]);results=[];reportBox.style.display='none';updateUi();setStatus(files.length?'Ready for decode test.':'Upload label PDFs to start.',0);});
+  clearBtn.addEventListener('click',()=>{files=[];results=[];labelInput.value='';reportBox.style.display='none';setStatus('Upload label PDFs to start.',0);updateUi();});
+  function cropCanvas(canvas,z){const x=Math.max(0,Math.floor(z.x*canvas.width)),y=Math.max(0,Math.floor(z.y*canvas.height)),w=Math.min(canvas.width-x,Math.floor(z.w*canvas.width)),h=Math.min(canvas.height-y,Math.floor(z.h*canvas.height));const out=document.createElement('canvas');out.width=Math.max(1,w);out.height=Math.max(1,h);out.getContext('2d',{willReadFrequently:true}).drawImage(canvas,x,y,w,h,0,0,out.width,out.height);return out;}
+  async function renderPage(page,scale){const vp=page.getViewport({scale});const canvas=document.createElement('canvas');canvas.width=Math.floor(vp.width);canvas.height=Math.floor(vp.height);await page.render({canvasContext:canvas.getContext('2d',{willReadFrequently:true}),viewport:vp}).promise;return canvas;}
+  async function nativeDecode(canvas,regex){if(!('BarcodeDetector'in window))return'';try{const fm=await BarcodeDetector.getSupportedFormats();const det=new BarcodeDetector({formats:fm.includes('code_128')?['code_128']:fm});const hits=await det.detect(canvas);for(const h of hits){const v=clean(h.rawValue).toUpperCase();if(regex.test(v)&&!/^0+$/.test(v))return v;}}catch(e){}return'';}
+  async function zxingDecode(canvas,regex){try{const root=window.ZXingBrowser||window.ZXing;if(!root||!root.BrowserMultiFormatReader)return'';const reader=new root.BrowserMultiFormatReader();let r=null;if(reader.decodeFromCanvas)r=await reader.decodeFromCanvas(canvas);else if(reader.decodeFromImageElement){const img=new Image();img.src=canvas.toDataURL('image/png');await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;});r=await reader.decodeFromImageElement(img);}const text=clean(r&&typeof r.getText==='function'?r.getText():r&&r.text?r.text:'').toUpperCase();if(regex.test(text)&&!/^0+$/.test(text))return text;}catch(e){}return'';}
+  async function decodeOne(canvas,zones,regex){const fullNative=await nativeDecode(canvas,regex);if(fullNative)return{value:fullNative,method:'native full page'};for(const [name,z] of zones){const c=cropCanvas(canvas,z);const n=await nativeDecode(c,regex);if(n)return{value:n,method:'native '+name};const zx=await zxingDecode(c,regex);if(zx)return{value:zx,method:'zxing '+name};}const fullZx=await zxingDecode(canvas,regex);if(fullZx)return{value:fullZx,method:'zxing full page'};return{value:'',method:''};}
+  async function readTextOrder(page){try{const tc=await page.getTextContent();const txt=tc.items.map(i=>i.str||'').join(' ').replace(/\s+/g,' ');const m=txt.toUpperCase().match(/FN\d{8,}/);return m?m[0]:'';}catch(e){return'';}}
+  async function processFile(file,fileIndex,totalFiles){const bytes=new Uint8Array(await file.arrayBuffer());const pdf=await pdfjsLib.getDocument({data:bytes}).promise;const out=[];for(let p=1;p<=pdf.numPages;p++){setStatus(`Decoding ${fileIndex+1}/${totalFiles}: page ${p}/${pdf.numPages}`,((fileIndex/totalFiles)*100)+((p/pdf.numPages)*(100/totalFiles)));const page=await pdf.getPage(p);const canvas=await renderPage(page,4.8);const textOrder=await readTextOrder(page);let order=textOrder?{value:textOrder,method:'pdf text'}:await decodeOne(canvas,orderZones,orderRe);const awb=await decodeOne(canvas,awbZones,awbRe);let status='OK',note='';if(!order.value&&!awb.value){status='FAIL';note='Neither AWB nor Order barcode decoded';}else if(!order.value){status='WARN';note='Order barcode unreadable; AWB decoded';}else if(!awb.value){status='WARN';note='AWB barcode unreadable; Order decoded';}out.push({status,file:file.name,page:p,awb:awb.value,order:order.value,awbMethod:awb.method,orderMethod:order.method,note});await new Promise(r=>setTimeout(r,0));}return out;}
+  function showReport(rows){const total=rows.length, ok=rows.filter(r=>r.status==='OK').length, warn=rows.filter(r=>r.status==='WARN').length, fail=rows.filter(r=>r.status==='FAIL').length, any=rows.filter(r=>r.awb||r.order).length;statGrid.innerHTML='';[['Pages',total],['Both decoded',ok],['Partial',warn],['Failed',fail],['Usable direct evidence',any]].forEach(([l,v])=>{const d=document.createElement('div');d.className='v2-stat';d.innerHTML=`<strong>${v}</strong><span>${l}</span>`;statGrid.appendChild(d);});reportRows.innerHTML='';rows.forEach(r=>{const cls=r.status==='OK'?'ok':r.status==='WARN'?'warn':'bad';const tr=document.createElement('tr');tr.innerHTML=`<td class="${cls}">${r.status}</td><td>${esc(r.file)}</td><td>${r.page}</td><td class="mono">${esc(r.awb||'-')}</td><td class="mono">${esc(r.order||'-')}</td><td>${esc(r.awbMethod||'-')}</td><td>${esc(r.orderMethod||'-')}</td><td>${esc(r.note||'-')}</td>`;reportRows.appendChild(tr);});reportNote.textContent=fail?'Production generation should not auto-stamp failed pages. They must remain manual-attention labels.':'Decoder result is ready for next V2 build step.';reportBox.style.display='block';}
+  function csv(rows){const head=['Status','File','Page','AWB','Order ID','AWB Method','Order Method','Note'];const e=v=>/[",\n]/.test(clean(v))?'"'+clean(v).replace(/"/g,'""')+'"':clean(v);return[head.join(','),...rows.map(r=>[r.status,r.file,r.page,r.awb,r.order,r.awbMethod,r.orderMethod,r.note].map(e).join(','))].join('\n');}
+  csvBtn.addEventListener('click',()=>{if(!results.length)return;const url=URL.createObjectURL(new Blob([csv(results)],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='ajio-v2-decode-report.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);});
+  runBtn.addEventListener('click',async()=>{try{runBtn.disabled=true;csvBtn.disabled=true;results=[];reportBox.style.display='none';for(let i=0;i<files.length;i++){results.push(...await processFile(files[i],i,files.length));}setStatus(`Done. ${results.length} label pages checked.`,100);showReport(results);csvBtn.disabled=false;}catch(e){console.error(e);alert(e.message||'Decode test failed');setStatus('Error: '+(e.message||'Decode test failed'),0);}finally{runBtn.disabled=!files.length;}});
+  updateUi();
+})();
+</script>
+</body>
+</html>
