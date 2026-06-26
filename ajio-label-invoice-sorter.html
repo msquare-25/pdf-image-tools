@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AJIO Label Invoice Sorter — Print SKU & Bag Barcode | PDFImageLab</title>
+  <meta name="description" content="Sort AJIO labels and invoices by forward bag barcode, print Seller SKU ID and Forward Consignment Bar Code on labels, and download one packing-ready PDF. Browser-only, no uploads." />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="canonical" href="https://pdfimagelab.com/ajio-label-invoice-sorter" />
+  <link rel="stylesheet" href="/style.css" />
+  <script defer src="/site.js"></script>
+  <script defer src="/assets/seo.js"></script>
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#0b0f14" />
+  <meta property="og:title" content="AJIO Label Invoice Sorter — PDFImageLab" />
+  <meta property="og:description" content="Arrange AJIO labels and invoices by bag barcode, stamp SKU + bag barcode on labels, and generate one packing-ready PDF." />
+  <meta property="og:image" content="https://pdfimagelab.com/og/default.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-MJR5QK0G37"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-MJR5QK0G37');
+  </script>
+
+  <!-- PDF.js reader -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+  </script>
+
+  <!-- pdf-lib writer -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <!-- SheetJS Excel reader -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <style>
+    .ajio-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);font-size:13px;font-weight:700}
+    .ajio-note{border:1px solid rgba(148,163,184,.35);border-radius:14px;padding:14px;background:rgba(148,163,184,.08)}
+    .ajio-upload-list{display:grid;gap:8px;margin-top:12px;text-align:left}
+    .ajio-file-pill{font-size:12px;padding:8px 10px;border:1px solid rgba(148,163,184,.35);border-radius:10px;background:rgba(255,255,255,.04);word-break:break-word}
+    .ajio-setting{display:flex;align-items:flex-start;gap:10px;margin:10px 0;text-align:left}
+    .ajio-setting input,.ajio-setting select{margin-top:2px}
+    .ajio-progress{height:10px;border-radius:999px;background:rgba(148,163,184,.25);overflow:hidden;margin-top:12px}
+    .ajio-progress span{display:block;height:100%;width:0%;background:linear-gradient(90deg,#60a5fa,#34d399);transition:width .25s ease}
+    .ajio-report{margin-top:18px;display:none}
+    .ajio-report-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:12px 0}
+    .ajio-stat{border:1px solid rgba(148,163,184,.35);border-radius:12px;padding:12px;background:rgba(255,255,255,.04)}
+    .ajio-stat strong{display:block;font-size:22px;line-height:1.1}
+    .ajio-stat span{font-size:12px;color:var(--muted,#94a3b8)}
+    .ajio-table-wrap{overflow:auto;border:1px solid rgba(148,163,184,.35);border-radius:12px;margin-top:12px}
+    .ajio-table{width:100%;border-collapse:collapse;font-size:12px;min-width:760px}
+    .ajio-table th,.ajio-table td{border-bottom:1px solid rgba(148,163,184,.25);padding:8px;text-align:left;vertical-align:top}
+    .ajio-table th{background:rgba(148,163,184,.12);font-weight:800}
+    .ajio-table tr:last-child td{border-bottom:none}
+    .ajio-ok{color:#22c55e;font-weight:800}.ajio-bad{color:#ef4444;font-weight:800}.ajio-warn{color:#f59e0b;font-weight:800}
+    .ajio-small-link{font-size:12px;text-decoration:underline;cursor:pointer;background:none;border:0;color:inherit;padding:0}
+    .ajio-tool-tabs-extra{white-space:nowrap}
+    @media (max-width:760px){.ajio-table{font-size:11px}.ajio-stat strong{font-size:18px}}
+  </style>
+</head>
+
+<body class="ajio-label-invoice-page">
+<header class="site-header">
+  <div class="container bar">
+    <div class="brand">
+      <a href="/" class="home-link">
+        <span class="logo"></span>
+        <span>PDFimageLab</span>
+      </a>
+    </div>
+
+    <div class="container tool-tabs-wrap">
+      <button class="tool-scroll tool-left" aria-label="Scroll tools left">‹</button>
+      <nav class="tool-tabs" role="navigation" aria-label="Tools">
+        <a href="/image-to-pdf">Image → PDF</a>
+        <a href="/pdf-to-images">PDF → Images</a>
+        <a href="/compress">Compress PDF</a>
+        <a href="/crop">Crop PDF</a>
+        <a href="/merge">Merge PDF</a>
+        <a href="/png-to-jpg">PNG → JPG</a>
+        <a href="/jpg-to-png">JPG → PNG</a>
+        <a href="/delete-pages">Delete pages</a>
+        <a href="/reorder-pages">Reorder PDF</a>
+        <a href="/rotate-pages">Rotate PDF</a>
+        <a href="/ajio-label-invoice-sorter" class="active ajio-tool-tabs-extra">AJIO Sorter</a>
+      </nav>
+      <button class="tool-scroll tool-right" aria-label="Scroll tools right">›</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <aside class="panel">
+      <div class="grid-3">
+        <section class="panel card box upload-box theme-center" id="dropzone">
+          <h2 class="title">Upload</h2>
+          <p class="muted">Upload AJIO Excel, Label PDF and Invoice PDF</p>
+
+          <label for="excelFile" class="btn gradient big">AJIO Excel</label>
+          <input id="excelFile" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" hidden />
+
+          <label for="labelPdf" class="btn subtle mt-1">Label PDF</label>
+          <input id="labelPdf" type="file" accept="application/pdf,.pdf" hidden />
+
+          <label for="invoicePdf" class="btn subtle mt-1">Invoice PDF</label>
+          <input id="invoicePdf" type="file" accept="application/pdf,.pdf" hidden />
+
+          <div class="ajio-upload-list">
+            <div class="ajio-file-pill" id="excelName">Excel: not selected</div>
+            <div class="ajio-file-pill" id="labelName">Label PDF: not selected</div>
+            <div class="ajio-file-pill" id="invoiceName">Invoice PDF: not selected</div>
+          </div>
+          <button class="btn subtle mt-2" id="clearBtn" disabled>Clear</button>
+          <div class="small mt-2">Privacy: No uploads. Everything runs in your browser.</div>
+        </section>
+
+        <section class="panel card box setting-box theme-center">
+          <h2 class="title">Setting</h2>
+          <label class="ajio-setting">
+            <span class="small">Sort final PDF by</span>
+          </label>
+          <select id="sortBy" class="input" style="width:100%;max-width:260px;padding:10px;border-radius:10px;">
+            <option value="bag" selected>Forward Consignment Bag Barcode</option>
+            <option value="sku">Seller SKU A-Z</option>
+            <option value="excel">Excel Row Order</option>
+            <option value="order">Order ID</option>
+          </select>
+
+          <label class="ajio-setting">
+            <input id="stampSku" type="checkbox" checked />
+            <span class="small">Print Seller SKU ID on label</span>
+          </label>
+          <label class="ajio-setting">
+            <input id="stampBag" type="checkbox" checked />
+            <span class="small">Print Forward Bag Barcode on label</span>
+          </label>
+          <label class="ajio-setting">
+            <input id="onlyMatched" type="checkbox" checked />
+            <span class="small">Skip unmatched orders in final PDF and show them in report</span>
+          </label>
+
+          <hr class="soft" />
+          <div class="ajio-note small">
+            Default sequence is bag barcode because packing bags are arranged by barcode scan series at the dispatch table.
+          </div>
+        </section>
+
+        <section class="panel card box action-box theme-center">
+          <h2 class="title">Generate</h2>
+          <div id="status" class="small">Upload all 3 files to start.</div>
+          <div class="ajio-progress" aria-hidden="true"><span id="progressBar"></span></div>
+          <div class="row center mt-2" style="gap:10px;flex-wrap:wrap">
+            <button id="processBtn" class="btn" disabled>Generate Final PDF</button>
+            <button id="reportBtn" class="btn subtle" disabled>Download Report CSV</button>
+          </div>
+          <div class="small mt-2">Output: label → invoice → label → invoice.</div>
+        </section>
+      </div>
+    </aside>
+
+    <main class="panel">
+      <p class="ajio-badge">Marketplace Tool · AJIO Packing Workflow</p>
+      <h1 class="page-title">AJIO Label Invoice Sorter</h1>
+      <p class="sub">Arrange AJIO labels and invoices by forward bag barcode, stamp Seller SKU ID and Forward Consignment Bar Code on each label, then download one packing-ready PDF.</p>
+
+      <section class="card mt-3">
+        <h2 class="title">How it works</h2>
+        <ul class="sub">
+          <li>Upload AJIO bulk accepted Excel, Label PDF and Invoice PDF.</li>
+          <li>The tool reads Customer Order ID, Seller SKU ID and Forward Consignment Bar Code from Excel.</li>
+          <li>It matches label pages and invoice pages using AJIO order number / barcode data.</li>
+          <li>Final PDF is generated in selected sequence. Default is bag barcode sorting for faster packing desk arrangement.</li>
+        </ul>
+        <p class="sub mt-1">Privacy: No uploads. Everything stays on your device.</p>
+        <p class="small muted">Independent utility for marketplace sellers. Not affiliated with AJIO or Reliance Retail.</p>
+      </section>
+
+      <section class="card mt-3 ajio-report" id="reportBox">
+        <h2 class="title">Validation Report</h2>
+        <div class="ajio-report-grid" id="statGrid"></div>
+        <div class="small muted" id="reportNote"></div>
+        <div class="ajio-table-wrap">
+          <table class="ajio-table">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Order ID</th>
+                <th>Bag Barcode</th>
+                <th>Seller SKU</th>
+                <th>Label</th>
+                <th>Invoice</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody id="reportRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="home-seo container" style="margin-top:40px;">
+        <h2>Built for AJIO sellers who print in batches</h2>
+        <p>This tool is useful when AJIO gives three files during order processing: one bulk accepted Excel file, one label PDF and one invoice PDF. It combines the three into one clean dispatch PDF and keeps the packing sequence aligned with the scanned bag barcode series.</p>
+        <h3>Recommended use</h3>
+        <ul style="line-height:1.8;">
+          <li>Scan or arrange AJIO bags in barcode series.</li>
+          <li>Upload the same accepted Excel, label PDF and invoice PDF.</li>
+          <li>Keep default sorting as Forward Consignment Bag Barcode.</li>
+          <li>Print the final PDF and pack in the same bag barcode sequence.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+</main>
+
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"SoftwareApplication",
+  "name":"AJIO Label Invoice Sorter",
+  "applicationCategory":"BusinessApplication",
+  "operatingSystem":"Web Browser",
+  "offers":{"@type":"Offer","price":"0","priceCurrency":"INR"},
+  "description":"Sort AJIO labels and invoices by forward bag barcode and print Seller SKU ID and Forward Consignment Bar Code on labels."
+}
+</script>
+
+<script>
+(function(){
+  'use strict';
+
+  const $ = (s) => document.querySelector(s);
+  const excelInput = $('#excelFile');
+  const labelInput = $('#labelPdf');
+  const invoiceInput = $('#invoicePdf');
+  const excelName = $('#excelName');
+  const labelName = $('#labelName');
+  const invoiceName = $('#invoiceName');
+  const clearBtn = $('#clearBtn');
+  const processBtn = $('#processBtn');
+  const reportBtn = $('#reportBtn');
+  const statusEl = $('#status');
+  const progressBar = $('#progressBar');
+  const sortBy = $('#sortBy');
+  const stampSku = $('#stampSku');
+  const stampBag = $('#stampBag');
+  const onlyMatched = $('#onlyMatched');
+  const reportBox = $('#reportBox');
+  const statGrid = $('#statGrid');
+  const reportRows = $('#reportRows');
+  const reportNote = $('#reportNote');
+
+  let excelFile = null;
+  let labelFile = null;
+  let invoiceFile = null;
+  let latestReport = [];
+
+  const CODE128_PATTERNS = [
+    '212222','222122','222221','121223','121322','131222','122213','122312','132212','221213',
+    '221312','231212','112232','122132','122231','113222','123122','123221','223211','221132',
+    '221231','213212','223112','312131','311222','321122','321221','312212','322112','322211',
+    '212123','212321','232121','111323','131123','131321','112313','132113','132311','211313',
+    '231113','231311','112133','112331','132131','113123','113321','133121','313121','211331',
+    '231131','213113','213311','213131','311123','311321','331121','312113','312311','332111',
+    '314111','221411','431111','111224','111422','121124','121421','141122','141221','112214',
+    '112412','122114','122411','142112','142211','241211','221114','413111','241112','134111',
+    '111242','121142','121241','114212','124112','124211','411212','421112','421211','212141',
+    '214121','412121','111143','111341','131141','114113','114311','411113','411311','113141',
+    '114131','311141','411131','211412','211214','211232','2331112'
+  ];
+
+  const collator = new Intl.Collator(undefined, { numeric:true, sensitivity:'base' });
+
+  function setStatus(text, pct){
+    statusEl.textContent = text;
+    if (typeof pct === 'number') progressBar.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  }
+
+  function clean(value){
+    return String(value == null ? '' : value).replace(/\s+/g,' ').trim();
+  }
+
+  function isBlankValue(value){
+    const v = clean(value);
+    return !v || v === '-' || /^na$/i.test(v) || /^null$/i.test(v);
+  }
+
+  function updateFileUi(){
+    excelName.textContent = 'Excel: ' + (excelFile ? excelFile.name : 'not selected');
+    labelName.textContent = 'Label PDF: ' + (labelFile ? labelFile.name : 'not selected');
+    invoiceName.textContent = 'Invoice PDF: ' + (invoiceFile ? invoiceFile.name : 'not selected');
+    const ready = !!(excelFile && labelFile && invoiceFile);
+    processBtn.disabled = !ready;
+    clearBtn.disabled = !(excelFile || labelFile || invoiceFile);
+    if (ready) setStatus('Ready. Click Generate Final PDF.', 0);
+  }
+
+  excelInput.addEventListener('change', e => { excelFile = e.target.files[0] || null; updateFileUi(); });
+  labelInput.addEventListener('change', e => { labelFile = e.target.files[0] || null; updateFileUi(); });
+  invoiceInput.addEventListener('change', e => { invoiceFile = e.target.files[0] || null; updateFileUi(); });
+  clearBtn.addEventListener('click', () => {
+    excelFile = labelFile = invoiceFile = null;
+    excelInput.value = labelInput.value = invoiceInput.value = '';
+    latestReport = [];
+    reportBtn.disabled = true;
+    reportBox.style.display = 'none';
+    setStatus('Upload all 3 files to start.', 0);
+    updateFileUi();
+  });
+
+  function findHeaderIndex(rows, names){
+    const targets = names.map(n => n.toLowerCase());
+    for (let r=0; r<Math.min(rows.length, 12); r++){
+      const row = rows[r] || [];
+      const lowered = row.map(c => clean(c).toLowerCase());
+      if (targets.every(t => lowered.includes(t))) return r;
+    }
+    return 1;
+  }
+
+  function findCol(headerRow, names, fallbackIndex){
+    const lowered = (headerRow || []).map(c => clean(c).toLowerCase());
+    for (const name of names){
+      const idx = lowered.indexOf(name.toLowerCase());
+      if (idx >= 0) return idx;
+    }
+    return fallbackIndex;
+  }
+
+  async function parseExcel(file){
+    const buffer = await file.arrayBuffer();
+    const wb = XLSX.read(buffer, { type:'array', cellDates:false });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header:1, raw:false, defval:'' });
+    const headerIdx = findHeaderIndex(rows, ['Customer Order Id','Seller SKU ID','Forward Consignment Bar Code']);
+    const header = rows[headerIdx] || [];
+
+    const orderCol = findCol(header, ['Customer Order Id'], 1);       // B
+    const skuCol   = findCol(header, ['Seller SKU ID'], 13);          // N
+    const qtyCol   = findCol(header, ['*Confirm Quantity','Confirm Quantity'], 20); // U
+    const bagCol   = findCol(header, ['Forward Consignment Bar Code'], 26);         // AA
+
+    const map = new Map();
+    let sequence = 0;
+
+    for (let r = headerIdx + 1; r < rows.length; r++){
+      const row = rows[r] || [];
+      const orderId = clean(row[orderCol]).toUpperCase();
+      if (!/^FN\d{6,}$/i.test(orderId)) continue;
+
+      if (!map.has(orderId)) {
+        map.set(orderId, { orderId, excelRow:r+1, sequence:sequence++, skus:[], bagBarcode:'', qtyValues:[], notes:[] });
+      }
+      const rec = map.get(orderId);
+
+      const sku = clean(row[skuCol]);
+      if (!isBlankValue(sku) && !rec.skus.includes(sku)) rec.skus.push(sku);
+
+      const bag = clean(row[bagCol]);
+      if (!isBlankValue(bag) && !rec.bagBarcode) rec.bagBarcode = bag;
+
+      const qty = clean(row[qtyCol]);
+      if (!isBlankValue(qty)) rec.qtyValues.push(qty);
+    }
+
+    const records = Array.from(map.values()).map(rec => {
+      const sku = rec.skus.length ? rec.skus.join(' + ') : '';
+      if (!sku) rec.notes.push('Missing Seller SKU ID');
+      if (!rec.bagBarcode) rec.notes.push('Missing Forward Consignment Bag Barcode');
+      return { ...rec, sku, confirmQty: rec.qtyValues.join(' + ') };
+    });
+
+    return { records, headerIdx, columns:{orderCol, skuCol, qtyCol, bagCol} };
+  }
+
+  async function getPdfTextPages(bytes){
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes).slice(0) }).promise;
+    const pages = [];
+    for (let i=1; i<=pdf.numPages; i++){
+      const page = await pdf.getPage(i);
+      const tc = await page.getTextContent();
+      const text = tc.items.map(item => item.str || '').join(' ').replace(/\s+/g,' ').trim();
+      pages.push({ pageIndex:i-1, pageNumber:i, text });
+    }
+    return { pdf, pages };
+  }
+
+  function extractOrderId(text){
+    const m = clean(text).toUpperCase().match(/FN\d{8,}/);
+    return m ? m[0] : '';
+  }
+
+  function extractAwb(text){
+    const upper = clean(text).toUpperCase();
+    const m = upper.match(/SF\d{6,}AJI/) || upper.match(/AWB\s*NUMBER\s*[:\-]?\s*(SF\d{6,}AJI)/);
+    return m ? (m[1] || m[0]) : '';
+  }
+
+  function addToIndex(map, key, value, duplicateList, duplicateLabel){
+    if (!key) return;
+    if (map.has(key)) duplicateList.push(`${duplicateLabel}: ${key}`);
+    else map.set(key, value);
+  }
+
+  function cropCanvas(canvas, zone){
+    const x = Math.max(0, Math.floor(zone.x * canvas.width));
+    const y = Math.max(0, Math.floor(zone.y * canvas.height));
+    const w = Math.min(canvas.width - x, Math.floor(zone.w * canvas.width));
+    const h = Math.min(canvas.height - y, Math.floor(zone.h * canvas.height));
+    const out = document.createElement('canvas');
+    out.width = Math.max(1, w);
+    out.height = Math.max(1, h);
+    const ctx = out.getContext('2d', { willReadFrequently:true });
+    ctx.drawImage(canvas, x, y, w, h, 0, 0, out.width, out.height);
+    return out;
+  }
+
+  function patternArray(pattern){ return pattern.split('').map(Number); }
+
+  function matchPattern(widths, stop){
+    let best = { code:-1, err:Infinity };
+    for (let code=0; code<CODE128_PATTERNS.length; code++){
+      const pat = patternArray(CODE128_PATTERNS[code]);
+      if (!!stop !== (code === 106)) continue;
+      if (pat.length !== widths.length) continue;
+      const sumW = widths.reduce((a,b)=>a+b,0);
+      const sumP = pat.reduce((a,b)=>a+b,0);
+      const scale = sumW / sumP;
+      let err = 0;
+      for (let i=0; i<pat.length; i++){
+        const d = widths[i] - pat[i] * scale;
+        err += d*d;
+      }
+      const norm = Math.sqrt(err / pat.length) / scale;
+      if (norm < best.err) best = { code, err:norm };
+    }
+    return best.err < 0.72 ? best.code : -1;
+  }
+
+  function rowRunsFromCanvas(canvas, y){
+    const ctx = canvas.getContext('2d', { willReadFrequently:true });
+    const { data } = ctx.getImageData(0, y, canvas.width, 1);
+    let min = 255, max = 0;
+    const lum = new Array(canvas.width);
+    for (let x=0; x<canvas.width; x++){
+      const idx = x*4;
+      const l = 0.299*data[idx] + 0.587*data[idx+1] + 0.114*data[idx+2];
+      lum[x] = l;
+      if (l < min) min = l;
+      if (l > max) max = l;
+    }
+    if (max - min < 50) return null;
+    const threshold = (min + max) / 2;
+    const bits = lum.map(l => l < threshold);
+    let first = bits.findIndex(Boolean);
+    let last = bits.length - 1;
+    while (last >= 0 && !bits[last]) last--;
+    if (first < 0 || last <= first) return null;
+
+    const runs = [];
+    let cur = bits[first];
+    let count = 0;
+    for (let x=first; x<=last; x++){
+      if (bits[x] === cur) count++;
+      else { runs.push(count); cur = bits[x]; count = 1; }
+    }
+    runs.push(count);
+    if (runs.length < 20) return null;
+    return runs;
+  }
+
+  function decodeCode128Runs(runs){
+    let idx = 0;
+    const codes = [];
+    while (idx + 6 <= runs.length){
+      if (idx + 7 <= runs.length){
+        const stop = matchPattern(runs.slice(idx, idx+7), true);
+        if (stop === 106){ codes.push(106); idx += 7; break; }
+      }
+      const code = matchPattern(runs.slice(idx, idx+6), false);
+      if (code < 0) break;
+      codes.push(code);
+      idx += 6;
+      if (codes.length > 80) break;
+    }
+    if (codes.length < 4) return '';
+    if (![103,104,105].includes(codes[0])) return '';
+    if (codes[codes.length-1] !== 106) return '';
+
+    const checksum = codes[codes.length-2];
+    let sum = codes[0];
+    for (let i=1; i<codes.length-2; i++) sum += codes[i] * i;
+    if (sum % 103 !== checksum) {
+      // If one row is slightly noisy, reject and try another row.
+      return '';
+    }
+    return code128ToText(codes.slice(0, -2)); // start + data only
+  }
+
+  function code128ToText(codes){
+    let set = codes[0] === 103 ? 'A' : (codes[0] === 104 ? 'B' : 'C');
+    let out = '';
+    for (let i=1; i<codes.length; i++){
+      const code = codes[i];
+      if (set === 'B'){
+        if (code <= 95) out += String.fromCharCode(code + 32);
+        else if (code === 99) set = 'C';
+        else if (code === 101) set = 'A';
+        else if (code === 98 && i+1 < codes.length) {
+          const next = codes[++i];
+          if (next <= 95) out += String.fromCharCode(next);
+        }
+      } else if (set === 'C'){
+        if (code <= 99) out += String(code).padStart(2, '0');
+        else if (code === 100) set = 'B';
+        else if (code === 101) set = 'A';
+      } else {
+        if (code <= 95) out += String.fromCharCode(code);
+        else if (code === 100) set = 'B';
+        else if (code === 99) set = 'C';
+      }
+    }
+    return out.trim();
+  }
+
+  function decodeCode128Canvas(canvas, wantedRegex){
+    const candidates = [];
+    const yStart = Math.floor(canvas.height * 0.18);
+    const yEnd = Math.floor(canvas.height * 0.82);
+    const step = Math.max(2, Math.floor(canvas.height / 28));
+    for (let y=yStart; y<=yEnd; y+=step){
+      const runs = rowRunsFromCanvas(canvas, y);
+      if (!runs) continue;
+      const decoded = decodeCode128Runs(runs);
+      if (decoded) {
+        candidates.push(decoded);
+        if (!wantedRegex || wantedRegex.test(decoded)) return decoded;
+      }
+    }
+    if (wantedRegex) return candidates.find(c => wantedRegex.test(c)) || '';
+    return candidates[0] || '';
+  }
+
+  async function renderPdfPageToCanvas(page, scale){
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    const ctx = canvas.getContext('2d', { willReadFrequently:true });
+    await page.render({ canvasContext:ctx, viewport }).promise;
+    return canvas;
+  }
+
+  async function analyzeLabels(labelPdf, invoiceByAwb){
+    const labels = [];
+    const byOrder = new Map();
+    const byAwb = new Map();
+    const duplicates = [];
+
+    const zones = {
+      awb:      { x:0.00, y:0.245, w:0.90, h:0.14, regex:/^SF\d{6,}AJI$/i },
+      order:    { x:0.34, y:0.45,  w:0.53, h:0.10, regex:/^FN\d{8,}$/i },
+      shipment: { x:0.31, y:0.535, w:0.68, h:0.13, regex:/^D\d{8,}$/i }
+    };
+
+    for (let i=1; i<=labelPdf.numPages; i++){
+      setStatus(`Reading label barcode ${i}/${labelPdf.numPages}…`, 32 + (i / labelPdf.numPages) * 28);
+      const page = await labelPdf.getPage(i);
+      const tc = await page.getTextContent();
+      const text = tc.items.map(item => item.str || '').join(' ').replace(/\s+/g,' ').trim();
+      let orderId = extractOrderId(text);
+      let awb = extractAwb(text);
+      let shipment = '';
+
+      const canvas = await renderPdfPageToCanvas(page, 3.2);
+      if (!orderId) orderId = decodeCode128Canvas(cropCanvas(canvas, zones.order), zones.order.regex).toUpperCase();
+      if (!awb) awb = decodeCode128Canvas(cropCanvas(canvas, zones.awb), zones.awb.regex).toUpperCase();
+      shipment = decodeCode128Canvas(cropCanvas(canvas, zones.shipment), zones.shipment.regex).toUpperCase();
+
+      if (!orderId && awb && invoiceByAwb.has(awb)) orderId = invoiceByAwb.get(awb).orderId;
+
+      const info = { pageIndex:i-1, pageNumber:i, orderId, awb, shipment };
+      labels.push(info);
+      addToIndex(byOrder, orderId, info, duplicates, 'Duplicate label order');
+      addToIndex(byAwb, awb, info, duplicates, 'Duplicate label AWB');
+    }
+    return { labels, byOrder, byAwb, duplicates };
+  }
+
+  function makeInvoiceIndex(pages){
+    const byOrder = new Map();
+    const byAwb = new Map();
+    const duplicates = [];
+    const invoices = pages.map(p => {
+      const orderId = extractOrderId(p.text);
+      const awb = extractAwb(p.text);
+      const info = { pageIndex:p.pageIndex, pageNumber:p.pageNumber, orderId, awb };
+      addToIndex(byOrder, orderId, info, duplicates, 'Duplicate invoice order');
+      addToIndex(byAwb, awb, info, duplicates, 'Duplicate invoice AWB');
+      return info;
+    });
+    return { invoices, byOrder, byAwb, duplicates };
+  }
+
+  function naturalCompare(a,b){ return collator.compare(clean(a), clean(b)); }
+
+  function sortRows(rows){
+    const mode = sortBy.value;
+    const val = (row) => {
+      if (mode === 'bag') return row.bagBarcode || 'ZZZZZZZZ';
+      if (mode === 'sku') return row.sku || 'ZZZZZZZZ';
+      if (mode === 'order') return row.orderId || 'ZZZZZZZZ';
+      return String(row.sequence).padStart(8,'0');
+    };
+    return rows.slice().sort((a,b) => naturalCompare(val(a), val(b)) || naturalCompare(a.orderId,b.orderId));
+  }
+
+  function csvEscape(value){
+    const s = clean(value);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  }
+
+  function buildCsv(rows){
+    const header = ['Status','Order ID','Bag Barcode','Seller SKU','Confirm Qty','Label Page','Invoice Page','AWB','Note'];
+    const lines = [header.join(',')];
+    rows.forEach(r => {
+      lines.push([
+        r.status, r.orderId, r.bagBarcode, r.sku, r.confirmQty || '',
+        r.label ? r.label.pageNumber : '',
+        r.invoice ? r.invoice.pageNumber : '',
+        r.invoice ? r.invoice.awb : (r.label ? r.label.awb : ''),
+        (r.notes || []).join(' | ')
+      ].map(csvEscape).join(','));
+    });
+    return lines.join('\n');
+  }
+
+  function downloadBlob(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  function fitText(text, maxChars){
+    const s = clean(text);
+    return s.length <= maxChars ? s : s.slice(0, Math.max(0, maxChars-1)) + '…';
+  }
+
+  function stampLabel(page, rec, fontBold, fontRegular){
+    const { width, height } = page.getSize();
+    const boxW = Math.min(width * 0.47, 270);
+    const boxH = 42;
+    const x = width - boxW - width * 0.035;
+    const y = height * 0.025;
+    const fontSize = Math.max(8, Math.min(11, width / 52));
+    page.drawRectangle({ x, y, width:boxW, height:boxH, color:PDFLib.rgb(1,1,1), opacity:0.96 });
+    page.drawRectangle({ x, y, width:boxW, height:boxH, borderColor:PDFLib.rgb(0,0,0), borderWidth:0.7 });
+    let lineY = y + boxH - fontSize - 7;
+    if (stampSku.checked) {
+      page.drawText(fitText('SKU: ' + (rec.sku || '-'), 38), { x:x+7, y:lineY, size:fontSize, font:fontBold, color:PDFLib.rgb(0,0,0) });
+      lineY -= fontSize + 6;
+    }
+    if (stampBag.checked) {
+      page.drawText(fitText('BAG: ' + (rec.bagBarcode || '-'), 38), { x:x+7, y:lineY, size:fontSize, font:fontRegular, color:PDFLib.rgb(0,0,0) });
+    }
+  }
+
+  async function createFinalPdf(rows, labelBytes, invoiceBytes){
+    const labelDoc = await PDFLib.PDFDocument.load(labelBytes, { ignoreEncryption:false });
+    const invoiceDoc = await PDFLib.PDFDocument.load(invoiceBytes, { ignoreEncryption:false });
+    const out = await PDFLib.PDFDocument.create();
+    const fontBold = await out.embedFont(PDFLib.StandardFonts.HelveticaBold);
+    const fontRegular = await out.embedFont(PDFLib.StandardFonts.Helvetica);
+
+    for (let i=0; i<rows.length; i++){
+      const rec = rows[i];
+      setStatus(`Creating final PDF ${i+1}/${rows.length}…`, 75 + (i / Math.max(1, rows.length)) * 20);
+      if (!rec.label || !rec.invoice) {
+        if (onlyMatched.checked) continue;
+        continue;
+      }
+      const [labelPage] = await out.copyPages(labelDoc, [rec.label.pageIndex]);
+      out.addPage(labelPage);
+      stampLabel(labelPage, rec, fontBold, fontRegular);
+
+      const [invoicePage] = await out.copyPages(invoiceDoc, [rec.invoice.pageIndex]);
+      out.addPage(invoicePage);
+    }
+    return await out.save();
+  }
+
+  function renderReport(rows, stats, extraNotes){
+    statGrid.innerHTML = '';
+    const statItems = [
+      ['Excel Orders', stats.excel], ['Label Pages', stats.labels], ['Invoice Pages', stats.invoices],
+      ['Matched', stats.matched], ['Issues', stats.issues]
+    ];
+    statItems.forEach(([label, value]) => {
+      const div = document.createElement('div');
+      div.className = 'ajio-stat';
+      div.innerHTML = `<strong>${value}</strong><span>${label}</span>`;
+      statGrid.appendChild(div);
+    });
+
+    reportRows.innerHTML = '';
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      const cls = r.status === 'OK' ? 'ajio-ok' : (r.status === 'WARN' ? 'ajio-warn' : 'ajio-bad');
+      tr.innerHTML = `
+        <td class="${cls}">${r.status}</td>
+        <td>${escapeHtml(r.orderId)}</td>
+        <td>${escapeHtml(r.bagBarcode || '-')}</td>
+        <td>${escapeHtml(r.sku || '-')}</td>
+        <td>${r.label ? 'Page ' + r.label.pageNumber : '<span class="ajio-bad">Missing</span>'}</td>
+        <td>${r.invoice ? 'Page ' + r.invoice.pageNumber : '<span class="ajio-bad">Missing</span>'}</td>
+        <td>${escapeHtml((r.notes || []).join(' | ') || '-')}</td>`;
+      reportRows.appendChild(tr);
+    });
+    reportNote.textContent = extraNotes.length ? extraNotes.join(' | ') : 'Report generated successfully.';
+    reportBox.style.display = 'block';
+  }
+
+  function escapeHtml(s){
+    return clean(s).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+  }
+
+  reportBtn.addEventListener('click', () => {
+    if (!latestReport.length) return;
+    const csv = buildCsv(latestReport);
+    downloadBlob(new Blob([csv], { type:'text/csv;charset=utf-8' }), 'ajio-label-invoice-report.csv');
+  });
+
+  processBtn.addEventListener('click', async () => {
+    try {
+      if (!excelFile || !labelFile || !invoiceFile) return;
+      processBtn.disabled = true;
+      reportBtn.disabled = true;
+      reportBox.style.display = 'none';
+      latestReport = [];
+
+      setStatus('Reading Excel…', 5);
+      const excel = await parseExcel(excelFile);
+      const excelRecords = excel.records;
+      if (!excelRecords.length) throw new Error('No AJIO Customer Order ID found in Excel. Check the uploaded file.');
+
+      setStatus('Reading invoice PDF…', 18);
+      const invoiceBytes = new Uint8Array(await invoiceFile.arrayBuffer());
+      const invoicePdfData = await getPdfTextPages(invoiceBytes);
+      const invoiceIndex = makeInvoiceIndex(invoicePdfData.pages);
+
+      setStatus('Reading label PDF…', 30);
+      const labelBytes = new Uint8Array(await labelFile.arrayBuffer());
+      const labelPdfData = await getPdfTextPages(labelBytes);
+      const labelIndex = await analyzeLabels(labelPdfData.pdf, invoiceIndex.byAwb);
+
+      setStatus('Matching orders…', 68);
+      const rows = excelRecords.map(rec => {
+        const invoice = invoiceIndex.byOrder.get(rec.orderId) || null;
+        let label = labelIndex.byOrder.get(rec.orderId) || null;
+        if (!label && invoice && invoice.awb) label = labelIndex.byAwb.get(invoice.awb) || null;
+
+        const notes = [...(rec.notes || [])];
+        if (!label) notes.push('Label page not found');
+        if (!invoice) notes.push('Invoice page not found');
+        if (invoice && label && invoice.awb && label.awb && invoice.awb !== label.awb) notes.push('AWB mismatch between label and invoice');
+        const hardIssue = !label || !invoice;
+        return { ...rec, label, invoice, notes, status: hardIssue ? 'ERROR' : (notes.length ? 'WARN' : 'OK') };
+      });
+
+      const sorted = sortRows(rows);
+      const matchedRows = sorted.filter(r => r.label && r.invoice);
+      const issueCount = sorted.filter(r => r.status !== 'OK').length;
+      const extraNotes = [...invoiceIndex.duplicates, ...labelIndex.duplicates];
+
+      latestReport = sorted;
+      renderReport(sorted, {
+        excel: excelRecords.length,
+        labels: labelIndex.labels.length,
+        invoices: invoiceIndex.invoices.length,
+        matched: matchedRows.length,
+        issues: issueCount + extraNotes.length
+      }, extraNotes);
+      reportBtn.disabled = false;
+
+      if (!matchedRows.length) throw new Error('No matched label + invoice pair found. Download the report and check barcode/order matching.');
+
+      const finalBytes = await createFinalPdf(sorted, labelBytes, invoiceBytes);
+      setStatus('Downloading final PDF…', 98);
+      const blob = new Blob([finalBytes], { type:'application/pdf' });
+      downloadBlob(blob, 'AJIO_Label_Invoice_SKU_BagBarcode_Sorted.pdf');
+      setStatus(`Done. ${matchedRows.length} matched orders exported.`, 100);
+    } catch (err) {
+      console.error(err);
+      setStatus('Error: ' + (err && err.message ? err.message : 'Something went wrong.'), 0);
+      alert(err && err.message ? err.message : 'Something went wrong.');
+    } finally {
+      processBtn.disabled = !(excelFile && labelFile && invoiceFile);
+    }
+  });
+
+  updateFileUi();
+})();
+</script>
+
+</body>
+</html>
