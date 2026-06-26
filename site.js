@@ -54,17 +54,39 @@
       });
     }
 
+    function tableIndex(headers, label) {
+      label = label.toLowerCase();
+      for (var i = 0; i < headers.length; i++) {
+        if (headers[i].toLowerCase() === label) return i;
+      }
+      return -1;
+    }
+
     function countMissingBagRowsFromReport() {
       var tbody = document.getElementById('reportRows');
-      if (!tbody) return 0;
+      var table = tbody && tbody.closest ? tbody.closest('table') : null;
+      if (!tbody || !table) return 0;
+      var headers = Array.prototype.slice.call(table.querySelectorAll('thead th')).map(function (th) {
+        return (th.textContent || '').trim();
+      });
+      var actionIdx = tableIndex(headers, 'Action Needed');
+      var statusIdx = tableIndex(headers, 'Status');
+      var skuIdx = tableIndex(headers, 'SKU');
+      var bagIdx = tableIndex(headers, 'Bag Barcode');
       var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
       var count = 0;
       rows.forEach(function (tr) {
         var cells = tr.querySelectorAll('td');
-        if (!cells || cells.length < 6) return;
-        var status = (cells[0].textContent || '').trim().toUpperCase();
-        var sku = (cells[4].textContent || '').trim();
-        var bag = (cells[5].textContent || '').trim();
+        if (!cells || !cells.length) return;
+        if (actionIdx >= 0 && cells[actionIdx]) {
+          var action = (cells[actionIdx].textContent || '').trim().toLowerCase();
+          if (action.indexOf('bag barcode missing') >= 0) count++;
+          return;
+        }
+        if (statusIdx < 0 || skuIdx < 0 || bagIdx < 0) return;
+        var status = (cells[statusIdx].textContent || '').trim().toUpperCase();
+        var sku = (cells[skuIdx].textContent || '').trim();
+        var bag = (cells[bagIdx].textContent || '').trim();
         if (status !== 'ERROR' && sku && sku !== '-' && (!bag || bag === '-')) count++;
       });
       return count;
