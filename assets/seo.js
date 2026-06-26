@@ -31,10 +31,10 @@
   ensureMetaProp("og:title", data.title); ensureMetaProp("og:description", data.desc); ensureMetaProp("og:url", canonicalUrl); ensureMetaProp("og:type", "website"); ensureMetaProp("og:image", OG_IMAGE);
   ensureMetaName("twitter:card", "summary_large_image"); ensureMetaName("twitter:title", data.title); ensureMetaName("twitter:description", data.desc); ensureMetaName("twitter:image", OG_IMAGE);
 
-  function rebootAjioSorterV6(){
+  function rebootAjioSorterV7(){
     if (path !== "/ajio-label-invoice-sorter") return;
-    if (window.__ajioSorterRebootV6) return;
-    window.__ajioSorterRebootV6 = true;
+    if (window.__ajioSorterRebootV7) return;
+    window.__ajioSorterRebootV7 = true;
 
     const stampReplacement = `  function stampLabel(page, rec, fontBold, fontRegular){
     const { width, height } = page.getSize();
@@ -112,7 +112,7 @@
     const orderZones = [
       {x:0.18,y:0.405,w:0.78,h:0.135}, {x:0.25,y:0.390,w:0.72,h:0.170},
       {x:0.00,y:0.370,w:1.00,h:0.210}, {x:0.30,y:0.420,w:0.65,h:0.145},
-      {x:0.10,y:0.385,w:0.86,h:0.190}
+      {x:0.10,y:0.385,w:0.86,h:0.190}, {x:0.18,y:0.455,w:0.80,h:0.110}
     ];
     const awbZones = [
       {x:0.00,y:0.195,w:0.78,h:0.185}, {x:0.00,y:0.220,w:0.93,h:0.175},
@@ -141,6 +141,53 @@
   }
 `;
 
+    const fallbackHelper = `  function applyAnchoredSequenceFallback(labelIndex, invoiceIndex){
+    const invoicesBySource = new Map();
+    invoiceIndex.invoices.forEach(inv => {
+      if (!invoicesBySource.has(inv.sourceIndex)) invoicesBySource.set(inv.sourceIndex, []);
+      invoicesBySource.get(inv.sourceIndex).push(inv);
+    });
+    invoicesBySource.forEach(list => list.sort((a,b) => a.pageIndex - b.pageIndex));
+
+    const labelsBySource = new Map();
+    labelIndex.labels.forEach(lbl => {
+      if (!labelsBySource.has(lbl.sourceIndex)) labelsBySource.set(lbl.sourceIndex, []);
+      labelsBySource.get(lbl.sourceIndex).push(lbl);
+    });
+    labelsBySource.forEach(list => list.sort((a,b) => a.pageIndex - b.pageIndex));
+
+    labelsBySource.forEach(labels => {
+      let best = null;
+      invoicesBySource.forEach((invoices, invSource) => {
+        const counts = new Map();
+        labels.forEach(lbl => {
+          if (!lbl.orderId || !invoiceIndex.byOrder.has(lbl.orderId)) return;
+          const inv = invoiceIndex.byOrder.get(lbl.orderId);
+          if (inv.sourceIndex !== invSource) return;
+          const off = inv.pageIndex - lbl.pageIndex;
+          counts.set(off, (counts.get(off) || 0) + 1);
+        });
+        counts.forEach((count, offset) => {
+          if (count >= 2 && (!best || count > best.count)) best = { invSource, offset, count };
+        });
+      });
+      if (!best) return;
+      const invs = invoicesBySource.get(best.invSource) || [];
+      const invByPage = new Map(invs.map(inv => [inv.pageIndex, inv]));
+      labels.forEach(lbl => {
+        if (lbl.orderId) return;
+        const inv = invByPage.get(lbl.pageIndex + best.offset);
+        if (!inv || !inv.orderId) return;
+        lbl.orderId = inv.orderId;
+        lbl.awb = lbl.awb || inv.awb || '';
+        lbl.inferredBySequence = true;
+        if (!labelIndex.byOrder.has(lbl.orderId)) labelIndex.byOrder.set(lbl.orderId, lbl);
+        if (lbl.awb && !labelIndex.byAwb.has(lbl.awb)) labelIndex.byAwb.set(lbl.awb, lbl);
+      });
+    });
+  }
+`;
+
     function patchScriptSource(src){
       let patched = src;
       let start = patched.indexOf('  function stampLabel(page, rec, fontBold, fontRegular){');
@@ -162,10 +209,17 @@
   function addToIndex`
       );
       patched = patched.replace(
+        '  reportBtn.addEventListener',
+        fallbackHelper + '\n  reportBtn.addEventListener'
+      );
+      patched = patched.replace(
+        '      const labelIndex = await analyzeAllLabels(labelFiles, invoiceIndex.byAwb);',
+        '      const labelIndex = await analyzeAllLabels(labelFiles, invoiceIndex.byAwb);\n      applyAnchoredSequenceFallback(labelIndex, invoiceIndex);'
+      );
+      patched = patched.replace(
         /if \(invoice && label && invoice\.awb && label\.awb && invoice\.awb !== label\.awb\) notes\.push\('AWB mismatch between label and invoice'\);/,
         `if (invoice && label && invoice.awb && label.awb && invoice.awb !== label.awb) notes.push('AWB mismatch between label and invoice');
-        if (label && !label.awb && invoice && invoice.awb) notes.push('Label AWB unreadable; matched by order ID');
-        if (invoice && !invoice.awb) notes.push('Invoice AWB unreadable')`
+        if (label && label.inferredBySequence) notes.push('Label matched by verified file sequence')`
       );
       return patched;
     }
@@ -184,7 +238,7 @@
     else setTimeout(install, 0);
   }
 
-  rebootAjioSorterV6();
+  rebootAjioSorterV7();
 
   (function addLd(){
     try{
