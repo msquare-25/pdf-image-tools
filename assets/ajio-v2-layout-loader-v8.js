@@ -1,6 +1,6 @@
 (async function(){
   'use strict';
-  window.AJIO_V2_LAYOUT_VERSION='v8-horizontal-bottom-band';
+  window.AJIO_V2_LAYOUT_VERSION='v8-horizontal-bottom-band-inset';
   const source='/assets/ajio-v2-final-v5.js?v=20260626-5';
   const lineGroups=`function lineGroups(items){
     const p=(items||[]).map(i=>sanitizeSku(i.sku)+(qty(i.qty)>1?' ('+qty(i.qty)+')':'')).filter(Boolean);
@@ -25,10 +25,10 @@
       orderLine=cleanLine(row.matchedOrder||'');
     }
 
-    const rightAnchor=width*.965;
+    const rightAnchor=width*.935;
     const minX=width*.30;
-    const bottomBase=height*.045;
-    const topLimit=height*.175;
+    const bottomBase=height*.062;
+    const topLimit=height*.190;
     const maxW=rightAnchor-minX;
     const measure=(t,s)=>font.widthOfTextAtSize(t,s);
     const lines=groups.map(g=>cleanLine(g.join(' + '))).filter(Boolean).concat(orderLine?[orderLine]:[]).filter(Boolean);
@@ -58,10 +58,10 @@
     code=code.replace(/function stampLabel\(page,row,font\)\{[\s\S]*?\}\nasync function createFinalPdf/,stampLabel+'\nasync function createFinalPdf');
     if(code===before)throw new Error('Stamp layout patch did not apply');
     const s=document.createElement('script');
-    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v8-horizontal-runtime.js';
+    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v8-horizontal-inset-runtime.js';
     document.body.appendChild(s);
     const st=document.getElementById('status');
-    if(st)st.textContent='V8 horizontal bottom layout loaded. Upload Label and Excel files.';
+    if(st)st.textContent='V8 horizontal inset layout loaded. Upload Label and Excel files.';
   }catch(err){
     console.error(err);
     alert('AJIO V2 engine failed to load. Please hard refresh and try again.');
