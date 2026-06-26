@@ -4,11 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AJIO Label Invoice Sorter — PDFImageLab</title>
-  <meta name="description" content="Sort AJIO labels and invoices by bag barcode, print SKU and bag barcode on labels, and generate one packing-ready PDF." />
+  <meta name="description" content="Arrange AJIO labels and invoices into one packing-ready PDF. Match labels with invoices, enrich from AJIO Excel, print SKU and bag barcode or order number on labels, and sort by bag barcode for faster dispatch." />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="canonical" href="https://pdfimagelab.com/ajio-label-invoice-sorter" />
   <link rel="stylesheet" href="/style.css" />
-  <script defer src="/site.js"></script>
+  <script defer src="/site.js?v=20260626-live-ajio"></script>
   <script defer src="/assets/seo.js"></script>
   <meta name="color-scheme" content="light dark" />
   <meta name="theme-color" content="#0b0f14" />
@@ -16,47 +16,48 @@
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-MJR5QK0G37"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);} 
+    function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
     gtag('config', 'G-MJR5QK0G37');
   </script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
     if (window.pdfjsLib) {
       pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
     }
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <style>
     .ajio-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);font-size:13px;font-weight:700}
     .ajio-note{border:1px solid rgba(148,163,184,.35);border-radius:14px;padding:14px;background:rgba(148,163,184,.08)}
-    .ajio-upload-list{display:grid;gap:8px;margin-top:12px;text-align:left}
-    .ajio-file-pill{font-size:12px;padding:8px 10px;border:1px solid rgba(148,163,184,.35);border-radius:10px;background:rgba(255,255,255,.04);word-break:break-word}
-    .ajio-setting{display:flex;align-items:flex-start;gap:10px;margin:10px 0;text-align:left}
-    .ajio-progress{height:10px;border-radius:999px;background:rgba(148,163,184,.25);overflow:hidden;margin-top:12px}
-    .ajio-progress span{display:block;height:100%;width:0%;background:linear-gradient(90deg,#60a5fa,#34d399);transition:width .25s ease}
-    .ajio-report{margin-top:18px;display:none}
-    .ajio-report-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:12px 0}
-    .ajio-stat{border:1px solid rgba(148,163,184,.35);border-radius:12px;padding:12px;background:rgba(255,255,255,.04)}
-    .ajio-stat strong{display:block;font-size:22px;line-height:1.1}
-    .ajio-stat span{font-size:12px;color:var(--muted,#94a3b8)}
-    .ajio-table-wrap{overflow:auto;border:1px solid rgba(148,163,184,.35);border-radius:12px;margin-top:12px}
-    .ajio-table{width:100%;border-collapse:collapse;font-size:12px;min-width:760px}
-    .ajio-table th,.ajio-table td{border-bottom:1px solid rgba(148,163,184,.25);padding:8px;text-align:left;vertical-align:top}
-    .ajio-table th{background:rgba(148,163,184,.12);font-weight:800}
-    .ajio-table tr:last-child td{border-bottom:none}
-    .ajio-ok{color:#22c55e;font-weight:800}.ajio-bad{color:#ef4444;font-weight:800}.ajio-warn{color:#f59e0b;font-weight:800}
+    .ajio-upload-list,.v2-list{display:grid;gap:8px;margin-top:12px;text-align:left}
+    .ajio-file-pill,.v2-pill{font-size:12px;padding:8px 10px;border:1px solid rgba(148,163,184,.35);border-radius:10px;background:rgba(255,255,255,.04);word-break:break-word}
+    .ajio-progress,.v2-progress{height:10px;border-radius:999px;background:rgba(148,163,184,.25);overflow:hidden;margin-top:12px}
+    .ajio-progress span,.v2-progress span{display:block;height:100%;width:0%;background:linear-gradient(90deg,#60a5fa,#34d399);transition:width .25s ease}
+    .v2-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+    .v2-report-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:12px 0}
+    .v2-stat{border:1px solid rgba(148,163,184,.35);border-radius:12px;padding:12px;background:rgba(255,255,255,.04)}
+    .v2-stat strong{display:block;font-size:22px;line-height:1.1}
+    .v2-stat span{font-size:12px;color:var(--muted,#94a3b8)}
+    .v2-table-wrap{overflow:auto;border:1px solid rgba(148,163,184,.35);border-radius:12px;margin-top:12px}
+    .v2-table{width:100%;border-collapse:collapse;font-size:12px;min-width:1650px}
+    .v2-table th,.v2-table td{border-bottom:1px solid rgba(148,163,184,.25);padding:8px;text-align:left;vertical-align:top}
+    .v2-table th{background:rgba(148,163,184,.12);font-weight:800}
+    .v2-table tr:last-child td{border-bottom:none}
+    .ok{color:#22c55e;font-weight:800}.bad{color:#ef4444;font-weight:800}.warn{color:#f59e0b;font-weight:800}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.snippet{max-width:420px;white-space:normal;line-height:1.35;color:var(--muted,#64748b)}
     .ajio-tool-tabs-extra{white-space:nowrap}
-    @media (max-width:760px){.ajio-table{font-size:11px}.ajio-stat strong{font-size:18px}}
+    @media (max-width:760px){.v2-table{font-size:11px}.v2-stat strong{font-size:18px}}
   </style>
 </head>
 <body class="ajio-label-invoice-page">
 <header class="site-header">
   <div class="container bar">
-    <div class="brand"><a href="/" class="home-link"><span class="logo"></span><span>PDFimageLab</span></a></div>
+    <div class="brand"><a href="/" class="home-link"><span class="logo"></span><span>PDFImageLab</span></a></div>
     <div class="container tool-tabs-wrap">
       <button class="tool-scroll tool-left" aria-label="Scroll tools left">‹</button>
       <nav class="tool-tabs" role="navigation" aria-label="Tools">
@@ -83,47 +84,43 @@
       <div class="grid-3">
         <section class="panel card box upload-box theme-center">
           <h2 class="title">Upload</h2>
-          <p class="muted">Upload AJIO Excel, Label PDF and Invoice PDF</p>
-          <label for="excelFile" class="btn gradient big">AJIO Excel</label>
-          <input id="excelFile" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" multiple hidden />
-          <label for="labelPdf" class="btn subtle mt-1">Label PDF</label>
+          <p class="muted">Upload AJIO Label PDF, optional Invoice PDF, and AJIO Excel.</p>
+          <label for="labelPdf" class="btn gradient big">Label PDF</label>
           <input id="labelPdf" type="file" accept="application/pdf,.pdf" multiple hidden />
           <label for="invoicePdf" class="btn subtle mt-1">Invoice PDF</label>
           <input id="invoicePdf" type="file" accept="application/pdf,.pdf" multiple hidden />
+          <label for="excelFile" class="btn subtle mt-1">AJIO Excel</label>
+          <input id="excelFile" type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" multiple hidden />
           <div class="ajio-upload-list">
-            <div class="ajio-file-pill" id="excelName">Excel: not selected</div>
             <div class="ajio-file-pill" id="labelName">Label PDF: not selected</div>
-            <div class="ajio-file-pill" id="invoiceName">Invoice PDF: not selected</div>
+            <div class="ajio-file-pill" id="invoiceName">Invoice PDF: optional / not selected</div>
+            <div class="ajio-file-pill" id="excelName">Excel: not selected</div>
           </div>
-          <button class="btn subtle mt-2" id="clearBtn" disabled>Clear</button>
+          <button class="btn subtle mt-2" id="clearBtn">Clear</button>
           <div class="small mt-2">Privacy: No uploads. Everything runs in your browser.</div>
         </section>
 
         <section class="panel card box setting-box theme-center">
           <h2 class="title">Setting</h2>
-          <label class="ajio-setting"><span class="small">Sort final PDF by</span></label>
-          <select id="sortBy" class="input" style="width:100%;max-width:270px;padding:10px;border-radius:10px;">
-            <option value="bag" selected>Forward Consignment Bag Barcode</option>
-            <option value="sku">Seller SKU A-Z</option>
-            <option value="excel">Excel Row Order</option>
-            <option value="order">Order ID</option>
-          </select>
-          <label class="ajio-setting"><input id="stampSku" type="checkbox" checked /><span class="small">Print Seller SKU ID on label</span></label>
-          <label class="ajio-setting"><input id="stampBag" type="checkbox" checked /><span class="small">Print Forward Bag Barcode on label</span></label>
-          <label class="ajio-setting"><input id="onlyMatched" type="checkbox" checked /><span class="small">Skip unmatched orders in final PDF and show them in report</span></label>
+          <div class="ajio-note small">
+            <strong>Default sort:</strong> Forward bag barcode sequence.<br />
+            If bag barcode is blank, the tool uses SKU A-Z and prints the FN order number in the barcode line.
+          </div>
           <hr class="soft" />
-          <div class="ajio-note small">Default sequence is bag barcode because packing bags are arranged by barcode scan series at the dispatch table.</div>
+          <div class="small muted" style="text-align:left">
+            Matching priority: label FN/AWB → invoice customer match → Excel enrichment. Label pages are always included; unsafe labels are marked for manual check.
+          </div>
         </section>
 
         <section class="panel card box action-box theme-center">
           <h2 class="title">Generate</h2>
-          <div id="status" class="small">Upload all files to start.</div>
+          <div id="status" class="small">Upload Label and Excel files. Invoice is optional but recommended.</div>
           <div class="ajio-progress" aria-hidden="true"><span id="progressBar"></span></div>
           <div class="row center mt-2" style="gap:10px;flex-wrap:wrap">
-            <button id="processBtn" class="btn" disabled>Generate Final PDF</button>
-            <button id="reportBtn" class="btn subtle" disabled>Download Report CSV</button>
+            <button id="runBtn" class="btn" disabled>Generate Final PDF</button>
+            <button id="csvBtn" class="btn subtle" disabled>Download Report CSV</button>
           </div>
-          <div class="small mt-2">Output: label → invoice → label → invoice.</div>
+          <div class="small mt-2">Output: label → invoice → label → invoice. If invoice is missing, only the label is included.</div>
         </section>
       </div>
     </aside>
@@ -131,27 +128,50 @@
     <main class="panel">
       <p class="ajio-badge">Marketplace Tool · AJIO Packing Workflow</p>
       <h1 class="page-title">AJIO Label Invoice Sorter</h1>
-      <p class="sub">Arrange AJIO labels and invoices by forward bag barcode, place Seller SKU ID and Forward Consignment Bar Code on each label, then download one packing-ready PDF.</p>
+      <p class="sub">Arrange AJIO labels and invoices into one packing-ready PDF, sort by forward bag barcode, and stamp each label with Seller SKU plus bag barcode or FN order number.</p>
 
       <section class="card mt-3">
         <h2 class="title">How it works</h2>
         <ul class="sub">
-          <li>Upload one or multiple AJIO bulk accepted Excel files, Label PDFs and Invoice PDFs.</li>
-          <li>The tool automatically finds the <strong>Order Details</strong> sheet and reads Customer Order ID, Seller SKU ID and Forward Consignment Bar Code.</li>
-          <li>It matches label pages and invoice pages using AJIO order number / AWB barcode data.</li>
-          <li>Final PDF is generated in selected sequence. Default is bag barcode sorting for faster packing desk arrangement.</li>
+          <li>Upload one or multiple AJIO Label PDFs, Invoice PDFs and bulk accepted Excel files.</li>
+          <li>The tool reads Customer Order ID, Seller SKU ID, <strong>*Confirm Quantity</strong> and Forward Consignment Bar Code from AJIO Excel.</li>
+          <li>Labels are matched by direct FN/AWB when possible. If barcode/text is not enough, customer details from the label are matched with invoice customer details.</li>
+          <li>If Excel is missing for an order but invoice is matched, SKU is taken from invoice and the FN order number is printed instead of bag barcode.</li>
+          <li>If Excel exists but bag barcode is blank, SKU comes from Excel and the FN order number is printed on the barcode line.</li>
+          <li>Final PDF is generated as label → invoice sequence and sorted by bag barcode for faster dispatch table arrangement.</li>
         </ul>
         <p class="sub mt-1">Privacy: No uploads. Everything stays on your device.</p>
         <p class="small muted">Independent utility for marketplace sellers. Not affiliated with AJIO or Reliance Retail.</p>
       </section>
 
-      <section class="card mt-3 ajio-report" id="reportBox">
+      <section class="card mt-3">
+        <h2 class="title">How to use</h2>
+        <ol class="sub">
+          <li>Upload all AJIO label PDFs for the orders you want to print.</li>
+          <li>Upload invoice PDFs when available. Invoice helps with customer-text matching and label → invoice output.</li>
+          <li>Upload AJIO Excel files. Multiple Excel files are supported for split batches.</li>
+          <li>Click <strong>Generate Final PDF</strong>.</li>
+          <li>Check the validation report. If any label is marked unsafe, verify it manually before packing.</li>
+        </ol>
+      </section>
+
+      <section class="card mt-3">
+        <h2 class="title">Important rules</h2>
+        <ul class="sub">
+          <li>Default sorting is bag barcode. Orders without bag barcode are placed after barcode orders and sorted by SKU.</li>
+          <li>Multi-quantity SKU stamping is automatically wrapped and scaled inside the bottom-right label area.</li>
+          <li>For 1+ quantity, the tool uses AJIO Excel Column U: <strong>*Confirm Quantity</strong>.</li>
+          <li>Labels are not skipped. If a label cannot be safely matched, it is still included with manual-check marking.</li>
+        </ul>
+      </section>
+
+      <section class="card mt-3" id="reportBox" style="display:none">
         <h2 class="title">Validation Report</h2>
-        <div class="ajio-report-grid" id="statGrid"></div>
+        <div class="v2-report-grid" id="statGrid"></div>
         <div class="small muted" id="reportNote"></div>
-        <div class="ajio-table-wrap">
-          <table class="ajio-table">
-            <thead><tr><th>Status</th><th>Order ID</th><th>Bag Barcode</th><th>Seller SKU</th><th>Label</th><th>Invoice</th><th>Note</th></tr></thead>
+        <div class="v2-table-wrap">
+          <table class="v2-table">
+            <thead><tr><th>Status</th><th>Confidence</th><th>Order</th><th>SKU Source</th><th>SKU</th><th>Bag Barcode</th><th>Label File</th><th>Label Page</th><th>Invoice</th><th>Score</th><th>Second</th><th>Common</th><th>Reason</th><th>Label Customer Text</th></tr></thead>
             <tbody id="reportRows"></tbody>
           </table>
         </div>
@@ -160,702 +180,6 @@
   </div>
 </main>
 
-<script>
-(function(){
-  'use strict';
-
-  const $ = (s) => document.querySelector(s);
-  const excelInput = $('#excelFile'), labelInput = $('#labelPdf'), invoiceInput = $('#invoicePdf');
-  const excelName = $('#excelName'), labelName = $('#labelName'), invoiceName = $('#invoiceName');
-  const clearBtn = $('#clearBtn'), processBtn = $('#processBtn'), reportBtn = $('#reportBtn');
-  const statusEl = $('#status'), progressBar = $('#progressBar'), sortBy = $('#sortBy');
-  const stampSku = $('#stampSku'), stampBag = $('#stampBag'), onlyMatched = $('#onlyMatched');
-  const reportBox = $('#reportBox'), statGrid = $('#statGrid'), reportRows = $('#reportRows'), reportNote = $('#reportNote');
-
-  let excelFiles = [], labelFiles = [], invoiceFiles = [], latestReport = [];
-  const collator = new Intl.Collator(undefined, { numeric:true, sensitivity:'base' });
-  const CODE128_PATTERNS = ['212222','222122','222221','121223','121322','131222','122213','122312','132212','221213','221312','231212','112232','122132','122231','113222','123122','123221','223211','221132','221231','213212','223112','312131','311222','321122','321221','312212','322112','322211','212123','212321','232121','111323','131123','131321','112313','132113','132311','211313','231113','231311','112133','112331','132131','113123','113321','133121','313121','211331','231131','213113','213311','213131','311123','311321','331121','312113','312311','332111','314111','221411','431111','111224','111422','121124','121421','141122','141221','112214','112412','122114','122411','142112','142211','241211','221114','413111','241112','134111','111242','121142','121241','114212','124112','124211','411212','421112','421211','212141','214121','412121','111143','111341','131141','114113','114311','411113','411311','113141','114131','311141','411131','211412','211214','211232','2331112'];
-
-  function setStatus(text, pct){ statusEl.textContent = text; if (typeof pct === 'number') progressBar.style.width = Math.max(0, Math.min(100, pct)) + '%'; }
-  function clean(value){ return String(value == null ? '' : value).replace(/\s+/g,' ').trim(); }
-  function isBlankValue(value){ const v = clean(value); return !v || v === '-' || /^na$/i.test(v) || /^null$/i.test(v); }
-  function escapeHtml(s){ return clean(s).replace(/[&<>\"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
-  function naturalCompare(a,b){ return collator.compare(clean(a), clean(b)); }
-
-  function updateFileUi(){
-    excelName.textContent = excelFiles.length ? `Excel: ${excelFiles.length} file(s) selected` : 'Excel: not selected';
-    labelName.textContent = labelFiles.length ? `Label PDF: ${labelFiles.length} file(s) selected` : 'Label PDF: not selected';
-    invoiceName.textContent = invoiceFiles.length ? `Invoice PDF: ${invoiceFiles.length} file(s) selected` : 'Invoice PDF: not selected';
-    const ready = !!(excelFiles.length && labelFiles.length && invoiceFiles.length);
-    processBtn.disabled = !ready;
-    clearBtn.disabled = !(excelFiles.length || labelFiles.length || invoiceFiles.length);
-    if (ready) setStatus('Ready. Click Generate Final PDF.', 0);
-  }
-
-  excelInput.addEventListener('change', e => { excelFiles = Array.from(e.target.files || []); updateFileUi(); });
-  labelInput.addEventListener('change', e => { labelFiles = Array.from(e.target.files || []); updateFileUi(); });
-  invoiceInput.addEventListener('change', e => { invoiceFiles = Array.from(e.target.files || []); updateFileUi(); });
-  clearBtn.addEventListener('click', () => {
-    excelFiles = []; labelFiles = []; invoiceFiles = [];
-    excelInput.value = ''; labelInput.value = ''; invoiceInput.value = '';
-    latestReport = [];
-    reportBtn.disabled = true;
-    reportBox.style.display = 'none';
-    setStatus('Upload all files to start.', 0);
-    updateFileUi();
-  });
-
-  function findHeaderIndex(rows, names){
-    const targets = names.map(n => n.toLowerCase());
-    for (let r=0; r<Math.min(rows.length, 20); r++){
-      const lowered = (rows[r] || []).map(c => clean(c).toLowerCase());
-      if (targets.every(t => lowered.includes(t))) return r;
-    }
-    return -1;
-  }
-
-  function findCol(headerRow, names, fallbackIndex){
-    const lowered = (headerRow || []).map(c => clean(c).toLowerCase());
-    for (const name of names){
-      const idx = lowered.indexOf(name.toLowerCase());
-      if (idx >= 0) return idx;
-    }
-    return fallbackIndex;
-  }
-
-  function findOrderDetailsSheet(wb){
-    const required = ['Customer Order Id','Seller SKU ID','Forward Consignment Bar Code'];
-    const preferred = wb.SheetNames.find(n => /^order details$/i.test(clean(n)));
-    const names = preferred ? [preferred, ...wb.SheetNames.filter(n => n !== preferred)] : wb.SheetNames;
-    for (const name of names){
-      const sheet = wb.Sheets[name];
-      const rows = XLSX.utils.sheet_to_json(sheet, { header:1, raw:false, defval:'' });
-      const headerIdx = findHeaderIndex(rows, required);
-      if (headerIdx >= 0) return { sheetName:name, rows, headerIdx };
-    }
-    return null;
-  }
-
-  async function parseExcel(file){
-    const buffer = await file.arrayBuffer();
-    const wb = XLSX.read(buffer, { type:'array', cellDates:false });
-    const found = findOrderDetailsSheet(wb);
-    if (!found) throw new Error(`Order Details sheet/header not found in ${file.name}`);
-
-    const rows = found.rows;
-    const headerIdx = found.headerIdx;
-    const header = rows[headerIdx] || [];
-    const orderCol = findCol(header, ['Customer Order Id'], 1);
-    const skuCol   = findCol(header, ['Seller SKU ID'], 13);
-    const qtyCol   = findCol(header, ['*Confirm Quantity','Confirm Quantity'], 20);
-    const bagCol   = findCol(header, ['Forward Consignment Bar Code'], 26);
-
-    const map = new Map();
-    let sequence = 0;
-    for (let r = headerIdx + 1; r < rows.length; r++){
-      const row = rows[r] || [];
-      const orderId = clean(row[orderCol]).toUpperCase();
-      if (!/^FN\d{6,}$/i.test(orderId)) continue;
-      if (!map.has(orderId)) map.set(orderId, { orderId, excelRow:r+1, sequence:sequence++, skus:[], bagBarcode:'', qtyValues:[], notes:[] });
-      const rec = map.get(orderId);
-      const sku = clean(row[skuCol]);
-      if (!isBlankValue(sku) && !rec.skus.includes(sku)) rec.skus.push(sku);
-      const bag = clean(row[bagCol]);
-      if (!isBlankValue(bag) && !rec.bagBarcode) rec.bagBarcode = bag;
-      const qty = clean(row[qtyCol]);
-      if (!isBlankValue(qty)) rec.qtyValues.push(qty);
-    }
-
-    return Array.from(map.values()).map(rec => {
-      const sku = rec.skus.length ? rec.skus.join(' + ') : '';
-      if (!sku) rec.notes.push('Missing Seller SKU ID');
-      if (!rec.bagBarcode) rec.notes.push('Missing Forward Consignment Bag Barcode');
-      return { ...rec, sku, confirmQty: rec.qtyValues.join(' + '), sourceName:file.name };
-    });
-  }
-
-  async function parseAllExcels(files){
-    const merged = new Map();
-    let seq = 0;
-    for (const file of files){
-      const records = await parseExcel(file);
-      for (const rec of records){
-        if (!merged.has(rec.orderId)) {
-          merged.set(rec.orderId, { ...rec, sequence: seq++ });
-        } else {
-          const old = merged.get(rec.orderId);
-          const skuParts = new Set([...String(old.sku || '').split(' + ').filter(Boolean), ...String(rec.sku || '').split(' + ').filter(Boolean)]);
-          old.sku = Array.from(skuParts).join(' + ') || old.sku || rec.sku || '';
-          old.bagBarcode = old.bagBarcode || rec.bagBarcode || '';
-          old.confirmQty = old.confirmQty || rec.confirmQty || '';
-          old.notes = [...new Set([...(old.notes || []), ...(rec.notes || [])])];
-        }
-      }
-    }
-    return Array.from(merged.values());
-  }
-
-  async function getPdfTextPages(bytes){
-    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes).slice(0) }).promise;
-    const pages = [];
-    for (let i=1; i<=pdf.numPages; i++){
-      const page = await pdf.getPage(i);
-      const tc = await page.getTextContent();
-      const text = tc.items.map(item => item.str || '').join(' ').replace(/\s+/g,' ').trim();
-      pages.push({ pageIndex:i-1, pageNumber:i, text });
-    }
-    return { pdf, pages };
-  }
-
-  function extractOrderId(text){ const m = clean(text).toUpperCase().match(/FN\d{8,}/); return m ? m[0] : ''; }
-  function extractAwb(text){ const u = clean(text).toUpperCase(); const m = u.match(/SF\d{6,}AJI/) || u.match(/\b\d{10,16}\b/) || u.match(/AWB\s*NUMBER\s*[:\-]?\s*(SF\d{6,}AJI)/); return m ? (m[1] || m[0]) : ''; }
-  function addToIndex(map, key, value, duplicateList, duplicateLabel){ if (!key) return; if (map.has(key)) duplicateList.push(`${duplicateLabel}: ${key}`); else map.set(key, value); }
-
-  async function renderPdfPageToCanvas(page, scale){
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.floor(viewport.width); canvas.height = Math.floor(viewport.height);
-    const ctx = canvas.getContext('2d', { willReadFrequently:true });
-    await page.render({ canvasContext:ctx, viewport }).promise;
-    return canvas;
-  }
-
-  function cropCanvas(canvas, zone){
-    const x = Math.max(0, Math.floor(zone.x * canvas.width));
-    const y = Math.max(0, Math.floor(zone.y * canvas.height));
-    const w = Math.min(canvas.width - x, Math.floor(zone.w * canvas.width));
-    const h = Math.min(canvas.height - y, Math.floor(zone.h * canvas.height));
-    const out = document.createElement('canvas'); out.width = Math.max(1, w); out.height = Math.max(1, h);
-    out.getContext('2d', { willReadFrequently:true }).drawImage(canvas, x, y, w, h, 0, 0, out.width, out.height);
-    return out;
-  }
-
-  async function decodeWithBarcodeDetector(canvas, regex){
-    if (!('BarcodeDetector' in window)) return '';
-    try {
-      const formats = await BarcodeDetector.getSupportedFormats();
-      const use = formats.includes('code_128') ? ['code_128'] : formats;
-      const detector = new BarcodeDetector({ formats: use });
-      const codes = await detector.detect(canvas);
-      for (const c of codes){
-        const v = clean(c.rawValue).toUpperCase();
-        if (!regex || regex.test(v)) return v;
-      }
-    } catch(e) {}
-    return '';
-  }
-
-  function patternArray(pattern){ return pattern.split('').map(Number); }
-  function matchPattern(widths, stop){
-    let best = { code:-1, err:Infinity };
-    for (let code=0; code<CODE128_PATTERNS.length; code++){
-      const pat = patternArray(CODE128_PATTERNS[code]);
-      if (!!stop !== (code === 106)) continue;
-      if (pat.length !== widths.length) continue;
-      const sumW = widths.reduce((a,b)=>a+b,0), sumP = pat.reduce((a,b)=>a+b,0), scale = sumW / sumP;
-      let err = 0;
-      for (let i=0; i<pat.length; i++){ const d = widths[i] - pat[i] * scale; err += d*d; }
-      const norm = Math.sqrt(err / pat.length) / scale;
-      if (norm < best.err) best = { code, err:norm };
-    }
-    return best.err < 0.72 ? best.code : -1;
-  }
-
-  function rowRunsFromCanvas(canvas, y){
-    const ctx = canvas.getContext('2d', { willReadFrequently:true });
-    const { data } = ctx.getImageData(0, y, canvas.width, 1);
-    let min = 255, max = 0;
-    const lum = new Array(canvas.width);
-    for (let x=0; x<canvas.width; x++){
-      const idx = x*4, l = 0.299*data[idx] + 0.587*data[idx+1] + 0.114*data[idx+2];
-      lum[x] = l; if (l < min) min = l; if (l > max) max = l;
-    }
-    if (max - min < 50) return null;
-    const threshold = (min + max) / 2;
-    const bits = lum.map(l => l < threshold);
-    let first = bits.findIndex(Boolean), last = bits.length - 1;
-    while (last >= 0 && !bits[last]) last--;
-    if (first < 0 || last <= first) return null;
-    const runs = [];
-    let cur = bits[first], count = 0;
-    for (let x=first; x<=last; x++){
-      if (bits[x] === cur) count++; else { runs.push(count); cur = bits[x]; count = 1; }
-    }
-    runs.push(count);
-    return runs.length < 20 ? null : runs;
-  }
-
-  function code128ToText(codes){
-    let set = codes[0] === 103 ? 'A' : (codes[0] === 104 ? 'B' : 'C');
-    let out = '';
-    for (let i=1; i<codes.length; i++){
-      const code = codes[i];
-      if (set === 'B'){
-        if (code <= 95) out += String.fromCharCode(code + 32);
-        else if (code === 99) set = 'C'; else if (code === 101) set = 'A';
-        else if (code === 98 && i+1 < codes.length) { const next = codes[++i]; if (next <= 95) out += String.fromCharCode(next); }
-      } else if (set === 'C'){
-        if (code <= 99) out += String(code).padStart(2, '0');
-        else if (code === 100) set = 'B'; else if (code === 101) set = 'A';
-      } else {
-        if (code <= 95) out += String.fromCharCode(code);
-        else if (code === 100) set = 'B'; else if (code === 99) set = 'C';
-      }
-    }
-    return out.trim();
-  }
-
-  function decodeCode128Runs(runs){
-    let idx = 0, codes = [];
-    while (idx + 6 <= runs.length){
-      if (idx + 7 <= runs.length){ const stop = matchPattern(runs.slice(idx, idx+7), true); if (stop === 106){ codes.push(106); idx += 7; break; } }
-      const code = matchPattern(runs.slice(idx, idx+6), false);
-      if (code < 0) break;
-      codes.push(code); idx += 6; if (codes.length > 80) break;
-    }
-    if (codes.length < 4 || ![103,104,105].includes(codes[0]) || codes[codes.length-1] !== 106) return '';
-    const checksum = codes[codes.length-2];
-    let sum = codes[0];
-    for (let i=1; i<codes.length-2; i++) sum += codes[i] * i;
-    if (sum % 103 !== checksum) return '';
-    return code128ToText(codes.slice(0, -2));
-  }
-
-  function decodeCode128Canvas(canvas, regex){
-    const candidates = [];
-    const yStart = Math.floor(canvas.height * 0.16), yEnd = Math.floor(canvas.height * 0.84), step = Math.max(2, Math.floor(canvas.height / 32));
-    for (let y=yStart; y<=yEnd; y+=step){
-      const runs = rowRunsFromCanvas(canvas, y);
-      if (!runs) continue;
-      const decoded = clean(decodeCode128Runs(runs)).toUpperCase();
-      if (decoded){ candidates.push(decoded); if (!regex || regex.test(decoded)) return decoded; }
-    }
-    return regex ? (candidates.find(c => regex.test(c)) || '') : (candidates[0] || '');
-  }
-
-  async function decodeBarcodeCanvas(canvas, regex){
-    const byDetector = await decodeWithBarcodeDetector(canvas, regex);
-    if (byDetector) return byDetector;
-    return decodeCode128Canvas(canvas, regex);
-  }
-
-  function makeInvoiceIndex(pages){
-    const byOrder = new Map(), byAwb = new Map(), duplicates = [];
-    const invoices = pages.map(p => {
-      const orderId = extractOrderId(p.text), awb = extractAwb(p.text);
-      const info = { pageIndex:p.pageIndex, pageNumber:p.pageNumber, orderId, awb, sourceIndex:p.sourceIndex, sourceName:p.sourceName };
-      addToIndex(byOrder, orderId, info, duplicates, 'Duplicate invoice order');
-      addToIndex(byAwb, awb, info, duplicates, 'Duplicate invoice AWB');
-      return info;
-    });
-    return { invoices, byOrder, byAwb, duplicates };
-  }
-
-  async function getAllInvoicePages(files){
-    const pages = [];
-    for (let i = 0; i < files.length; i++){
-      const bytes = new Uint8Array(await files[i].arrayBuffer());
-      const pdfData = await getPdfTextPages(bytes);
-      pdfData.pages.forEach(p => pages.push({ ...p, sourceIndex:i, sourceName:files[i].name }));
-    }
-    return { pages };
-  }
-
-  async function analyzeLabels(pdf, invoiceByAwb){
-    const labels = [], byOrder = new Map(), byAwb = new Map(), duplicates = [];
-    const zones = { awb:{ x:0.00, y:0.235, w:0.93, h:0.16, regex:/^(SF\d{6,}AJI|\d{10,16})$/i }, order:{ x:0.32, y:0.435, w:0.58, h:0.13, regex:/^FN\d{8,}$/i } };
-    for (let i=1; i<=pdf.numPages; i++){
-      const page = await pdf.getPage(i);
-      const tc = await page.getTextContent();
-      const text = tc.items.map(item => item.str || '').join(' ').replace(/\s+/g,' ').trim();
-      let orderId = extractOrderId(text), awb = extractAwb(text);
-      const canvas = await renderPdfPageToCanvas(page, 3.4);
-      if (!awb) awb = await decodeBarcodeCanvas(cropCanvas(canvas, zones.awb), zones.awb.regex);
-      if (!orderId) orderId = await decodeBarcodeCanvas(cropCanvas(canvas, zones.order), zones.order.regex);
-      if (!orderId && awb && invoiceByAwb.has(awb)) orderId = invoiceByAwb.get(awb).orderId;
-      const info = { pageIndex:i-1, pageNumber:i, orderId, awb };
-      labels.push(info);
-      addToIndex(byOrder, orderId, info, duplicates, 'Duplicate label order');
-      addToIndex(byAwb, awb, info, duplicates, 'Duplicate label AWB');
-    }
-    return { labels, byOrder, byAwb, duplicates };
-  }
-
-  async function analyzeAllLabels(files, invoiceByAwb){
-    const allLabels = [], byOrder = new Map(), byAwb = new Map(), duplicates = [];
-    for (let i = 0; i < files.length; i++){
-      setStatus(`Reading label PDF ${i+1}/${files.length}…`, 30 + ((i+1) / Math.max(1, files.length)) * 20);
-      const bytes = new Uint8Array(await files[i].arrayBuffer());
-      const pdfData = await getPdfTextPages(bytes);
-      const labelIndex = await analyzeLabels(pdfData.pdf, invoiceByAwb);
-      labelIndex.labels.forEach(label => {
-        const info = { ...label, sourceIndex:i, sourceName:files[i].name };
-        allLabels.push(info);
-        if (info.orderId && !byOrder.has(info.orderId)) byOrder.set(info.orderId, info); else if (info.orderId) duplicates.push(`Duplicate label order: ${info.orderId}`);
-        if (info.awb && !byAwb.has(info.awb)) byAwb.set(info.awb, info); else if (info.awb) duplicates.push(`Duplicate label AWB: ${info.awb}`);
-      });
-    }
-    return { labels: allLabels, byOrder, byAwb, duplicates };
-  }
-
-  function sortRows(rows){
-    const mode = sortBy.value;
-    const val = row => mode === 'bag' ? (row.bagBarcode || 'ZZZZZZZZ') : mode === 'sku' ? (row.sku || 'ZZZZZZZZ') : mode === 'order' ? (row.orderId || 'ZZZZZZZZ') : String(row.sequence).padStart(8,'0');
-    return rows.slice().sort((a,b) => naturalCompare(val(a), val(b)) || naturalCompare(a.orderId,b.orderId));
-  }
-
-  function csvEscape(value){ const s = clean(value); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; }
-  function buildCsv(rows){
-    const header = ['Status','Order ID','Bag Barcode','Seller SKU','Confirm Qty','Label Page','Label File','Invoice Page','Invoice File','AWB','Note'];
-    const lines = [header.join(',')];
-    rows.forEach(r => lines.push([
-      r.status, r.orderId, r.bagBarcode, r.sku, r.confirmQty || '',
-      r.label ? r.label.pageNumber : '', r.label ? r.label.sourceName : '',
-      r.invoice ? r.invoice.pageNumber : '', r.invoice ? r.invoice.sourceName : '',
-      r.invoice ? r.invoice.awb : (r.label ? r.label.awb : ''),
-      (r.notes || []).join(' | ')
-    ].map(csvEscape).join(',')));
-    return lines.join('\n');
-  }
-
-  function downloadBlob(blob, filename){ const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1500); }
-  function fitText(text, maxChars){ const s = clean(text); return s.length <= maxChars ? s : s.slice(0, Math.max(0, maxChars-1)) + '…'; }
-
-function stampLabel(page, rec, fontBold, fontRegular){
-  const { width, height } = page.getSize();
-
-  const cleanLocal = v => String(v == null ? '' : v).replace(/\s+/g,' ').trim();
-
-  const measure = (font, text, size) =>
-    font && font.widthOfTextAtSize
-      ? font.widthOfTextAtSize(text, size)
-      : text.length * size * 0.55;
-
-  function splitSkus(text){
-    return cleanLocal(text || '-')
-      .split(/\s+\+\s+/)
-      .map(s => cleanLocal(s))
-      .filter(Boolean);
-  }
-
-  function groupSkus(parts){
-    const n = parts.length;
-
-    if (n <= 0) return [];
-    if (n === 1) return [[parts[0]]];
-
-    // 2 qty
-    if (n === 2) {
-      return [
-        [parts[0]],
-        [parts[1]]
-      ];
-    }
-
-    // 3 qty
-    if (n === 3) {
-      return [
-        [parts[0], parts[1]],
-        [parts[2]]
-      ];
-    }
-
-    // 4 qty
-    if (n === 4) {
-      return [
-        [parts[0], parts[1]],
-        [parts[2], parts[3]]
-      ];
-    }
-
-    // 5 qty
-    if (n === 5) {
-      return [
-        [parts[0], parts[1], parts[2]],
-        [parts[3], parts[4]]
-      ];
-    }
-
-    // 6 qty
-    if (n === 6) {
-      return [
-        [parts[0], parts[1], parts[2]],
-        [parts[3], parts[4], parts[5]]
-      ];
-    }
-
-    // 7 qty
-    if (n === 7) {
-      return [
-        [parts[0], parts[1], parts[2]],
-        [parts[3], parts[4], parts[5]],
-        [parts[6]]
-      ];
-    }
-
-    // 8 qty
-    if (n === 8) {
-      return [
-        [parts[0], parts[1], parts[2]],
-        [parts[3], parts[4], parts[5]],
-        [parts[6], parts[7]]
-      ];
-    }
-
-    // 9 qty
-    if (n === 9) {
-      return [
-        [parts[0], parts[1], parts[2]],
-        [parts[3], parts[4], parts[5]],
-        [parts[6], parts[7], parts[8]]
-      ];
-    }
-
-    // 10 qty
-    if (n === 10) {
-      return [
-        [parts[0], parts[1], parts[2], parts[3]],
-        [parts[4], parts[5], parts[6]],
-        [parts[7], parts[8], parts[9]]
-      ];
-    }
-
-    // more than 10 fallback
-    const out = [];
-    out.push(parts.slice(0, 4));
-    out.push(parts.slice(4, 7));
-    out.push(parts.slice(7, 10));
-
-    for (let i = 10; i < n; i += 3) {
-      out.push(parts.slice(i, i + 3));
-    }
-
-    return out.filter(a => a.length);
-  }
-
-  function buildLines(size){
-    const lines = [];
-
-    if (stampSku.checked) {
-      const skuParts = splitSkus(rec.sku || '-');
-      const grouped = groupSkus(skuParts);
-
-      grouped.forEach(group => {
-        const txt = group.join(' + ');
-        if (txt) {
-          lines.push({
-            text: txt,
-            font: fontRegular
-          });
-        }
-      });
-    }
-
-    if (stampBag.checked) {
-      lines.push({
-        text: cleanLocal(rec.bagBarcode || '-'),
-        font: fontRegular,
-        bag: true
-      });
-    }
-
-    if (!lines.length) {
-      lines.push({
-        text: '-',
-        font: fontRegular
-      });
-    }
-
-    return lines;
-  }
-
-  const bottom = height * 0.030;
-  const right = width * 0.965;
-
-  // right side thi start, jarur pade to left side grow thase
-  const maxW = width * 0.68;
-  const maxH = height * 0.20;
-
-  let chosen = null;
-
-  for (let size = 7.4; size >= 5.0; size -= 0.3) {
-    const lineH = size + 3.2;
-    const lines = buildLines(size);
-
-    const widest = Math.max(
-      28,
-      ...lines.map(l => measure(l.font, l.text, size))
-    );
-
-    const blockH = (lines.length - 1) * lineH + size;
-
-    const bagLine = lines.find(l => l.bag);
-    const bagFits = !bagLine || measure(bagLine.font, bagLine.text, size) <= maxW;
-
-    if (blockH <= maxH && widest <= maxW && bagFits) {
-      chosen = {
-        size,
-        lineH,
-        lines,
-        blockW: widest
-      };
-      break;
-    }
-  }
-
-  if (!chosen) {
-    const size = 5.0;
-    const lineH = size + 3.0;
-    const lines = buildLines(size);
-
-    const widest = Math.max(
-      28,
-      ...lines.map(l => measure(l.font, l.text, size))
-    );
-
-    chosen = {
-      size,
-      lineH,
-      lines,
-      blockW: Math.min(maxW, widest)
-    };
-  }
-
-  const blockH = (chosen.lines.length - 1) * chosen.lineH + chosen.size;
-
-  const x = Math.max(
-    width * 0.05,
-    right - chosen.blockW
-  );
-
-  const yBottom = Math.max(
-    height * 0.012,
-    bottom
-  );
-
-  page.drawRectangle({
-    x: Math.max(0, x - 4),
-    y: Math.max(0, yBottom - 3),
-    width: Math.min(width * 0.93, chosen.blockW + 8),
-    height: Math.min(height * 0.96, blockH + 8),
-    color: PDFLib.rgb(1,1,1),
-    opacity: 0.97
-  });
-
-  for (let i = 0; i < chosen.lines.length; i++) {
-    const line = chosen.lines[i];
-
-    const y = yBottom + (chosen.lines.length - 1 - i) * chosen.lineH;
-
-    page.drawText(line.text, {
-      x,
-      y,
-      size: chosen.size,
-      font: line.font,
-      color: PDFLib.rgb(0,0,0)
-    });
-  }
-}
-
-  async function createFinalPdf(rows){
-    const labelDocs = [];
-    for (const file of labelFiles){
-      const bytes = await file.arrayBuffer();
-      labelDocs.push(await PDFLib.PDFDocument.load(bytes, { ignoreEncryption:false }));
-    }
-    const invoiceDocs = [];
-    for (const file of invoiceFiles){
-      const bytes = await file.arrayBuffer();
-      invoiceDocs.push(await PDFLib.PDFDocument.load(bytes, { ignoreEncryption:false }));
-    }
-
-    const out = await PDFLib.PDFDocument.create();
-    const fontBold = await out.embedFont(PDFLib.StandardFonts.HelveticaBold);
-    const fontRegular = await out.embedFont(PDFLib.StandardFonts.Helvetica);
-
-    for (let i = 0; i < rows.length; i++){
-      const rec = rows[i];
-      setStatus(`Creating final PDF ${i+1}/${rows.length}…`, 75 + (i / Math.max(1, rows.length)) * 20);
-      if (!rec.label || !rec.invoice) { if (onlyMatched.checked) continue; else continue; }
-      const [labelPage] = await out.copyPages(labelDocs[rec.label.sourceIndex], [rec.label.pageIndex]);
-      out.addPage(labelPage);
-      stampLabel(labelPage, rec, fontBold, fontRegular);
-      const [invoicePage] = await out.copyPages(invoiceDocs[rec.invoice.sourceIndex], [rec.invoice.pageIndex]);
-      out.addPage(invoicePage);
-    }
-    return await out.save();
-  }
-
-  function renderReport(rows, stats, extraNotes){
-    statGrid.innerHTML = '';
-    [['Excel Orders', stats.excel], ['Label Pages', stats.labels], ['Invoice Pages', stats.invoices], ['Matched', stats.matched], ['Issues', stats.issues]].forEach(([label, value]) => {
-      const div = document.createElement('div'); div.className = 'ajio-stat'; div.innerHTML = `<strong>${value}</strong><span>${label}</span>`; statGrid.appendChild(div);
-    });
-    reportRows.innerHTML = '';
-    rows.forEach(r => {
-      const tr = document.createElement('tr');
-      const cls = r.status === 'OK' ? 'ajio-ok' : (r.status === 'WARN' ? 'ajio-warn' : 'ajio-bad');
-      tr.innerHTML = `<td class="${cls}">${r.status}</td><td>${escapeHtml(r.orderId)}</td><td>${escapeHtml(r.bagBarcode || '-')}</td><td>${escapeHtml(r.sku || '-')}</td><td>${r.label ? 'Page ' + r.label.pageNumber + ' · ' + escapeHtml(r.label.sourceName) : '<span class="ajio-bad">Missing</span>'}</td><td>${r.invoice ? 'Page ' + r.invoice.pageNumber + ' · ' + escapeHtml(r.invoice.sourceName) : '<span class="ajio-bad">Missing</span>'}</td><td>${escapeHtml((r.notes || []).join(' | ') || '-')}</td>`;
-      reportRows.appendChild(tr);
-    });
-    reportNote.textContent = extraNotes.length ? extraNotes.join(' | ') : 'Report generated successfully.';
-    reportBox.style.display = 'block';
-  }
-
-  reportBtn.addEventListener('click', () => { if (!latestReport.length) return; downloadBlob(new Blob([buildCsv(latestReport)], { type:'text/csv;charset=utf-8' }), 'ajio-label-invoice-report.csv'); });
-
-  processBtn.addEventListener('click', async () => {
-    try {
-      if (!excelFiles.length || !labelFiles.length || !invoiceFiles.length) return;
-      processBtn.disabled = true; reportBtn.disabled = true; reportBox.style.display = 'none'; latestReport = [];
-
-      setStatus('Reading Excel files…', 5);
-      const excelRecords = await parseAllExcels(excelFiles);
-
-      setStatus('Reading invoice PDFs…', 18);
-      const invoiceData = await getAllInvoicePages(invoiceFiles);
-      const invoiceIndex = makeInvoiceIndex(invoiceData.pages);
-
-      setStatus('Reading label PDFs…', 30);
-      const labelIndex = await analyzeAllLabels(labelFiles, invoiceIndex.byAwb);
-
-      setStatus('Matching orders…', 68);
-      const rows = excelRecords.map(rec => {
-        const invoice = invoiceIndex.byOrder.get(rec.orderId) || null;
-        let label = labelIndex.byOrder.get(rec.orderId) || null;
-        if (!label && invoice && invoice.awb) label = labelIndex.byAwb.get(invoice.awb) || null;
-        const notes = [...(rec.notes || [])];
-        if (!label) notes.push('Label page not found');
-        if (!invoice) notes.push('Invoice page not found');
-        if (invoice && label && invoice.awb && label.awb && invoice.awb !== label.awb) notes.push('AWB mismatch between label and invoice');
-        const hardIssue = !label || !invoice;
-        return { ...rec, label, invoice, notes, status: hardIssue ? 'ERROR' : (notes.length ? 'WARN' : 'OK') };
-      });
-
-      const sorted = sortRows(rows);
-      const matchedRows = sorted.filter(r => r.label && r.invoice);
-      const issueCount = sorted.filter(r => r.status !== 'OK').length;
-      const extraNotes = [...invoiceIndex.duplicates, ...labelIndex.duplicates];
-      latestReport = sorted;
-      renderReport(sorted, { excel:excelRecords.length, labels:labelIndex.labels.length, invoices:invoiceIndex.invoices.length, matched:matchedRows.length, issues:issueCount + extraNotes.length }, extraNotes);
-      reportBtn.disabled = false;
-      if (!matchedRows.length) throw new Error('No matched label + invoice pair found. Download the report and check barcode/order matching.');
-
-      const finalBytes = await createFinalPdf(sorted);
-      setStatus('Downloading final PDF…', 98);
-      downloadBlob(new Blob([finalBytes], { type:'application/pdf' }), 'AJIO_Label_Invoice_SKU_BagBarcode_Sorted.pdf');
-      setStatus(`Done. ${matchedRows.length} matched orders exported.`, 100);
-    } catch (err) {
-      console.error(err);
-      setStatus('Error: ' + (err && err.message ? err.message : 'Something went wrong.'), 0);
-      alert(err && err.message ? err.message : 'Something went wrong.');
-    } finally {
-      processBtn.disabled = !(excelFiles.length && labelFiles.length && invoiceFiles.length);
-    }
-  });
-
-  updateFileUi();
-})();
-</script>
+<script src="/assets/ajio-v2-layout-loader-v8.js?v=20260626-10-live-horizontal"></script>
 </body>
 </html>
