@@ -54,6 +54,40 @@
       });
     }
 
+    function installAjioNoOrderFallbackPatch() {
+      if (!window.PDFLib || !PDFLib.PDFPage || !PDFLib.PDFPage.prototype || PDFLib.PDFPage.prototype.__ajioNoOrderFallbackPatch) return;
+
+      window.__AJIO_MISSING_BAG_MARKS = window.__AJIO_MISSING_BAG_MARKS || 0;
+      window.__AJIO_MISSING_BAG_WARNED = false;
+
+      var originalDrawText = PDFLib.PDFPage.prototype.drawText;
+      PDFLib.PDFPage.prototype.drawText = function (text) {
+        var value = String(text == null ? '' : text).trim().toUpperCase();
+        if (/^FN\d{8,}$/.test(value)) {
+          window.__AJIO_MISSING_BAG_MARKS = (window.__AJIO_MISSING_BAG_MARKS || 0) + 1;
+          return this;
+        }
+        return originalDrawText.apply(this, arguments);
+      };
+      PDFLib.PDFPage.prototype.__ajioNoOrderFallbackPatch = true;
+
+      if (window.URL && !window.URL.__ajioMissingBagWarningPatch) {
+        var originalCreateObjectURL = window.URL.createObjectURL.bind(window.URL);
+        window.URL.createObjectURL = function (obj) {
+          if (obj && obj.type === 'application/pdf') {
+            var count = window.__AJIO_MISSING_BAG_MARKS || 0;
+            if (count > 0 && !window.__AJIO_MISSING_BAG_WARNED) {
+              window.__AJIO_MISSING_BAG_WARNED = true;
+              alert('Warning: ' + count + ' order(s) do not have Forward Consignment Bag Barcode in Excel. These labels are generated without bag barcode marking.');
+            }
+            window.__AJIO_MISSING_BAG_MARKS = 0;
+          }
+          return originalCreateObjectURL(obj);
+        };
+        window.URL.__ajioMissingBagWarningPatch = true;
+      }
+    }
+
     async function ensureAjioLibraries() {
       if (!window.PDFLib) {
         try { await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js', 'PDFLib'); }
@@ -67,13 +101,18 @@
         try { await loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js', 'Tesseract'); }
         catch (e3) { /* OCR is optional; barcode/text/customer matching can still run. */ }
       }
+      installAjioNoOrderFallbackPatch();
       ajioLibLoadedOnce = !!(window.PDFLib && window.XLSX);
       return ajioLibLoadedOnce;
     }
 
     document.addEventListener('click', function (ev) {
       var btn = ev.target && ev.target.id === 'runBtn' ? ev.target : null;
-      if (!btn || ajioLibLoadedOnce || (window.PDFLib && window.XLSX)) return;
+      if (!btn) return;
+      window.__AJIO_MISSING_BAG_MARKS = 0;
+      window.__AJIO_MISSING_BAG_WARNED = false;
+      installAjioNoOrderFallbackPatch();
+      if (ajioLibLoadedOnce || (window.PDFLib && window.XLSX)) return;
       ev.preventDefault();
       ev.stopPropagation();
       ev.stopImmediatePropagation();
