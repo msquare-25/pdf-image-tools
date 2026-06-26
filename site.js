@@ -28,8 +28,9 @@
     }
   });
 
-  // AJIO V2: make final PDF dependencies resilient across CDN/cache failures.
-  if (location.pathname.replace(/\/$/, '') === '/ajio-label-invoice-sorter-v2') {
+  // AJIO sorter: make final PDF dependencies resilient across CDN/cache failures.
+  var ajioPath = location.pathname.replace(/\/$/, '');
+  if (ajioPath === '/ajio-label-invoice-sorter' || ajioPath === '/ajio-label-invoice-sorter-v2') {
     var ajioLibLoading = false;
     var ajioLibLoadedOnce = false;
 
@@ -53,7 +54,7 @@
       });
     }
 
-    async function ensureAjioV2Libraries() {
+    async function ensureAjioLibraries() {
       if (!window.PDFLib) {
         try { await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js', 'PDFLib'); }
         catch (e1) { await loadScriptOnce('https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js', 'PDFLib'); }
@@ -61,6 +62,10 @@
       if (!window.XLSX) {
         try { await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', 'XLSX'); }
         catch (e2) { await loadScriptOnce('https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js', 'XLSX'); }
+      }
+      if (!window.Tesseract) {
+        try { await loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js', 'Tesseract'); }
+        catch (e3) { /* OCR is optional; barcode/text/customer matching can still run. */ }
       }
       ajioLibLoadedOnce = !!(window.PDFLib && window.XLSX);
       return ajioLibLoadedOnce;
@@ -76,7 +81,7 @@
       ajioLibLoading = true;
       var statusEl = document.getElementById('status');
       if (statusEl) statusEl.textContent = 'Loading PDF/Excel libraries...';
-      ensureAjioV2Libraries().then(function () {
+      ensureAjioLibraries().then(function () {
         ajioLibLoading = false;
         if (statusEl) statusEl.textContent = 'Libraries loaded. Starting generation...';
         setTimeout(function () { btn.click(); }, 60);
@@ -89,9 +94,9 @@
     }, true);
 
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function () { ensureAjioV2Libraries().catch(function () {}); });
+      document.addEventListener('DOMContentLoaded', function () { ensureAjioLibraries().catch(function () {}); });
     } else {
-      ensureAjioV2Libraries().catch(function () {});
+      ensureAjioLibraries().catch(function () {});
     }
   }
 })();
