@@ -28,106 +28,70 @@
     }
   });
 
-  // ------------------------------
-  // 2) Elements
-  // ------------------------------
-  var wrap    = document.querySelector('.tool-tabs-wrap');
-  var scroller= document.querySelector('.tool-tabs');
-  var btnL    = document.querySelector('.tool-left');
-  var btnR    = document.querySelector('.tool-right');
+  // AJIO V2: make final PDF dependencies resilient across CDN/cache failures.
+  if (location.pathname.replace(/\/$/, '') === '/ajio-label-invoice-sorter-v2') {
+    var ajioLibLoading = false;
+    var ajioLibLoadedOnce = false;
 
-  // if not present on this page, nothing to do
-  if (!wrap || !scroller) {
-    // Mark home for CSS toggles (optional)
-    if (location.pathname === '/' || /\/index\.html?$/i.test(location.pathname)) {
-      document.documentElement.classList.add('is-home');
+    function loadScriptOnce(src, globalName) {
+      return new Promise(function (resolve, reject) {
+        if (globalName && window[globalName]) return resolve();
+        var existing = document.querySelector('script[data-ajio-lib="' + globalName + '"]');
+        if (existing) {
+          existing.addEventListener('load', function () { resolve(); }, { once: true });
+          existing.addEventListener('error', function () { reject(new Error('Failed: ' + src)); }, { once: true });
+          return;
+        }
+        var s = document.createElement('script');
+        s.src = src;
+        s.async = false;
+        s.defer = false;
+        s.setAttribute('data-ajio-lib', globalName || src);
+        s.onload = function () { resolve(); };
+        s.onerror = function () { reject(new Error('Failed: ' + src)); };
+        document.head.appendChild(s);
+      });
     }
-    return;
-  }
 
-  // ------------------------------
-  // 3) Ensure last tab never gets clipped
-  // ------------------------------
-  if (!scroller.querySelector('.end-spacer')) {
-    var spacer = document.createElement('span');
-    spacer.className = 'end-spacer';
-    spacer.setAttribute('aria-hidden', 'true');
-    spacer.style.display = 'inline-block';
-    spacer.style.width = '24px';
-    spacer.style.height = '1px';
-    scroller.appendChild(spacer);
-  }
+    async function ensureAjioV2Libraries() {
+      if (!window.PDFLib) {
+        try { await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js', 'PDFLib'); }
+        catch (e1) { await loadScriptOnce('https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js', 'PDFLib'); }
+      }
+      if (!window.XLSX) {
+        try { await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', 'XLSX'); }
+        catch (e2) { await loadScriptOnce('https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js', 'XLSX'); }
+      }
+      ajioLibLoadedOnce = !!(window.PDFLib && window.XLSX);
+      return ajioLibLoadedOnce;
+    }
 
-  // ------------------------------
-  // 4) Arrow visibility on mobile
-  // ------------------------------
-  function toggleArrowsForMobile() {
-    var small = window.matchMedia('(max-width: 540px)').matches;
-    if (btnL) btnL.style.display = small ? 'none' : '';
-    if (btnR) btnR.style.display = small ? 'none' : '';
-  }
-  toggleArrowsForMobile();
-  window.addEventListener('resize', toggleArrowsForMobile);
+    document.addEventListener('click', function (ev) {
+      var btn = ev.target && ev.target.id === 'runBtn' ? ev.target : null;
+      if (!btn || ajioLibLoadedOnce || (window.PDFLib && window.XLSX)) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      ev.stopImmediatePropagation();
+      if (ajioLibLoading) return;
+      ajioLibLoading = true;
+      var statusEl = document.getElementById('status');
+      if (statusEl) statusEl.textContent = 'Loading PDF/Excel libraries...';
+      ensureAjioV2Libraries().then(function () {
+        ajioLibLoading = false;
+        if (statusEl) statusEl.textContent = 'Libraries loaded. Starting generation...';
+        setTimeout(function () { btn.click(); }, 60);
+      }).catch(function (err) {
+        ajioLibLoading = false;
+        if (statusEl) statusEl.textContent = 'Library load failed. Check internet/CDN access and refresh.';
+        alert('PDF/Excel libraries could not load. Please hard refresh, or try another browser/network.');
+        console.error(err);
+      });
+    }, true);
 
-  // ------------------------------
-  // 5) Arrow enable/disable state
-  // ------------------------------
-  function updateArrows() {
-    if (!btnL || !btnR) return;
-    var max = scroller.scrollWidth - scroller.clientWidth - 1; // fudge for subpixels
-    var x = scroller.scrollLeft;
-
-    btnL.disabled = x <= 0;
-    btnR.disabled = x >= max;
-
-    // optional: subtle opacity when disabled
-    btnL.style.opacity = btnL.disabled ? '0.4' : '1';
-    btnR.style.opacity = btnR.disabled ? '0.4' : '1';
-  }
-
-  // ------------------------------
-  // 6) Arrow click handlers (desktop)
-  // ------------------------------
-  function step(dir) {
-    // scroll ~ one card width or 60% of viewport
-    var card = scroller.querySelector('a');
-    var stepBy = Math.max(scroller.clientWidth * 0.6, (card ? card.getBoundingClientRect().width : 160) * 2);
-    scroller.scrollBy({ left: dir * stepBy, behavior: 'smooth' });
-  }
-
-  if (btnL) btnL.addEventListener('click', function () { step(-1); });
-  if (btnR) btnR.addEventListener('click', function () { step(1); });
-
-  // keyboard support (focus on scroller area)
-  scroller.addEventListener('keydown', function (e) {
-    if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
-    if (e.key === 'ArrowRight'){ e.preventDefault(); step(1);  }
-  });
-
-  // ------------------------------
-  // 7) Keep arrows updated
-  // ------------------------------
-  scroller.addEventListener('scroll', updateArrows, { passive: true });
-  window.addEventListener('resize', updateArrows);
-
-  if ('ResizeObserver' in window) {
-    new ResizeObserver(updateArrows).observe(scroller);
-  }
-  // initial state
-  updateArrows();
-
-  // ------------------------------
-  // 8) Mark home for CSS toggles (optional)
-  // ------------------------------
-  if (location.pathname === '/' || /\/index\.html?$/i.test(location.pathname)) {
-    document.documentElement.classList.add('is-home');
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () { ensureAjioV2Libraries().catch(function () {}); });
+    } else {
+      ensureAjioV2Libraries().catch(function () {});
+    }
   }
 })();
-
-// PWA: register service worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .catch(err => console.warn('Service Worker failed:', err));
-  });
-}
