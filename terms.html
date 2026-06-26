@@ -10,6 +10,9 @@
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>Terms of Use — PDFImageLab</title>
 <link href="/style.css" rel="stylesheet"/>
+<style>
+body{min-height:100vh;display:flex;flex-direction:column}.legal-nav-header{padding:12px 0 0}.legal-nav-header .inner,.legal-shell{width:min(100%,920px);margin:0 auto;padding:0 20px;box-sizing:border-box}.legal-nav-header .inner{display:flex;flex-direction:column;align-items:flex-start;gap:10px}.legal-nav-header .header-title{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--text)}.legal-nav-header .row{gap:10px}.legal-page{flex:1;padding:54px 0 70px}.legal-heading{margin:0 0 22px}.legal-heading .title{margin:0 0 8px;font-size:clamp(2rem,2.7vw,2.55rem);line-height:1.1}.legal-heading .sub{margin:0;font-size:1rem;line-height:1.6;max-width:760px;color:var(--muted)}.legal-card{width:100%;box-sizing:border-box;padding:24px 26px}.legal-card p,.legal-card li{line-height:1.75}.legal-card ul{margin-top:8px}.legal-card .title{margin-top:0}.legal-card .sub{margin:0 0 12px;color:var(--muted)}.legal-card a[href^="mailto"]{color:var(--brand-1);font-weight:800}.legal-footer{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap;text-align:center;width:100%}.legal-footer .dot{opacity:.45}footer{padding:18px 0 24px}@media(max-width:768px){.legal-nav-header .inner,.legal-shell{padding:0 16px}.legal-page{padding:36px 0 48px}.legal-heading .title{font-size:1.7rem}.legal-heading .sub{font-size:.96rem}.legal-card{padding:20px}.legal-footer{gap:8px}}
+</style>
 <meta content="light dark" name="color-scheme"/>
 <script defer="defer" src="/site.js"></script>
 <script defer src="/assets/seo.js"></script>
@@ -47,23 +50,24 @@
 </nav>
 <button aria-label="Scroll tools right" class="tool-scroll tool-right" title="Scroll right">›</button>
 </div></header>
-<header>
+<header class="legal-nav-header">
 <div class="inner">
 <div class="header-title"><span style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#06b6d4);display:inline-block;"></span> PDF &amp; Image Tools</div>
 <nav class="row">
 <a class="btn btn-ghost" href="/">Home</a>
-<a class="btn btn-ghost" href="/terms">Terms</a>
+<a class="btn btn-ghost active" href="/terms">Terms</a>
 <a class="btn btn-ghost" href="/privacy">Privacy</a>
 <a class="btn btn-ghost" href="/contact">Contact</a>
 </nav>
 </div>
 </header>
-<main>
-<h1 class="page-title">Terms & Conditions</h1>
+<main class="legal-page">
+<div class="legal-shell">
+<section class="legal-heading">
+<h1 class="title">Terms &amp; Conditions</h1>
 <p class="sub">Simple, human-readable terms for using our free tools.</p>
-<section class="hero mb-4">
 </section>
-<section class="card">
+<section class="card legal-card">
 <h2 class="title">1) Basics</h2>
 <p class="sub">Our tools run locally in your browser. Your files are not uploaded to our server.</p>
 <ul>
@@ -79,11 +83,14 @@
 <p>For questions, feedback or support related to PDFImageLab, you can contact us by email.</p>
 <p>Email: <a href="mailto:support@pdfimagelab.com">support@pdfimagelab.com</a></p>
 </section>
+</div>
 </main>
 <footer>
-<div class="inner">
-<a class="small" href="/privacy">Privacy</a> ·
-<a class="small" href="/terms">Terms</a> ·
+<div class="inner legal-footer">
+<a class="small" href="/privacy">Privacy</a>
+<span class="dot">·</span>
+<a class="small" href="/terms">Terms</a>
+<span class="dot">·</span>
 <a class="small" href="/contact">Contact</a>
 </div>
 </footer>
