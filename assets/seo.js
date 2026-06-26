@@ -49,8 +49,8 @@
       tries++;
       if (!window.PDFLib || !PDFLib.PDFPage || !PDFLib.PDFPage.prototype) { if (tries > 80) clearInterval(timer); return; }
       const proto = PDFLib.PDFPage.prototype;
-      if (proto.__ajioPlainStampPatchV3) { clearInterval(timer); return; }
-      proto.__ajioPlainStampPatchV3 = true;
+      if (proto.__ajioPlainStampPatchV4) { clearInterval(timer); return; }
+      proto.__ajioPlainStampPatchV4 = true;
       const originalRectangle = proto.drawRectangle;
       const originalText = proto.drawText;
       proto.drawRectangle = function(opts){
@@ -60,22 +60,23 @@
       function drawTextHighlight(page, text, opts){
         try{
           const s=page.getSize?page.getSize():null; if(!s || !opts || typeof text!=="string") return;
-          const x=Number(opts.x||0), y=Number(opts.y||0), size=Number(opts.size||9);
-          const isStampArea=x>s.width*0.50 && y<s.height*0.28;
-          const looksLikeSkuOrBag=/^[A-Z0-9][A-Z0-9_\-\/,. +]{2,55}$/i.test(text) || /^D?B?\d{8,16}$/i.test(text) || /^QTY\s+/i.test(text);
-          if(!isStampArea || !looksLikeSkuOrBag) return;
-          let textW=Math.min(s.width*0.55, Math.max(32, text.length*size*0.58));
-          if(opts.font && opts.font.widthOfTextAtSize) textW=Math.min(s.width*0.55, Math.max(32, opts.font.widthOfTextAtSize(text,size)));
+          const x=Number(opts.x||0), y=Number(opts.y||0), size=Number(opts.size||8);
+          const isStampArea=x>s.width*0.24 && y<s.height*0.26;
+          const looks=/^[A-Z0-9][A-Z0-9_\-\/,. +]{2,70}$/i.test(text) || /^D?B?\d{8,16}$/i.test(text);
+          if(!isStampArea || !looks || /^QTY\b/i.test(text)) return;
+          let textW=Math.min(s.width*0.70, Math.max(32, text.length*size*0.56));
+          if(opts.font && opts.font.widthOfTextAtSize) textW=Math.min(s.width*0.70, Math.max(32, opts.font.widthOfTextAtSize(text,size)));
           originalRectangle.call(page,{x:Math.max(0,x-3),y:Math.max(0,y-2),width:textW+6,height:size+5,color:PDFLib.rgb(1,1,1),opacity:0.97});
         }catch(e){}
       }
       proto.drawText = function(text, opts){
         try{
+          if(typeof text==="string" && /^QTY\b/i.test(text)) return this;
           if(typeof text==="string" && (text.indexOf("SKU: ")===0 || text.indexOf("BAG: ")===0)){
             const s=this.getSize?this.getSize():{width:595,height:842};
             const isSku=text.indexOf("SKU: ")===0;
             const cleanText=text.replace(/^SKU:\s*/,"").replace(/^BAG:\s*/,"");
-            const o=Object.assign({},opts||{}); const size=o.size||9;
+            const o=Object.assign({},opts||{}); const size=o.size||8;
             o.x=s.width*0.79; o.y=s.height*0.022+(isSku?size+4:0);
             drawTextHighlight(this,cleanText,o);
             return originalText.call(this,cleanText,o);
@@ -88,62 +89,58 @@
     },100);
   }
 
-  function rebootAjioSorterWithWrappedStamp(){
+  function rebootAjioSorterWithSkuGroups(){
     if (path !== "/ajio-label-invoice-sorter") return;
-    if (window.__ajioWrappedStampReboot) return;
-    window.__ajioWrappedStampReboot = true;
+    if (window.__ajioSkuGroupRebootV4) return;
+    window.__ajioSkuGroupRebootV4 = true;
     const replacement = `  function stampLabel(page, rec, fontBold, fontRegular){
     const { width, height } = page.getSize();
     const cleanLocal = v => String(v == null ? '' : v).replace(/\\s+/g,' ').trim();
-    const measure = (font, text, size) => font && font.widthOfTextAtSize ? font.widthOfTextAtSize(text, size) : text.length * size * 0.58;
-    function wrapOne(text, font, size, maxW){
-      text = cleanLocal(text);
-      if (!text) return [];
-      const lines = [];
-      let line = '';
-      for (const ch of Array.from(text)){
-        const test = line + ch;
-        if (line && measure(font, test, size) > maxW){ lines.push(line); line = ch; }
-        else line = test;
-      }
-      if (line) lines.push(line);
-      return lines;
+    const measure = (font, text, size) => font && font.widthOfTextAtSize ? font.widthOfTextAtSize(text, size) : text.length * size * 0.56;
+    function splitSkus(text){ return cleanLocal(text || '-').split(/\\s+\\+\\s+/).map(s => cleanLocal(s)).filter(Boolean); }
+    function chunkSkus(parts){
+      const n = parts.length;
+      if (n <= 2) return [parts];
+      if (n <= 5) return [parts.slice(0, Math.min(3,n)), parts.slice(Math.min(3,n))].filter(a => a.length);
+      const chunks = [parts.slice(0,4), parts.slice(4,7), parts.slice(7,10)];
+      for (let i=10; i<n; i+=3) chunks.push(parts.slice(i,i+3));
+      return chunks.filter(a => a.length);
     }
-    function buildLines(size, maxW){
-      const lines = [];
-      if (stampSku.checked){
-        const skuParts = cleanLocal(rec.sku || '-').split(/\\s+\\+\\s+/).filter(Boolean);
-        skuParts.forEach(part => wrapOne(part, fontBold, size, maxW).forEach(t => lines.push({ text:t, font:fontBold })));
+    function makeLines(size, maxW){
+      const skuParts = stampSku.checked ? splitSkus(rec.sku || '-') : [];
+      let lines = chunkSkus(skuParts).map(group => ({ text:group.join(' + '), font:fontRegular }));
+      if (stampBag.checked) lines.push({ text:cleanLocal(rec.bagBarcode || '-'), font:fontRegular, bag:true });
+      lines = lines.filter(l => l.text);
+      if (!lines.length) lines = [{ text:'-', font:fontRegular }];
+      const tooWide = lines.some(l => measure(l.font, l.text, size) > maxW);
+      if (!tooWide) return lines;
+      if (skuParts.length > 1){
+        lines = skuParts.map(s => ({ text:s, font:fontRegular }));
+        if (stampBag.checked) lines.push({ text:cleanLocal(rec.bagBarcode || '-'), font:fontRegular, bag:true });
       }
-      const qty = cleanLocal(rec.confirmQty || '');
-      if (qty && qty !== '1') wrapOne('QTY ' + qty, fontRegular, size, maxW).forEach(t => lines.push({ text:t, font:fontRegular }));
-      if (stampBag.checked) wrapOne(rec.bagBarcode || '-', fontRegular, size, maxW).forEach(t => lines.push({ text:t, font:fontRegular }));
-      return lines.length ? lines : [{ text:'-', font:fontRegular }];
+      return lines;
     }
     const bottom = height * 0.028;
     const right = width * 0.965;
-    const normalCellX = width * 0.72;
-    const normalCellW = width * 0.24;
-    const maxW = width * 0.46;
-    const maxH = height * 0.22;
+    const maxW = width * 0.68;
+    const maxH = height * 0.18;
     let chosen = null;
-    for (let size = 10; size >= 6; size -= 0.5){
-      const lineH = size + 2.6;
-      const widths = [normalCellW, width*0.30, width*0.36, width*0.42, maxW];
-      for (const w of widths){
-        const lines = buildLines(size, w);
-        const blockH = (lines.length - 1) * lineH + size;
-        if (blockH <= maxH){ chosen = { size, lineH, lines, wrapW:w }; break; }
-      }
-      if (chosen) break;
+    for (let size = 8.2; size >= 5.2; size -= 0.4){
+      const lineH = size + 2.2;
+      const lines = makeLines(size, maxW);
+      const blockH = (lines.length - 1) * lineH + size;
+      const widest = Math.max(28, ...lines.map(l => measure(l.font, l.text, size)));
+      if (blockH <= maxH && widest <= maxW){ chosen = { size, lineH, lines, blockW:widest }; break; }
     }
-    if (!chosen){ const size = 6; chosen = { size, lineH:size+2.4, lines:buildLines(size, maxW), wrapW:maxW }; }
-    const lineWidths = chosen.lines.map(l => measure(l.font, l.text, chosen.size));
-    const blockW = Math.min(maxW, Math.max(28, ...lineWidths));
+    if (!chosen){
+      const size = 5.2;
+      const lines = makeLines(size, maxW).slice(-6);
+      chosen = { size, lineH:size+2.1, lines, blockW:Math.min(maxW, Math.max(28, ...lines.map(l => measure(l.font, l.text, size)))) };
+    }
     const blockH = (chosen.lines.length - 1) * chosen.lineH + chosen.size;
-    let x = blockW <= normalCellW ? normalCellX + Math.max(0, (normalCellW - blockW) / 2) : Math.max(width * 0.03, right - blockW);
+    const x = Math.max(width * 0.055, right - chosen.blockW);
     const yBottom = Math.max(height * 0.012, bottom);
-    page.drawRectangle({ x:Math.max(0,x-4), y:Math.max(0,yBottom-3), width:Math.min(width*0.94, blockW+8), height:Math.min(height*0.96, blockH+7), color:PDFLib.rgb(1,1,1), opacity:0.97 });
+    page.drawRectangle({ x:Math.max(0,x-4), y:Math.max(0,yBottom-3), width:Math.min(width*0.93, chosen.blockW+8), height:Math.min(height*0.96, blockH+7), color:PDFLib.rgb(1,1,1), opacity:0.97 });
     for (let i=0; i<chosen.lines.length; i++){
       const line = chosen.lines[i];
       const y = yBottom + (chosen.lines.length - 1 - i) * chosen.lineH;
@@ -160,9 +157,8 @@
       const end = src.indexOf('\n  async function createFinalPdf', start);
       if (start < 0 || end < 0) return;
       ['excelFile','labelPdf','invoicePdf','clearBtn','processBtn','reportBtn'].forEach(id => { const el=document.getElementById(id); if(el && el.parentNode){ const n=el.cloneNode(true); if(n.type==='file') n.multiple=true; el.parentNode.replaceChild(n,el); } });
-      const patched = src.slice(0,start) + replacement + src.slice(end);
       const tag = document.createElement('script');
-      tag.textContent = patched;
+      tag.textContent = src.slice(0,start) + replacement + src.slice(end);
       document.body.appendChild(tag);
       const st = document.getElementById('status'); if(st) st.textContent = 'Upload all files to start.';
     }
@@ -171,7 +167,7 @@
   }
 
   patchPdfLibStampHighlight();
-  rebootAjioSorterWithWrappedStamp();
+  rebootAjioSorterWithSkuGroups();
 
   (function addLd(){
     try{
