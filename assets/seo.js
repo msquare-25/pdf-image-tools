@@ -1,58 +1,98 @@
-(function(){
-  const ORIGIN='https://pdfimagelab.com';
-  const path=(location.pathname||'/').replace(/\/$/,'')||'/';
-  const page={
-    '/': ['PDF & Image Tools — Fast, Private, Free','All-in-one PDF & image utilities that run entirely in your browser.'],
-    '/ajio-label-invoice-sorter':['AJIO Label Invoice Sorter — SKU & Bag Barcode','Sort AJIO labels by bag barcode and enrich labels using Excel and invoice data.']
-  }[path]||['PDF & Image Tools','Fast, private PDF and image tools.'];
-  function metaName(n,c){let e=document.querySelector(`meta[name="${n}"]`);if(!e){e=document.createElement('meta');e.name=n;document.head.appendChild(e);}e.content=c;}
-  function metaProp(n,c){let e=document.querySelector(`meta[property="${n}"]`);if(!e){e=document.createElement('meta');e.setAttribute('property',n);document.head.appendChild(e);}e.content=c;}
-  function canonical(c){let e=document.querySelector('link[rel="canonical"]');if(!e){e=document.createElement('link');e.rel='canonical';document.head.appendChild(e);}e.href=c;}
-  document.title=page[0]; metaName('description',page[1]); canonical(ORIGIN+(path==='/'?'/':path)); metaProp('og:title',page[0]); metaProp('og:description',page[1]); metaProp('og:url',ORIGIN+(path==='/'?'/':path)); metaName('twitter:card','summary_large_image');
+(function () {
+  const ORIGIN = 'https://pdfimagelab.com';
+  const OG_IMAGE = ORIGIN + '/og/default.png';
+  const path = (location.pathname || '/').replace(/\/$/, '') || '/';
 
-  if(path!=='/ajio-label-invoice-sorter')return;
-  function boot(){
-    if(!window.XLSX||!window.PDFLib||!window.pdfjsLib){setTimeout(boot,150);return;}
-    const $=s=>document.querySelector(s), clean=v=>String(v==null?'':v).replace(/\s+/g,' ').trim(), coll=new Intl.Collator(undefined,{numeric:true,sensitivity:'base'});
-    let excel=$('#excelFile'), label=$('#labelPdf'), invoice=$('#invoicePdf'), go=$('#processBtn'), clear=$('#clearBtn'), rep=$('#reportBtn');
-    const excelName=$('#excelName'),labelName=$('#labelName'),invoiceName=$('#invoiceName'),status=$('#status'),bar=$('#progressBar'),box=$('#reportBox'),grid=$('#statGrid'),tbody=$('#reportRows'),note=$('#reportNote'),sortBy=$('#sortBy');
-    if(!excel||!label||!go)return;
-    function clone(e){const n=e.cloneNode(true);e.parentNode.replaceChild(n,e);return n;}
-    excel=clone(excel);label=clone(label);invoice=clone(invoice);go=clone(go);clear=clone(clear);rep=clone(rep);excel.multiple=label.multiple=invoice.multiple=true;
-    const only=$('#onlyMatched'); if(only){only.checked=false; const sp=only.closest('label')?.querySelector('span'); if(sp)sp.textContent='Include every uploaded label even if invoice or Excel data is missing';}
-    let excelFiles=[],labelFiles=[],invoiceFiles=[],latest=[];
-    const set=(t,p)=>{if(status)status.textContent=t;if(bar&&typeof p==='number')bar.style.width=Math.max(0,Math.min(100,p))+'%';};
-    const esc=s=>clean(s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-    const q=v=>{const n=Number(String(v??'').replace(/[^0-9.]/g,''));return Number.isFinite(n)&&n>0?n:1;};
-    const blank=v=>{const s=clean(v);return !s||s==='-'||/^na|null$/i.test(s);};
-    const add=(m,sku,qty)=>{sku=clean(sku).replace(/^,+|,+$/g,'').trim();if(sku)m.set(sku,(m.get(sku)||0)+q(qty));};
-    const items=m=>Array.from(m.entries()).map(([sku,qty])=>({sku,qty:q(qty)}));
-    const itemText=it=>(it||[]).map(x=>x.sku+(q(x.qty)>1?' ('+q(x.qty)+')':'')).join(' + ');
-    function ui(){excelName.textContent=excelFiles.length?`Excel: ${excelFiles.length} file(s) selected`:'Excel: optional - not selected';labelName.textContent=labelFiles.length?`Label PDF: ${labelFiles.length} file(s) selected`:'Label PDF: not selected';invoiceName.textContent=invoiceFiles.length?`Invoice PDF: ${invoiceFiles.length} file(s) selected`:'Invoice PDF: optional - not selected';go.disabled=!labelFiles.length;clear.disabled=!(excelFiles.length||labelFiles.length||invoiceFiles.length);set(labelFiles.length?'Ready. Label PDF is master; Excel and invoice enrich the output.':'Upload at least one AJIO Label PDF to start.',0);}
-    excel.onchange=e=>{excelFiles=Array.from(e.target.files||[]);ui();}; label.onchange=e=>{labelFiles=Array.from(e.target.files||[]);ui();}; invoice.onchange=e=>{invoiceFiles=Array.from(e.target.files||[]);ui();}; clear.onclick=()=>{excelFiles=[];labelFiles=[];invoiceFiles=[];latest=[];excel.value=label.value=invoice.value='';rep.disabled=true;if(box)box.style.display='none';ui();};
-    function hidx(rows,names){const t=names.map(n=>n.toLowerCase());for(let r=0;r<Math.min(rows.length,25);r++){const low=(rows[r]||[]).map(c=>clean(c).toLowerCase());if(t.every(x=>low.includes(x)))return r;}return-1;}
-    function col(h,names,f){const low=(h||[]).map(c=>clean(c).toLowerCase());for(const n of names){const i=low.indexOf(n.toLowerCase());if(i>=0)return i;}return f;}
-    async function parseExcel(f){const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}),need=['Customer Order Id','Seller SKU ID','Forward Consignment Bar Code'];let found=null;for(const name of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:false,defval:''});const hi=hidx(rows,need);if(hi>=0){found={rows,hi};break;}}if(!found)throw new Error('Order Details sheet/header not found in '+f.name);const head=found.rows[found.hi], oc=col(head,['Customer Order Id'],1), sc=col(head,['Seller SKU ID'],13), qc=col(head,['Quantity','Qty','Item Qty','Item Quantity','*Confirm Quantity','Confirm Quantity'],17), bc=col(head,['Forward Consignment Bar Code'],26), out=new Map();let seq=0;for(let r=found.hi+1;r<found.rows.length;r++){const row=found.rows[r]||[],id=clean(row[oc]).toUpperCase();if(!/^FN\d{6,}$/i.test(id))continue;if(!out.has(id))out.set(id,{orderId:id,sequence:seq++,skuMap:new Map(),bagBarcode:''});const rec=out.get(id);if(!blank(row[sc]))add(rec.skuMap,row[sc],row[qc]);if(!blank(row[bc])&&!rec.bagBarcode)rec.bagBarcode=clean(row[bc]);}return Array.from(out.values()).map(r=>{const it=items(r.skuMap);return{orderId:r.orderId,sequence:r.sequence,skuItems:it,sku:itemText(it),bagBarcode:r.bagBarcode};});}
-    async function allExcel(files){const byOrder=new Map();let seq=0;for(const f of files){for(const r of await parseExcel(f)){if(!byOrder.has(r.orderId)){const m=new Map();r.skuItems.forEach(x=>add(m,x.sku,x.qty));byOrder.set(r.orderId,{...r,sequence:seq++,skuMap:m});}else{const old=byOrder.get(r.orderId);r.skuItems.forEach(x=>add(old.skuMap,x.sku,x.qty));old.skuItems=items(old.skuMap);old.sku=itemText(old.skuItems);old.bagBarcode=old.bagBarcode||r.bagBarcode;}}}return{records:Array.from(byOrder.values()),byOrder};}
-    const oid=t=>{const m=clean(t).toUpperCase().match(/FN\d{8,}/);return m?m[0]:'';};
-    const awb=t=>{const m=clean(t).toUpperCase().match(/\bAWB(?:\s*(?:NUMBER|NO|#))?\s*[:\-]?\s*((?:SF\d{6,}AJI)|(?:\d{10,16}))\b/i);return m&&!/^0+$/.test(m[1])?clean(m[1]).toUpperCase():'';};
-    const validAwb=v=>/^(?:SF\d{6,}AJI|\d{10,16})$/i.test(clean(v))&&!/^0+$/.test(clean(v));
-    function lines(tc,w){const a=tc.items.map(it=>{const tr=it.transform||[1,0,0,1,0,0];return{text:clean(it.str||''),x:tr[4]||0,y:tr[5]||0,w:it.width||0};}).filter(x=>x.text).sort((a,b)=>Math.abs(b.y-a.y)>3?b.y-a.y:a.x-b.x),out=[];for(const it of a){let l=out.find(x=>Math.abs(x.y-it.y)<=3);if(!l){l={y:it.y,items:[],xMin:it.x,xMax:it.x+it.w,pageWidth:w};out.push(l);}l.items.push(it);l.xMin=Math.min(l.xMin,it.x);l.xMax=Math.max(l.xMax,it.x+it.w);}out.forEach(l=>{l.items.sort((a,b)=>a.x-b.x);l.text=clean(l.items.map(i=>i.text).join(' '));});return out.sort((a,b)=>b.y-a.y);}
-    function pdfSku(page){const map=new Map(),ls=page.lines||[],W=page.width||595,brands=[];ls.forEach((l,i)=>{if(/\bBrand\s*:/i.test(l.text))brands.push(i);});function skuClean(s){s=clean(s).replace(/^,+|,+$/g,'');return(!s||/^brand\b|shipping charge|^hsn\b/i.test(s))?'':s;}brands.forEach((bi,k)=>{const bl=ls[bi],prev=brands[k-1]??-1,block=ls.slice(Math.max(prev+1,bi-9),bi+1).filter(l=>!/Shipping\s+Charge|ORDER\s+NUMBER|^Item\s+Details|^HSN/i.test(l.text)),txt=block.map(l=>l.text).join(' ');let sku='';const ms=Array.from(txt.matchAll(/(?:^|[\s,])\d{6,15}\s*,\s*([^,]+?)\s*,/g));if(ms.length)sku=skuClean(ms[ms.length-1][1]);if(!sku){const p=(txt.split(/Brand\s*:/i)[0]||txt).split(',').map(skuClean).filter(Boolean);if(p.length)sku=p[p.length-1];}if(!sku)return;const top=Math.max(...block.map(l=>l.y),bl.y),bot=Math.min(...block.map(l=>l.y),bl.y),qs=ls.filter(l=>l.xMin>W*.78&&l.y<=top+8&&l.y>=bot-8&&/^\d+$/.test(clean(l.text)));add(map,sku,qs.length?qs[0].text:1);});return items(map);}
-    async function pdfPages(f,src){const bytes=new Uint8Array(await f.arrayBuffer()),pdf=await pdfjsLib.getDocument({data:bytes.slice(0)}).promise,pages=[];for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i),vp=p.getViewport({scale:1}),tc=await p.getTextContent(),text=tc.items.map(x=>x.str||'').join(' ').replace(/\s+/g,' ').trim();pages.push({pageIndex:i-1,pageNumber:i,text,lines:lines(tc,vp.width),width:vp.width,sourceIndex:src,sourceName:f.name});}return{bytes,pdf,pages};}
-    async function invoiceIndex(files){const docs=[],invoices=[],byOrder=new Map(),byAwb=new Map();for(let i=0;i<files.length;i++){set(`Reading invoice PDF ${i+1}/${files.length}…`,18);const d=await pdfPages(files[i],i);docs.push(d);d.pages.forEach(p=>{const it=pdfSku(p),info={pageIndex:p.pageIndex,pageNumber:p.pageNumber,sourceIndex:p.sourceIndex,sourceName:p.sourceName,orderId:oid(p.text),awb:awb(p.text),skuItems:it,sku:itemText(it)};invoices.push(info);if(info.orderId&&!byOrder.has(info.orderId))byOrder.set(info.orderId,info);if(info.awb&&!byAwb.has(info.awb))byAwb.set(info.awb,info);});}return{docs,invoices,byOrder,byAwb};}
-    async function detect(canvas){if(!('BarcodeDetector'in window))return[];try{const fm=await BarcodeDetector.getSupportedFormats(),det=new BarcodeDetector({formats:fm.includes('code_128')?['code_128']:fm});return(await det.detect(canvas)).map(c=>clean(c.rawValue).toUpperCase()).filter(Boolean);}catch(e){return[];}}
-    async function labelIndex(files,invByAwb){const docs=[],labels=[],byOrder=new Map(),byAwb=new Map();for(let i=0;i<files.length;i++){set(`Reading label PDF ${i+1}/${files.length}…`,35);const d=await pdfPages(files[i],i);docs.push(d);for(const p of d.pages){let id=oid(p.text),a='';const pg=await d.pdf.getPage(p.pageNumber),vp=pg.getViewport({scale:3.2}),cv=document.createElement('canvas');cv.width=Math.floor(vp.width);cv.height=Math.floor(vp.height);await pg.render({canvasContext:cv.getContext('2d',{willReadFrequently:true}),viewport:vp}).promise;const codes=await detect(cv);if(!id)id=codes.find(v=>/^FN\d{8,}$/i.test(v))||'';a=codes.find(v=>validAwb(v)&&!/^FN\d{8,}$/i.test(v))||'';if(!id&&a&&invByAwb.has(a))id=invByAwb.get(a).orderId;const info={pageIndex:p.pageIndex,pageNumber:p.pageNumber,sourceIndex:i,sourceName:files[i].name,orderId:id,awb:a,labelSequence:labels.length};labels.push(info);if(id&&!byOrder.has(id))byOrder.set(id,info);if(a&&!byAwb.has(a))byAwb.set(a,info);}}return{docs,labels,byOrder,byAwb};}
-    function buildRows(lab,inv,ex){const rows=[],usedInv=new Set(),usedEx=new Set();lab.labels.forEach((l,seq)=>{let id=l.orderId||'',iv=id?inv.byOrder.get(id)||null:null;if(!iv&&l.awb)iv=inv.byAwb.get(l.awb)||null;if(!id&&iv?.orderId)id=iv.orderId;if(iv)usedInv.add(iv.sourceIndex+':'+iv.pageIndex);const xr=id?ex.byOrder.get(id)||null:null;if(xr)usedEx.add(id);const it=xr?.skuItems?.length?xr.skuItems:(iv?.skuItems||[]),sku=itemText(it),bag=xr?.bagBarcode||'',notes=[];let status='OK';if(!id){status='ERROR';notes.push('Label order number unreadable');}if(!iv){status='ERROR';notes.push('Invoice missing - label included');}if(!xr){if(status!=='ERROR')status='WARN';notes.push('Excel data missing');if(sku)notes.push('Invoice SKU used');}if(!sku){if(status!=='ERROR')status='WARN';notes.push('SKU missing');}if(!bag){if(status!=='ERROR')status='WARN';notes.push(id?'Bag barcode missing; printed order ID':'Bag barcode missing');}rows.push({status,orderId:id,labelAwb:l.awb,invoiceAwb:iv?.awb||'',bagBarcode:bag,sku,skuItems:it,label:l,invoice:iv,excel:xr,printed:[sku,bag||id||l.awb].filter(Boolean).join(' / '),notes,sequence:seq});});return{rows,excelOnly:ex.records.filter(r=>!usedEx.has(r.orderId)),extraInvoices:inv.invoices.filter(i=>!usedInv.has(i.sourceIndex+':'+i.pageIndex))};}
-    function sortRows(rows){return rows.slice().sort((a,b)=>{const ga=a.bagBarcode?0:(a.sku?1:2),gb=b.bagBarcode?0:(b.sku?1:2);if(ga!==gb)return ga-gb;if(ga===0)return coll.compare(a.bagBarcode,b.bagBarcode);if(ga===1)return coll.compare(a.sku,b.sku);return coll.compare(a.orderId||String(a.sequence),b.orderId||String(b.sequence));});}
-    function stampLines(it){const p=(it||[]).map(x=>x.sku+(q(x.qty)>1?' ('+q(x.qty)+')':''));const n=p.length;if(n<=1)return p.length?[p]:[];if(n===2)return[[p[0]],[p[1]]];if(n===3)return[[p[0],p[1]],[p[2]]];if(n===4)return[[p[0],p[1]],[p[2],p[3]]];if(n<=6)return[p.slice(0,3),p.slice(3)];if(n<=9)return[p.slice(0,3),p.slice(3,6),p.slice(6)];return[p.slice(0,4),p.slice(4,7),p.slice(7,10)];}
-    function stamp(page,r,font){const {width,height}=page.getSize();let text=stampLines(r.skuItems).map(g=>g.join(' + '));text.push(r.bagBarcode||r.orderId||r.labelAwb||`LABEL ${r.label.pageNumber}`);const meas=(t,s)=>font.widthOfTextAtSize(t,s);let ch;for(let size=7.4;size>=5;size-=.3){const lh=size+3.2,w=Math.max(28,...text.map(t=>meas(t,size))),h=(text.length-1)*lh+size;if(w<=width*.68&&h<=height*.2){ch={size,lh,w};break;}}if(!ch)ch={size:5,lh:8,w:Math.min(width*.68,Math.max(28,...text.map(t=>meas(t,5))))};const x=Math.max(width*.05,width*.965-ch.w),yb=Math.max(height*.012,height*.03),h=(text.length-1)*ch.lh+ch.size;page.drawRectangle({x:x-4,y:yb-3,width:ch.w+8,height:h+8,color:PDFLib.rgb(1,1,1),opacity:.97});text.forEach((t,i)=>page.drawText(t,{x,y:yb+(text.length-1-i)*ch.lh,size:ch.size,font,color:PDFLib.rgb(0,0,0)}));}
-    async function makePdf(rows,lab,inv){const ldocs=[];for(const d of lab.docs)ldocs.push(await PDFLib.PDFDocument.load(d.bytes,{ignoreEncryption:false}));const idocs=[];for(const d of inv.docs)idocs.push(await PDFLib.PDFDocument.load(d.bytes,{ignoreEncryption:false}));const out=await PDFLib.PDFDocument.create(),font=await out.embedFont(PDFLib.StandardFonts.Helvetica);for(let i=0;i<rows.length;i++){const r=rows[i];set(`Creating final PDF ${i+1}/${rows.length}…`,75+i/Math.max(1,rows.length)*20);const [lp]=await out.copyPages(ldocs[r.label.sourceIndex],[r.label.pageIndex]);out.addPage(lp);stamp(lp,r,font);if(r.invoice&&idocs[r.invoice.sourceIndex]){const [ip]=await out.copyPages(idocs[r.invoice.sourceIndex],[r.invoice.pageIndex]);out.addPage(ip);}}return await out.save();}
-    function dl(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);}function csv(rows){const h=['Status','Order ID','Bag Barcode','Seller SKU','Label Page','Invoice Page','Printed','Note'];const c=v=>/[",\n]/.test(clean(v))?'"'+clean(v).replace(/"/g,'""')+'"':clean(v);return[h.join(','),...rows.map(r=>[r.status,r.orderId,r.bagBarcode,r.sku,r.label?.pageNumber,r.invoice?.pageNumber||'',r.printed,(r.notes||[]).join(' | ')].map(c).join(','))].join('\n');}
-    function show(rows,st){grid.innerHTML='';[['Label Pages',st.labels],['Invoice Pages',st.invoices],['Excel Orders',st.excel],['Generated Labels',st.generated],['OK',st.ok],['Issues',st.issues],['Excel-only Ignored',st.excelOnly],['Extra Invoices',st.extraInvoices]].forEach(([l,v])=>{const d=document.createElement('div');d.className='ajio-stat';d.innerHTML=`<strong>${v}</strong><span>${l}</span>`;grid.appendChild(d);});tbody.innerHTML='';rows.forEach(r=>{const tr=document.createElement('tr'),cls=r.status==='OK'?'ajio-ok':r.status==='WARN'?'ajio-warn':'ajio-bad';tr.innerHTML=`<td class="${cls}">${r.status}</td><td>${esc(r.orderId||'-')}</td><td>${esc(r.bagBarcode||'-')}</td><td>${esc(r.sku||'-')}</td><td>Page ${r.label.pageNumber} · ${esc(r.label.sourceName)}</td><td>${r.invoice?'Page '+r.invoice.pageNumber+' · '+esc(r.invoice.sourceName):'<span class="ajio-bad">Missing</span>'}</td><td>${esc((r.notes||[]).join(' | ')||'-')}</td>`;tbody.appendChild(tr);});if(note)note.textContent='Report generated successfully.';box.style.display='block';}
-    rep.onclick=()=>{if(latest.length)dl(new Blob([csv(latest)],{type:'text/csv;charset=utf-8'}),'ajio-label-invoice-report.csv');};
-    go.onclick=async()=>{try{if(!labelFiles.length)return;go.disabled=true;rep.disabled=true;if(box)box.style.display='none';set('Reading Excel files…',5);const ex=excelFiles.length?await allExcel(excelFiles):{records:[],byOrder:new Map()};set('Reading invoice PDFs…',18);const inv=invoiceFiles.length?await invoiceIndex(invoiceFiles):{docs:[],invoices:[],byOrder:new Map(),byAwb:new Map()};set('Reading label PDFs…',35);const lab=await labelIndex(labelFiles,inv.byAwb);const built=buildRows(lab,inv,ex),rows=sortRows(built.rows),me=rows.filter(r=>!r.excel).length,mi=rows.filter(r=>!r.invoice).length,un=rows.filter(r=>!r.orderId).length;if((me||mi||un)&&!confirm(`Some labels need attention.\n\nExcel data missing: ${me}\nInvoice missing: ${mi}\nLabel order unreadable: ${un}\n\nEvery uploaded label will still be included. Continue?`)){set('Cancelled. Upload missing files and generate again.',0);return;}latest=rows;show(rows,{labels:lab.labels.length,invoices:inv.invoices.length,excel:ex.records.length,generated:rows.length,ok:rows.filter(r=>r.status==='OK').length,issues:rows.filter(r=>r.status!=='OK').length,excelOnly:built.excelOnly.length,extraInvoices:built.extraInvoices.length});rep.disabled=false;const bytes=await makePdf(rows,lab,inv);dl(new Blob([bytes],{type:'application/pdf'}),'AJIO_Label_Master_SKU_BagBarcode_Sorted.pdf');set(`Done. ${rows.length} label(s) exported.`,100);}catch(e){console.error(e);set('Error: '+(e.message||'Something went wrong.'),0);alert(e.message||'Something went wrong.');}finally{go.disabled=!labelFiles.length;}};
-    const up=document.querySelector('.upload-box .muted');if(up)up.textContent='Upload Label PDF. Excel and Invoice PDFs are optional enrichment files.';const act=document.querySelector('.action-box .small.mt-2');if(act)act.textContent='Output: every uploaded label is included. Invoice is added when found.';ui();
+  const PAGES = {
+    '/': {
+      title: 'PDF & Image Tools — Fast, Private, Free',
+      desc: 'All-in-one PDF & image utilities that run entirely in your browser: merge, crop, compress, convert, and more. No uploads. Fast and private.'
+    },
+    '/image-to-pdf': {
+      title: 'Image → PDF — JPG/PNG/WebP/AVIF/HEIC to PDF',
+      desc: 'Convert JPG/PNG/WebP/AVIF/HEIC to a single PDF locally in your browser. Private, fast, and free.'
+    },
+    '/pdf-to-images': {
+      title: 'PDF → Images — Export PDF pages to PNG/JPG',
+      desc: 'Export PDF pages to PNG or JPG at custom DPI — 100% client-side. Nothing leaves your device.'
+    },
+    '/compress': {
+      title: 'Compress PDF — Reduce Size, Keep Quality',
+      desc: 'Shrink large PDFs from scans or photos with smart presets. Runs fully offline in your browser.'
+    },
+    '/crop': {
+      title: 'Crop PDF — Select Area & Apply to Pages',
+      desc: 'Crop PDF pages by dragging a box; apply to one or all pages. Private and fast.'
+    },
+    '/merge': {
+      title: 'Merge PDF — Combine & Reorder Easily',
+      desc: 'Combine multiple PDFs, reorder pages, and download in one click — no uploads required.'
+    },
+    '/delete-pages': {
+      title: 'Delete PDF Pages — Remove & Save',
+      desc: 'Remove selected PDF pages and save a clean file — private, local processing only.'
+    },
+    '/reorder-pages': {
+      title: 'Reorder PDF Pages — Drag, Drop, Export',
+      desc: 'Rearrange PDF pages visually by drag & drop, then export. Everything stays on your device.'
+    },
+    '/rotate-pages': {
+      title: 'Rotate PDF Pages — Single or All',
+      desc: 'Rotate specific pages or the entire PDF, then save a new file — client-side only.'
+    },
+    '/png-to-jpg': {
+      title: 'PNG → JPG — Quick Converter',
+      desc: 'Convert PNG to JPG with adjustable quality. Batch-friendly and private.'
+    },
+    '/jpg-to-png': {
+      title: 'JPG → PNG — Lossless Converter',
+      desc: 'Convert JPG to lossless PNG. Everything stays on your device.'
+    },
+    '/ajio-label-invoice-sorter': {
+      title: 'AJIO Label Invoice Sorter — SKU & Bag Barcode',
+      desc: 'Sort AJIO labels and invoices by bag barcode, print SKU and bag barcode on labels, and generate one packing-ready PDF in your browser.'
+    },
+    '/privacy': {
+      title: 'Privacy — No Uploads. No Retention.',
+      desc: 'We process your files locally in your browser. No servers, no tracking of your documents.'
+    },
+    '/terms': {
+      title: 'Terms — Simple & Human-Readable',
+      desc: 'Plain-language terms for using our client-side PDF & image tools.'
+    }
+  };
+
+  const data = PAGES[path] || PAGES['/'];
+  const canonicalUrl = ORIGIN + (path === '/' ? '/' : path);
+
+  function ensureMetaName(name, content) {
+    let el = document.querySelector(`meta[name="${name}"]`);
+    if (!el) { el = document.createElement('meta'); el.setAttribute('name', name); document.head.appendChild(el); }
+    el.setAttribute('content', content);
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+
+  function ensureMetaProp(prop, content) {
+    let el = document.querySelector(`meta[property="${prop}"]`);
+    if (!el) { el = document.createElement('meta'); el.setAttribute('property', prop); document.head.appendChild(el); }
+    el.setAttribute('content', content);
+  }
+
+  function ensureCanonical(href) {
+    let link = document.querySelector('link[rel="canonical"]');
+    if (!link) { link = document.createElement('link'); link.setAttribute('rel', 'canonical'); document.head.appendChild(link); }
+    link.setAttribute('href', href);
+  }
+
+  if (data.title) document.title = data.title;
+  ensureCanonical(canonicalUrl);
+  ensureMetaName('description', data.desc);
+  ensureMetaProp('og:title', data.title);
+  ensureMetaProp('og:description', data.desc);
+  ensureMetaProp('og:url', canonicalUrl);
+  ensureMetaProp('og:type', 'website');
+  ensureMetaProp('og:image', OG_IMAGE);
+  ensureMetaName('twitter:card', 'summary_large_image');
+  ensureMetaName('twitter:title', data.title);
+  ensureMetaName('twitter:description', data.desc);
+  ensureMetaName('twitter:image', OG_IMAGE);
 })();
