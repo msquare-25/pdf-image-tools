@@ -1,2 +1,5 @@
 // AJIO engine v3
-console.log('AJIO engine v3 placeholder');
+function ajioEngineV3Test(){
+  console.log('AJIO engine v3 loaded');
+}
+ajioEngineV3Test();
