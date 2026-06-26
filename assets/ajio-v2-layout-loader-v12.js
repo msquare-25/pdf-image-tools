@@ -33,14 +33,14 @@
     const measure=(t,s)=>font.widthOfTextAtSize(t,s);
     const lines=groups.map(g=>cleanLine(g.join(' + '))).filter(Boolean).concat(orderLine?[orderLine]:[]).filter(Boolean);
     let fit=null;
-    for(let size=7.4;size>=3.2;size-=.15){
-      const lh=size+2.55;
+    for(let size=7.8;size>=3.35;size-=.15){
+    const lh=size+2.7;
       const w=Math.max(25,...lines.map(t=>measure(t,size)));
       const h=(lines.length-1)*lh+size;
       if(w<=maxW && bottomBase+h<=topLimit){fit={lines,size,lh,w,h};break;}
     }
     if(!fit){
-      const size=3.1,lh=5.5;
+      const size=3.3,lh=5.75;
       fit={lines,size,lh,w:Math.min(maxW,Math.max(25,...lines.map(t=>measure(t,size)))),h:(lines.length-1)*lh+size};
     }
     const x=Math.max(minX,rightAnchor-fit.w);
