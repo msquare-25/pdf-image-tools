@@ -12,7 +12,6 @@
     "/reorder-pages": { title: "Reorder PDF Pages — Drag, Drop, Export", desc: "Rearrange PDF pages visually by drag & drop, then export. Everything stays on your device." },
     "/rotate-pages": { title: "Rotate PDF Pages — Single or All", desc: "Rotate specific pages or the entire PDF, then save a new file — client-side only." },
     "/png-to-jpg": { title: "PNG → JPG — Quick Converter", desc: "Convert PNG to JPG with adjustable quality. Batch-friendly and private." },
-    "/heic-to-jpg-png": { title: "HEIC → JPG/PNG — HEIC Converter", desc: "Convert HEIC photos from iPhone or iPad to JPG or PNG directly in your browser. No uploads, fully private." },
     "/jpg-to-png": { title: "JPG → PNG — Lossless Converter", desc: "Convert JPG to lossless PNG (ZIP). Everything stays on your device." },
     "/ajio-label-invoice-sorter": { title: "AJIO Label Invoice Sorter — SKU & Bag Barcode", desc: "Sort AJIO labels and invoices by bag barcode, stamp SKU and bag barcode on labels, and generate one packing-ready PDF in your browser." },
     "/privacy": { title: "Privacy — No Uploads. No Retention.", desc: "We process your files locally in your browser. No servers, no tracking of your documents." },
@@ -27,72 +26,15 @@
   function ensureMetaName(name, content){ if(!content)return; let el=document.querySelector(`meta[name="${name}"]`); if(!el){el=document.createElement("meta"); el.setAttribute("name",name); document.head.appendChild(el);} el.setAttribute("content",content); }
   function ensureMetaProp(prop, content){ if(!content)return; let el=document.querySelector(`meta[property="${prop}"]`); if(!el){el=document.createElement("meta"); el.setAttribute("property",prop); document.head.appendChild(el);} el.setAttribute("content",content); }
   function ensureCanonical(href){ let link=document.querySelector('link[rel="canonical"]'); if(!link){link=document.createElement("link"); link.setAttribute("rel","canonical"); document.head.appendChild(link);} link.setAttribute("href",href); }
-
   if (data.title && document.title.trim() !== data.title) document.title = data.title;
-  ensureCanonical(canonicalUrl);
-  ensureMetaName("description", data.desc);
-  ensureMetaName("color-scheme", "light dark");
-  ensureMetaProp("og:title", data.title);
-  ensureMetaProp("og:description", data.desc);
-  ensureMetaProp("og:url", canonicalUrl);
-  ensureMetaProp("og:type", "website");
-  ensureMetaProp("og:image", OG_IMAGE);
-  ensureMetaName("twitter:card", "summary_large_image");
-  ensureMetaName("twitter:title", data.title);
-  ensureMetaName("twitter:description", data.desc);
-  ensureMetaName("twitter:image", OG_IMAGE);
+  ensureCanonical(canonicalUrl); ensureMetaName("description", data.desc); ensureMetaName("color-scheme", "light dark");
+  ensureMetaProp("og:title", data.title); ensureMetaProp("og:description", data.desc); ensureMetaProp("og:url", canonicalUrl); ensureMetaProp("og:type", "website"); ensureMetaProp("og:image", OG_IMAGE);
+  ensureMetaName("twitter:card", "summary_large_image"); ensureMetaName("twitter:title", data.title); ensureMetaName("twitter:description", data.desc); ensureMetaName("twitter:image", OG_IMAGE);
 
-  function patchPdfLibStampHighlight(){
+  function rebootAjioSorterV6(){
     if (path !== "/ajio-label-invoice-sorter") return;
-    let tries = 0;
-    const timer = setInterval(function(){
-      tries++;
-      if (!window.PDFLib || !PDFLib.PDFPage || !PDFLib.PDFPage.prototype) { if (tries > 80) clearInterval(timer); return; }
-      const proto = PDFLib.PDFPage.prototype;
-      if (proto.__ajioPlainStampPatchV5) { clearInterval(timer); return; }
-      proto.__ajioPlainStampPatchV5 = true;
-      const originalRectangle = proto.drawRectangle;
-      const originalText = proto.drawText;
-      proto.drawRectangle = function(opts){
-        try { const s=this.getSize?this.getSize():null; if(s && opts && opts.y<s.height*0.09 && opts.height<=55 && opts.width>s.width*0.38 && opts.width<s.width*0.60 && opts.x>s.width*0.40){ return this; } } catch(e) {}
-        return originalRectangle.apply(this, arguments);
-      };
-      function drawTextHighlight(page, text, opts){
-        try{
-          const s=page.getSize?page.getSize():null; if(!s || !opts || typeof text!=="string") return;
-          const x=Number(opts.x||0), y=Number(opts.y||0), size=Number(opts.size||8);
-          const isStampArea=x>s.width*0.24 && y<s.height*0.26;
-          const looks=/^[A-Z0-9][A-Z0-9_\-\/,. +]{2,70}$/i.test(text) || /^D?B?\d{8,16}$/i.test(text);
-          if(!isStampArea || !looks || /^QTY\b/i.test(text)) return;
-          let textW=Math.min(s.width*0.70, Math.max(32, text.length*size*0.56));
-          if(opts.font && opts.font.widthOfTextAtSize) textW=Math.min(s.width*0.70, Math.max(32, opts.font.widthOfTextAtSize(text,size)));
-          originalRectangle.call(page,{x:Math.max(0,x-3),y:Math.max(0,y-2),width:textW+6,height:size+5,color:PDFLib.rgb(1,1,1),opacity:0.97});
-        }catch(e){}
-      }
-      proto.drawText = function(text, opts){
-        try{
-          if(typeof text==="string" && /^QTY\b/i.test(text)) return this;
-          if(typeof text==="string" && (text.indexOf("SKU: ")===0 || text.indexOf("BAG: ")===0)){
-            const s=this.getSize?this.getSize():{width:595,height:842};
-            const isSku=text.indexOf("SKU: ")===0;
-            const cleanText=text.replace(/^SKU:\s*/,"").replace(/^BAG:\s*/,"");
-            const o=Object.assign({},opts||{}); const size=o.size||8;
-            o.x=s.width*0.79; o.y=s.height*0.022+(isSku?size+4:0);
-            drawTextHighlight(this,cleanText,o);
-            return originalText.call(this,cleanText,o);
-          }
-          drawTextHighlight(this,text,opts||{});
-        }catch(e){}
-        return originalText.apply(this,arguments);
-      };
-      clearInterval(timer);
-    },100);
-  }
-
-  function rebootAjioSorterWithSafeValidation(){
-    if (path !== "/ajio-label-invoice-sorter") return;
-    if (window.__ajioSafeValidationRebootV5) return;
-    window.__ajioSafeValidationRebootV5 = true;
+    if (window.__ajioSorterRebootV6) return;
+    window.__ajioSorterRebootV6 = true;
 
     const stampReplacement = `  function stampLabel(page, rec, fontBold, fontRegular){
     const { width, height } = page.getSize();
@@ -146,17 +88,72 @@
   }
 `;
 
+    const analyzeReplacement = `  async function analyzeLabels(pdf, invoiceByAwb){
+    const labels = [], byOrder = new Map(), byAwb = new Map(), duplicates = [];
+    const orderRegex = /^FN\\d{8,}$/i;
+    const awbRegex = /^(?:SF\\d{6,}AJI|\\d{10,16})$/i;
+    function validAwb(v){ v = clean(v).toUpperCase(); return awbRegex.test(v) && !/^0+$/.test(v); }
+    async function detectorValues(canvas){
+      if (!('BarcodeDetector' in window)) return [];
+      try{
+        const formats = await BarcodeDetector.getSupportedFormats();
+        const use = formats.includes('code_128') ? ['code_128'] : formats;
+        const detector = new BarcodeDetector({ formats: use });
+        return (await detector.detect(canvas)).map(c => clean(c.rawValue).toUpperCase()).filter(Boolean);
+      }catch(e){ return []; }
+    }
+    async function tryZones(canvas, zones, regex){
+      for (const z of zones){
+        const v = await decodeBarcodeCanvas(cropCanvas(canvas, z), regex);
+        if (v) return clean(v).toUpperCase();
+      }
+      return '';
+    }
+    const orderZones = [
+      {x:0.18,y:0.405,w:0.78,h:0.135}, {x:0.25,y:0.390,w:0.72,h:0.170},
+      {x:0.00,y:0.370,w:1.00,h:0.210}, {x:0.30,y:0.420,w:0.65,h:0.145},
+      {x:0.10,y:0.385,w:0.86,h:0.190}
+    ];
+    const awbZones = [
+      {x:0.00,y:0.195,w:0.78,h:0.185}, {x:0.00,y:0.220,w:0.93,h:0.175},
+      {x:0.00,y:0.170,w:1.00,h:0.230}
+    ];
+    for (let i=1; i<=pdf.numPages; i++){
+      const page = await pdf.getPage(i);
+      const tc = await page.getTextContent();
+      const text = tc.items.map(item => item.str || '').join(' ').replace(/\\s+/g,' ').trim();
+      let orderId = extractOrderId(text);
+      let awb = extractAwb(text);
+      const canvas = await renderPdfPageToCanvas(page, 4.2);
+      const codes = await detectorValues(canvas);
+      if (!orderId) orderId = codes.find(v => orderRegex.test(v)) || '';
+      if (!awb) awb = codes.find(v => validAwb(v) && !orderRegex.test(v)) || '';
+      if (!orderId) orderId = await tryZones(canvas, orderZones, orderRegex);
+      if (!awb) awb = await tryZones(canvas, awbZones, awbRegex);
+      if (awb && !validAwb(awb)) awb = '';
+      if (!orderId && awb && invoiceByAwb.has(awb)) orderId = invoiceByAwb.get(awb).orderId;
+      const info = { pageIndex:i-1, pageNumber:i, orderId, awb };
+      labels.push(info);
+      addToIndex(byOrder, orderId, info, duplicates, 'Duplicate label order');
+      addToIndex(byAwb, awb, info, duplicates, 'Duplicate label AWB');
+    }
+    return { labels, byOrder, byAwb, duplicates };
+  }
+`;
+
     function patchScriptSource(src){
       let patched = src;
-      const start = patched.indexOf('  function stampLabel(page, rec, fontBold, fontRegular){');
-      const end = patched.indexOf('\n  async function createFinalPdf', start);
+      let start = patched.indexOf('  function stampLabel(page, rec, fontBold, fontRegular){');
+      let end = patched.indexOf('\n  async function createFinalPdf', start);
       if (start >= 0 && end >= 0) patched = patched.slice(0,start) + stampReplacement + patched.slice(end);
-
+      start = patched.indexOf('  async function analyzeLabels(pdf, invoiceByAwb){');
+      end = patched.indexOf('\n  async function analyzeAllLabels', start);
+      if (start >= 0 && end >= 0) patched = patched.slice(0,start) + analyzeReplacement + patched.slice(end);
       patched = patched.replace(
         /function extractAwb\(text\)\{[\s\S]*?\}\n\s*function addToIndex/,
         `function extractAwb(text){
     const u = clean(text).toUpperCase();
-    const m = u.match(/\bAWB(?:\s+NUMBER)?\s*[:\-]?\s*((?:SF\d{6,}AJI)|(?:\d{10,16}))\b/i);
+    const m = u.match(/\\bAWB(?:\\s*(?:NUMBER|NO|#))?\\s*[:\\-]?\\s*((?:SF\\d{6,}AJI)|(?:\\d{10,16}))\\b/i);
     if (!m) return '';
     const awb = clean(m[1]).toUpperCase();
     if (!awb || /^0+$/.test(awb)) return '';
@@ -164,7 +161,6 @@
   }
   function addToIndex`
       );
-
       patched = patched.replace(
         /if \(invoice && label && invoice\.awb && label\.awb && invoice\.awb !== label\.awb\) notes\.push\('AWB mismatch between label and invoice'\);/,
         `if (invoice && label && invoice.awb && label.awb && invoice.awb !== label.awb) notes.push('AWB mismatch between label and invoice');
@@ -188,8 +184,7 @@
     else setTimeout(install, 0);
   }
 
-  patchPdfLibStampHighlight();
-  rebootAjioSorterWithSafeValidation();
+  rebootAjioSorterV6();
 
   (function addLd(){
     try{
