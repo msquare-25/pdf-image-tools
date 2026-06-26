@@ -4,7 +4,7 @@
   const path = (location.pathname || '/').replace(/\/$/, '') || '/';
   const PAGES = {
     '/': { title: 'PDF & Image Tools — Fast, Private, Free', desc: 'All-in-one PDF & image utilities that run entirely in your browser. No uploads.' },
-    '/ajio-label-invoice-sorter': { title: 'AJIO Label Invoice Sorter — Direct Barcode Match', desc: 'AJIO label and invoice matching using label AWB and order barcodes only.' }
+    '/ajio-label-invoice-sorter': { title: 'AJIO Label Invoice Sorter — PDFImageLab', desc: 'Arrange AJIO labels and invoices into a packing-ready PDF with Excel SKU, quantity and forward bag barcode marking.' }
   };
   const data = PAGES[path] || PAGES['/'];
   const canonicalUrl = ORIGIN + (path === '/' ? '/' : path);
@@ -20,7 +20,7 @@
     const only = document.getElementById('onlyMatched');
     if (only) { only.checked = false; const row = only.closest('label'); if (row) row.style.display = 'none'; }
     const note = document.querySelector('.action-box .small.mt-2');
-    if (note) note.textContent = 'Output uses direct label AWB / order barcode matching only. Unmatched label pages are included without guessed SKU/bag data.';
+    if (note) note.textContent = 'Output: label → invoice → label → invoice. Labels without bag barcode are generated without bag barcode marking and a warning is shown before download.';
   }
 
   function installPdfSafety(){
