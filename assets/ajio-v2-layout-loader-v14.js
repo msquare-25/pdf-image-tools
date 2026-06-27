@@ -1,7 +1,7 @@
 (async function(){
   'use strict';
-  window.AJIO_V2_LAYOUT_VERSION='v14-emergency-stable-upload-restored';
-  const source='/assets/ajio-v2-final-v5.js?v=20260626-5';
+  window.AJIO_V2_LAYOUT_VERSION='v14-stable-ex-support';
+  const source='/assets/ajio-v2-final-v5.js?v=20260627-stable-ex-support';
 
   const lineGroups=`function lineGroups(items){
     const p=(items||[]).map(i=>sanitizeSku(i.sku)+(qty(i.qty)>1?' ('+qty(i.qty)+')':'')).filter(Boolean);
@@ -53,6 +53,8 @@
     const res=await fetch(source,{cache:'no-store'});
     if(!res.ok)throw new Error('Cannot load AJIO V2 base engine');
     let code=await res.text();
+    code=code.replace("function extractFn(t){const m=compact(t).match(/FN\\d{8,}/);return m?m[0]:''}","function extractFn(t){const c=compact(t);const m=c.match(/(?:FN|EX)\\d{6,}[A-Z0-9]*/);return m?m[0]:''}");
+    code=code.replace("if(!/^FN\\d{6,}$/i.test(id))continue;","if(!/^(?:FN|EX)\\d{6,}/i.test(id))continue;");
     code=code.replace("invoiceName.textContent=invoiceFiles.length?`Invoice PDF: ${invoiceFiles.length} file(s) selected`:'Invoice PDF: optional / not selected';","invoiceName.textContent=invoiceFiles.length?`Invoice PDF: ${invoiceFiles.length} file(s) selected`:'Invoice PDF: not selected';");
     code=code.replace(/runBtn\.disabled=!\(labelFiles\.length&&excelFiles\.length\)/g,"runBtn.disabled=!(labelFiles.length&&invoiceFiles.length&&excelFiles.length)");
     code=code.replace("setStatus('Upload Label and Excel files. Invoice is optional but recommended.',0);","setStatus('Upload Label, Invoice and Excel files.',0);");
@@ -63,10 +65,10 @@
     code=code.replace(/function stampLabel\(page,row,font\)\{[\s\S]*?\}\nasync function createFinalPdf/,stampLabel+'\nasync function createFinalPdf');
     if(code===before)throw new Error('Stamp layout patch did not apply');
     const s=document.createElement('script');
-    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v14-emergency-runtime.js';
+    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v14-stable-ex-runtime.js';
     document.body.appendChild(s);
     const st=document.getElementById('status');
-    if(st)st.textContent='V14 emergency stable loaded. Upload Label, Invoice and Excel files.';
+    if(st)st.textContent='V14 stable EX support loaded. Upload Label, Invoice and Excel files.';
   }catch(err){
     console.error(err);
     alert('AJIO V2 engine failed to load. Please hard refresh and try again.');
