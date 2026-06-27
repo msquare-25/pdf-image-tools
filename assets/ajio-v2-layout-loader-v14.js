@@ -1,5 +1,73 @@
-(function(){
-  var el=document.createElement('script');
-  el.setAttribute('src','/assets/ajio-v2-layout-loader-stable.js?v=backup');
-  document.head.appendChild(el);
+(async function(){
+  'use strict';
+  window.AJIO_V2_LAYOUT_VERSION='v14-emergency-stable-upload-restored';
+  const source='/assets/ajio-v2-final-v5.js?v=20260626-5';
+  const lineGroups=`function lineGroups(items){
+    const p=(items||[]).map(i=>sanitizeSku(i.sku)+(qty(i.qty)>1?' ('+qty(i.qty)+')':'')).filter(Boolean);
+    const n=p.length;
+    if(n<=1)return p.length?[p]:[];
+    if(n===2)return[[p[0]],[p[1]]];
+    if(n===3)return[[p[0],p[1]],[p[2]]];
+    if(n===4)return[[p[0],p[1]],[p[2],p[3]]];
+    if(n<=6)return[p.slice(0,3),p.slice(3)];
+    if(n<=9)return[p.slice(0,3),p.slice(3,6),p.slice(6)];
+    return[p.slice(0,4),p.slice(4,7),p.slice(7,10)];
+  }`;
+  const stampLabel=`function stampLabel(page,row,font){
+    const {width,height}=page.getSize();
+    let groups=[];
+    let orderLine='';
+    if(row.stampData&&row.confidence!=='UNSAFE'){
+      groups=lineGroups(row.stampData.skuItems).map(g=>g.map(cleanLine).filter(Boolean)).filter(g=>g.length);
+      orderLine=cleanLine(row.bagBarcode || '');
+    }else{
+      groups=[['MANUAL CHECK']];
+      orderLine='';
+    }
+
+    const rightAnchor=width*.935;
+    const minX=width*.30;
+    const bottomBase=height*.052;
+    const topLimit=height*.185;
+    const maxW=rightAnchor-minX;
+    const measure=(t,s)=>font.widthOfTextAtSize(t,s);
+    const lines=groups.map(g=>cleanLine(g.join(' + '))).filter(Boolean).concat(orderLine?[orderLine]:[]).filter(Boolean);
+    let fit=null;
+    for(let size=7.8;size>=3.35;size-=.15){
+      const lh=size+2.7;
+      const w=Math.max(25,...lines.map(t=>measure(t,size)));
+      const h=(lines.length-1)*lh+size;
+      if(w<=maxW && bottomBase+h<=topLimit){fit={lines,size,lh,w,h};break;}
+    }
+    if(!fit){
+      const size=3.3,lh=5.75;
+      fit={lines,size,lh,w:Math.min(maxW,Math.max(25,...lines.map(t=>measure(t,size)))),h:(lines.length-1)*lh+size};
+    }
+    const x=Math.max(minX,rightAnchor-fit.w);
+    const yb=bottomBase;
+    page.drawRectangle({x:x-3,y:yb-2,width:Math.min(maxW,fit.w)+6,height:fit.h+5,color:PDFLib.rgb(1,1,1),opacity:.97});
+    fit.lines.forEach((t,i)=>page.drawText(t,{x,y:yb+(fit.lines.length-1-i)*fit.lh,size:fit.size,font,color:PDFLib.rgb(0,0,0)}));
+  }`;
+  try{
+    const res=await fetch(source,{cache:'no-store'});
+    if(!res.ok)throw new Error('Cannot load AJIO V2 base engine');
+    let code=await res.text();
+    code=code.replace("invoiceName.textContent=invoiceFiles.length?`Invoice PDF: ${invoiceFiles.length} file(s) selected`:'Invoice PDF: optional / not selected';","invoiceName.textContent=invoiceFiles.length?`Invoice PDF: ${invoiceFiles.length} file(s) selected`:'Invoice PDF: not selected';");
+    code=code.replace(/runBtn\.disabled=!\(labelFiles\.length&&excelFiles\.length\)/g,"runBtn.disabled=!(labelFiles.length&&invoiceFiles.length&&excelFiles.length)");
+    code=code.replace("setStatus('Upload Label and Excel files. Invoice is optional but recommended.',0);","setStatus('Upload Label, Invoice and Excel files.',0);");
+    code=code.replace("else setStatus('No invoice PDFs uploaded. Using label + Excel only…',8);","else throw new Error('Invoice PDF is required.');");
+    code=code.replace(/qc=col\(h,\[[^\]]*Confirm Quantity[^\]]*\],17\)/,"qc=col(h,['*Confirm Quantity','Confirm Quantity'],20)");
+    code=code.replace(/function lineGroups\(items\)\{[\s\S]*?\}\nfunction cleanLine/,lineGroups+'\nfunction cleanLine');
+    const before=code;
+    code=code.replace(/function stampLabel\(page,row,font\)\{[\s\S]*?\}\nasync function createFinalPdf/,stampLabel+'\nasync function createFinalPdf');
+    if(code===before)throw new Error('Stamp layout patch did not apply');
+    const s=document.createElement('script');
+    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v14-emergency-runtime.js';
+    document.body.appendChild(s);
+    const st=document.getElementById('status');
+    if(st)st.textContent='V14 emergency stable loaded. Upload Label, Invoice and Excel files.';
+  }catch(err){
+    console.error(err);
+    alert('AJIO V2 engine failed to load. Please hard refresh and try again.');
+  }
 })();
