@@ -1,7 +1,7 @@
 (async function(){
   'use strict';
-  window.AJIO_V2_LAYOUT_VERSION='ex-test-ocr-order-text';
-  const source='/assets/ajio-v2-final-v5.js?v=20260626-5-ex-test-ocr';
+  window.AJIO_V2_LAYOUT_VERSION='ex-test-excel-sku-order-infer';
+  const source='/assets/ajio-v2-final-v5.js?v=20260626-5-ex-test-sku-infer';
   const extractFnPatch=`function extractFn(t){
     let c=compact(t).replace(/EXO/g,'EX0').replace(/FNO/g,'FN0');
     const m=c.match(/(?:FN|EX)[0-9O]{6,}[A-Z0-9]*/);
@@ -29,6 +29,38 @@
     }catch(e){console.warn('OCR label FN failed',e)}
     return'';
   }`;
+  const enrichRowsPatch=`function excelByInvoiceSku(invItems,excelData){
+    const invKeys=(invItems||[]).map(i=>skuKey(i.sku)).filter(Boolean);
+    if(!invKeys.length)return null;
+    const recs=(excelData.records||[]).filter(r=>{
+      const exKeys=(r.skuItems||[]).map(i=>skuKey(i.sku)).filter(Boolean);
+      if(exKeys.length!==invKeys.length)return false;
+      return invKeys.every(k=>exKeys.includes(k));
+    });
+    return recs.length===1?recs[0]:null;
+  }
+  function enrichRows(matches,excelData){return matches.map(m=>{
+    const invItems=m.invoice?(m.invoice.skuItems||[]):[];
+    let matchedOrder=m.matchedOrder||'';
+    let ex=matchedOrder?excelData.byOrder.get(matchedOrder):null;
+    if(!ex&&invItems.length){
+      const bySku=excelByInvoiceSku(invItems,excelData);
+      if(bySku){ex=bySku;matchedOrder=bySku.orderId;}
+    }
+    const fallback=(!ex&&invItems.length&&m.confidence!=='UNSAFE')?{skuItems:invItems,sku:skuText(invItems),bagBarcode:'',source:'invoice'}:null;
+    let status=m.status,notes=[m.reason],skuSource='excel';
+    if(ex){
+      if(m.confidence==='UNSAFE'){m.confidence='EXACT_EXCEL';status='WARN';notes.push('Label/order matched Excel; invoice/customer match missing')}
+      if(!m.matchedOrder&&matchedOrder)notes.push('Order number recovered from unique Excel SKU match');
+      if(!ex.bagBarcode)notes.push('Bag barcode missing; order number will print in barcode line')
+    }else if(fallback){
+      status='WARN';notes.push('Excel order not found; SKU used from invoice, bag barcode missing');skuSource='invoice'
+    }else{
+      status=m.confidence==='UNSAFE'?'ERROR':'WARN';notes.push('Excel order not found; invoice SKU not found');skuSource='missing'
+    }
+    const data=ex||fallback;
+    return{...m,matchedOrder,excel:ex,stampData:data,status,sku:data?data.sku:'',skuItems:data?data.skuItems:[],bagBarcode:data?data.bagBarcode:'',skuSource,notes:notes.join(' | ')}
+  })}`;
   const lineGroups=`function lineGroups(items){
     const p=(items||[]).map(i=>sanitizeSku(i.sku)+(qty(i.qty)>1?' ('+qty(i.qty)+')':'')).filter(Boolean);
     const n=p.length;
@@ -81,6 +113,7 @@
     let code=await res.text();
     code=code.replace("function extractFn(t){const m=compact(t).match(/FN\\d{8,}/);return m?m[0]:''}",extractFnPatch);
     code=code.replace(/async function ocrLabelFn\(page\)\{[\s\S]*?\}\nasync function invoiceRecords/,ocrLabelFnPatch+'\nasync function invoiceRecords');
+    code=code.replace(/function enrichRows\(matches,excelData\)\{[\s\S]*?\}\nfunction sortRows/,enrichRowsPatch+'\nfunction sortRows');
     code=code.replace("if(!/^FN\\d{6,}$/i.test(id))continue;","if(!/^(?:FN|EX)\\d{6,}$/i.test(id))continue;");
     code=code.replace("invoiceName.textContent=invoiceFiles.length?`Invoice PDF: ${invoiceFiles.length} file(s) selected`:'Invoice PDF: optional / not selected';","invoiceName.textContent=invoiceFiles.length?`Invoice PDF: ${invoiceFiles.length} file(s) selected`:'Invoice PDF: not selected';");
     code=code.replace(/runBtn\.disabled=!\(labelFiles\.length&&excelFiles\.length\)/g,"runBtn.disabled=!(labelFiles.length&&invoiceFiles.length&&excelFiles.length)");
@@ -92,10 +125,10 @@
     code=code.replace(/function stampLabel\(page,row,font\)\{[\s\S]*?\}\nasync function createFinalPdf/,stampLabel+'\nasync function createFinalPdf');
     if(code===before)throw new Error('Stamp layout patch did not apply');
     const s=document.createElement('script');
-    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-ex-test-ocr-runtime.js';
+    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-ex-test-sku-infer-runtime.js';
     document.body.appendChild(s);
     const st=document.getElementById('status');
-    if(st)st.textContent='EX OCR test loader loaded. Upload Label, Invoice and Excel files.';
+    if(st)st.textContent='EX Excel-SKU test loader loaded. Upload Label, Invoice and Excel files.';
   }catch(err){
     console.error(err);
     alert('AJIO EX test engine failed to load.');
