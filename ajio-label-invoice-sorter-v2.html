@@ -18,19 +18,19 @@
   </style>
 </head>
 <body>
-<header class="site-header"><div class="container bar"><div class="brand"><a href="/" class="home-link"><span class="logo"></span><span>PDFimageLab</span></a></div><div class="container tool-tabs-wrap"><nav class="tool-tabs"><a href="/ajio-label-invoice-sorter">AJIO Sorter Live</a><a class="active" href="/ajio-label-invoice-sorter-v2">AJIO V2 Final</a></nav></div></div></header>
+<header class="site-header"><div class="container bar"><div class="brand"><a href="/" class="home-link"><span class="logo"></span><span>PDFimageLab</span></a></div><div class="container tool-tabs-wrap"><nav class="tool-tabs"><a href="/ajio-label-invoice-sorter">AJIO Sorter Live</a><a class="active" href="/ajio-label-invoice-sorter-v2">AJIO EX Test</a></nav></div></div></header>
 <main><div class="wrap"><main class="panel">
-  <p class="ajio-badge">Hidden Test Page · AJIO Sorter V2</p>
-  <h1 class="page-title">AJIO V2: Customer Match + Final PDF</h1>
-  <p class="sub">No sequence fallback. Label + Excel works without invoice when label order number can be read. Invoice is optional but recommended for customer-text matching and invoice pages.</p>
+  <p class="ajio-badge">Hidden Test Page · AJIO EX Order Test</p>
+  <h1 class="page-title">AJIO EX Test: Same Stable Stamping + EX Order ID</h1>
+  <p class="sub">Live page is not changed. This page only tests whether EX order IDs can be read like FN order IDs.</p>
   <section class="card mt-3"><div class="v2-grid">
     <div><h2 class="title">1. Label PDF</h2><label for="labelPdf" class="btn gradient big">Label PDF</label><input id="labelPdf" type="file" accept="application/pdf,.pdf" multiple hidden /><div class="v2-list"><div class="v2-pill" id="labelName">Label PDF: not selected</div></div></div>
-    <div><h2 class="title">2. Invoice PDF</h2><label for="invoicePdf" class="btn gradient big">Invoice PDF</label><input id="invoicePdf" type="file" accept="application/pdf,.pdf" multiple hidden /><div class="v2-list"><div class="v2-pill" id="invoiceName">Invoice PDF: optional / not selected</div></div></div>
+    <div><h2 class="title">2. Invoice PDF</h2><label for="invoicePdf" class="btn gradient big">Invoice PDF</label><input id="invoicePdf" type="file" accept="application/pdf,.pdf" multiple hidden /><div class="v2-list"><div class="v2-pill" id="invoiceName">Invoice PDF: not selected</div></div></div>
     <div><h2 class="title">3. AJIO Excel</h2><label for="excelFile" class="btn gradient big">AJIO Excel</label><input id="excelFile" type="file" accept=".xlsx,.xls,.csv" multiple hidden /><div class="v2-list"><div class="v2-pill" id="excelName">Excel: not selected</div></div></div>
-    <div><h2 class="title">4. Generate</h2><button id="runBtn" class="btn" disabled>Generate V2 Final PDF</button><button id="csvBtn" class="btn subtle" disabled>Download CSV</button><button id="clearBtn" class="btn subtle">Clear</button><div id="status" class="small mt-2">Upload Label and Excel files. Invoice is optional but recommended.</div><div class="v2-progress"><span id="progressBar"></span></div></div>
+    <div><h2 class="title">4. Generate</h2><button id="runBtn" class="btn" disabled>Generate EX Test PDF</button><button id="csvBtn" class="btn subtle" disabled>Download CSV</button><button id="clearBtn" class="btn subtle">Clear</button><div id="status" class="small mt-2">Upload Label, Invoice and Excel files.</div><div class="v2-progress"><span id="progressBar"></span></div></div>
   </div></section>
-  <section class="card mt-3" id="reportBox" style="display:none"><h2 class="title">V2 Report</h2><div class="v2-report-grid" id="statGrid"></div><div class="small muted" id="reportNote"></div><div class="v2-table-wrap"><table class="v2-table"><thead><tr><th>Status</th><th>Confidence</th><th>Order</th><th>SKU Source</th><th>SKU</th><th>Bag Barcode</th><th>Label File</th><th>Label Page</th><th>Invoice</th><th>Score</th><th>Second</th><th>Common</th><th>Reason</th><th>Label Customer Text</th></tr></thead><tbody id="reportRows"></tbody></table></div></section>
+  <section class="card mt-3" id="reportBox" style="display:none"><h2 class="title">EX Test Report</h2><div class="v2-report-grid" id="statGrid"></div><div class="small muted" id="reportNote"></div><div class="v2-table-wrap"><table class="v2-table"><thead><tr><th>Status</th><th>Confidence</th><th>Order</th><th>SKU Source</th><th>SKU</th><th>Bag Barcode</th><th>Label File</th><th>Label Page</th><th>Invoice</th><th>Score</th><th>Second</th><th>Common</th><th>Reason</th><th>Label Customer Text</th></tr></thead><tbody id="reportRows"></tbody></table></div></section>
 </main></div></main>
-<script src="/assets/ajio-v2-layout-loader-v8.js?v=20260626-9-horizontal"></script>
+<script src="/assets/ajio-v2-layout-loader-ex-test.js?v=20260627-ex-test-1"></script>
 </body>
 </html>
