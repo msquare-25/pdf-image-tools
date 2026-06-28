@@ -1,7 +1,34 @@
 (async function(){
   'use strict';
-  window.AJIO_V2_LAYOUT_VERSION='ex-test-from-stable';
-  const source='/assets/ajio-v2-final-v5.js?v=20260626-5-ex-test';
+  window.AJIO_V2_LAYOUT_VERSION='ex-test-ocr-order-text';
+  const source='/assets/ajio-v2-final-v5.js?v=20260626-5-ex-test-ocr';
+  const extractFnPatch=`function extractFn(t){
+    let c=compact(t).replace(/EXO/g,'EX0').replace(/FNO/g,'FN0');
+    const m=c.match(/(?:FN|EX)[0-9O]{6,}[A-Z0-9]*/);
+    if(!m)return'';
+    const v=m[0];
+    return v.slice(0,2)+v.slice(2).replace(/O/g,'0');
+  }`;
+  const ocrLabelFnPatch=`async function ocrLabelFn(page){
+    try{
+      const worker=await getOcrWorker();
+      const canvas=await renderPage(page,5.5);
+      const zones=[
+        {x:.43,y:.525,w:.34,h:.055},
+        {x:.38,y:.505,w:.45,h:.08},
+        {x:.14,y:.455,w:.82,h:.13},
+        {x:.25,y:.49,w:.62,h:.07},
+        {x:.22,y:.515,w:.70,h:.055}
+      ];
+      for(const z of zones){
+        const c=prepOcrCanvas(cropCanvas(canvas,z));
+        const res=await worker.recognize(c);
+        const fn=extractFn(res.data.text||'');
+        if(fn)return fn;
+      }
+    }catch(e){console.warn('OCR label FN failed',e)}
+    return'';
+  }`;
   const lineGroups=`function lineGroups(items){
     const p=(items||[]).map(i=>sanitizeSku(i.sku)+(qty(i.qty)>1?' ('+qty(i.qty)+')':'')).filter(Boolean);
     const n=p.length;
@@ -52,7 +79,8 @@
     const res=await fetch(source,{cache:'no-store'});
     if(!res.ok)throw new Error('Cannot load AJIO V2 base engine');
     let code=await res.text();
-    code=code.replace("function extractFn(t){const m=compact(t).match(/FN\\d{8,}/);return m?m[0]:''}","function extractFn(t){const c=compact(t);const m=c.match(/(?:FN|EX)\\d{6,}[A-Z0-9]*/);return m?m[0]:''}");
+    code=code.replace("function extractFn(t){const m=compact(t).match(/FN\\d{8,}/);return m?m[0]:''}",extractFnPatch);
+    code=code.replace(/async function ocrLabelFn\(page\)\{[\s\S]*?\}\nasync function invoiceRecords/,ocrLabelFnPatch+'\nasync function invoiceRecords');
     code=code.replace("if(!/^FN\\d{6,}$/i.test(id))continue;","if(!/^(?:FN|EX)\\d{6,}$/i.test(id))continue;");
     code=code.replace("invoiceName.textContent=invoiceFiles.length?`Invoice PDF: ${invoiceFiles.length} file(s) selected`:'Invoice PDF: optional / not selected';","invoiceName.textContent=invoiceFiles.length?`Invoice PDF: ${invoiceFiles.length} file(s) selected`:'Invoice PDF: not selected';");
     code=code.replace(/runBtn\.disabled=!\(labelFiles\.length&&excelFiles\.length\)/g,"runBtn.disabled=!(labelFiles.length&&invoiceFiles.length&&excelFiles.length)");
@@ -64,10 +92,10 @@
     code=code.replace(/function stampLabel\(page,row,font\)\{[\s\S]*?\}\nasync function createFinalPdf/,stampLabel+'\nasync function createFinalPdf');
     if(code===before)throw new Error('Stamp layout patch did not apply');
     const s=document.createElement('script');
-    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-ex-test-runtime.js';
+    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-ex-test-ocr-runtime.js';
     document.body.appendChild(s);
     const st=document.getElementById('status');
-    if(st)st.textContent='EX test loader loaded. Upload Label, Invoice and Excel files.';
+    if(st)st.textContent='EX OCR test loader loaded. Upload Label, Invoice and Excel files.';
   }catch(err){
     console.error(err);
     alert('AJIO EX test engine failed to load.');
