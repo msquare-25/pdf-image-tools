@@ -1,7 +1,7 @@
 (async function(){
   'use strict';
-  window.AJIO_V2_LAYOUT_VERSION='ex-test-generic-order-multipage-invoice';
-  const source='/assets/ajio-v2-final-v5.js?v=20260626-5-generic-order-multipage';
+  window.AJIO_V2_LAYOUT_VERSION='ex-test-sku-courier-sort-amount';
+  const source='/assets/ajio-v2-final-v5.js?v=20260626-5-sku-courier-sort-amount';
 
   const extractFnPatch=`function extractFn(t){
     const normalizeOrderId=v=>{
@@ -21,6 +21,18 @@
     if(m)return normalizeOrderId(m[0]);
     m=c.match(/(?!SF)[A-Z]{2,4}[0-9O]{6,}/);
     return m?normalizeOrderId(m[0]):'';
+  }`;
+
+  const collectAmountPatch=`function collectAmount(t){
+    const u=normalize(t);
+    let m=u.match(/COLLECT\\s*(?:RS)?\\s*(\\d+(?:\\.\\d+)?)/);
+    if(m)return m[1];
+    m=u.match(/COLLECT[\\s\\S]{0,90}\\b(?:COD|NONCOD)\\b\\s*(?:RS)?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:RS)?/);
+    if(m)return m[1];
+    m=u.match(/TOTAL\\s+INVOICE\\s+VALUE\\s+(\\d+(?:\\.\\d+)?)/);
+    if(m)return m[1];
+    m=u.match(/TOTAL\\s*:?\\s*\\d+\\s+[\\d.]+\\s+[\\d.]+\\s+[\\d.]+\\s+(\\d+(?:\\.\\d+)?)/);
+    return m?m[1]:'';
   }`;
 
   const invoiceRecordsPatch=`async function invoiceRecords(files){
@@ -84,6 +96,27 @@
     }
     const data=ex||fallback;
     return{...m,matchedOrder,excel:ex,stampData:data,status,sku:data?data.sku:'',skuItems:data?data.skuItems:[],bagBarcode:data?data.bagBarcode:'',skuSource,notes:notes.join(' | ')}
+  })}`;
+
+  const sortRowsPatch=`function courierCode(row){
+    const t=normalize(((row.label&&row.label.text)||'')+' '+((row.invoice&&row.invoice.text)||''));
+    if(/SHADOWFAX/.test(t)||/SHIPMENT\\s*#\\s*S\\b/.test(t))return'S';
+    if(/XPRESSBEES|XPRESS/.test(t)||/SHIPMENT\\s*#\\s*X\\b/.test(t))return'X';
+    if(/DELHIVERY/.test(t)||/SHIPMENT\\s*#\\s*D\\b/.test(t))return'D';
+    if(/BLUEDART|BLUE\\s*DART/.test(t)||/SHIPMENT\\s*#\\s*B\\b/.test(t))return'B';
+    return'Z';
+  }
+  function courierRank(row){const c=courierCode(row);return {S:0,X:1,D:2,B:3}[c]??9}
+  function isComboRow(row){const items=row.skuItems||[];return items.length>1||items.some(i=>qty(i.qty)>1)}
+  function sortSkuText(row){return(row.skuItems||[]).map(i=>sanitizeSku(i.sku)).filter(Boolean).join(' + ')||sanitizeSku(row.sku||'')}
+  function sortRows(rows){return rows.slice().sort((a,b)=>{
+    const ga=!a.sku?3:(isComboRow(a)?2:0),gb=!b.sku?3:(isComboRow(b)?2:0);
+    if(ga!==gb)return ga-gb;
+    const sa=sortSkuText(a),sb=sortSkuText(b);
+    const skuCmp=coll.compare(sa,sb);if(skuCmp)return skuCmp;
+    const ca=courierRank(a),cb=courierRank(b);if(ca!==cb)return ca-cb;
+    const bagCmp=coll.compare(a.bagBarcode||'',b.bagBarcode||'');if(bagCmp)return bagCmp;
+    return coll.compare(a.matchedOrder||'',b.matchedOrder||'')
   })}`;
 
   const createFinalPdfPatch=`async function createFinalPdf(rows){
@@ -160,8 +193,10 @@
     if(!res.ok)throw new Error('Cannot load AJIO V2 base engine');
     let code=await res.text();
     code=code.replace("function extractFn(t){const m=compact(t).match(/FN\\d{8,}/);return m?m[0]:''}",extractFnPatch);
+    code=code.replace(/function collectAmount\(t\)\{[\s\S]*?\}\nfunction paymentType/,collectAmountPatch+'\nfunction paymentType');
     code=code.replace(/async function invoiceRecords\(files\)\{[\s\S]*?\}\nasync function labelRecords/,invoiceRecordsPatch+'\nasync function labelRecords');
     code=code.replace(/function enrichRows\(matches,excelData\)\{[\s\S]*?\}\nfunction sortRows/,enrichRowsPatch+'\nfunction sortRows');
+    code=code.replace(/function sortRows\(rows\)\{[\s\S]*?\}\nfunction lineGroups/,sortRowsPatch+'\nfunction lineGroups');
     code=code.replace("if(!/^FN\\d{6,}$/i.test(id))continue;","if(!id||id==='-'||id==='NA'||id==='N/A'||!/^[A-Z0-9]{6,}$/i.test(id)||!/[A-Z]/.test(id)||!/\\d/.test(id))continue;");
     code=code.replace("invoiceName.textContent=invoiceFiles.length?`Invoice PDF: ${invoiceFiles.length} file(s) selected`:'Invoice PDF: optional / not selected';","invoiceName.textContent=invoiceFiles.length?`Invoice PDF: ${invoiceFiles.length} file(s) selected`:'Invoice PDF: not selected';");
     code=code.replace(/runBtn\.disabled=!\(labelFiles\.length&&excelFiles\.length\)/g,"runBtn.disabled=!(labelFiles.length&&invoiceFiles.length&&excelFiles.length)");
@@ -176,12 +211,12 @@
     code=code.replace(/async function createFinalPdf\(rows\)\{[\s\S]*?\}\nfunction show/,createFinalPdfPatch+'\nfunction show');
     if(code===beforePdf)throw new Error('Multi-page invoice PDF patch did not apply');
     const s=document.createElement('script');
-    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-generic-order-multipage-runtime.js';
+    s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-sku-courier-sort-amount-runtime.js';
     document.body.appendChild(s);
     const st=document.getElementById('status');
-    if(st)st.textContent='Generic order + multi-page invoice test loaded. Upload Label, Invoice and Excel files.';
+    if(st)st.textContent='SKU A-Z + courier sort test loaded. Upload Label, Invoice and Excel files.';
   }catch(err){
     console.error(err);
-    alert('AJIO generic order test engine failed to load.');
+    alert('AJIO SKU/courier sort test engine failed to load.');
   }
 })();
