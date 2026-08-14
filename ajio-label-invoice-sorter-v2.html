@@ -20,9 +20,9 @@
 <body>
 <header class="site-header"><div class="container bar"><div class="brand"><a href="/" class="home-link"><span class="logo"></span><span>PDFimageLab</span></a></div><div class="container tool-tabs-wrap"><nav class="tool-tabs"><a href="/ajio-label-invoice-sorter">AJIO Sorter Live</a><a class="active" href="/ajio-label-invoice-sorter-v2">AJIO V2 Test</a></nav></div></div></header>
 <main><div class="wrap"><main class="panel">
-  <p class="ajio-badge">Hidden Test Page · Generic Order + Multi-page Invoice Test</p>
+  <p class="ajio-badge">Hidden Test Page · Generic Order + Robust Invoice Grouping Test</p>
   <h1 class="page-title">AJIO V2 Test: Generic Order ID + Multi-page Invoices</h1>
-  <p class="sub">Live page is not changed. This page tests ORDER NUMBER / Order# based IDs such as FN, EX or future AJIO series, plus invoice page grouping and SKU/courier/quantity sorting.</p>
+  <p class="sub">Live page is not changed. This page tests ORDER NUMBER / Order# based IDs such as FN, EX or future AJIO series, robust invoice page grouping, and SKU/courier/quantity sorting.</p>
   <section class="card mt-3"><div class="v2-grid">
     <div><h2 class="title">1. Label PDF</h2><label for="labelPdf" class="btn gradient big">Label PDF</label><input id="labelPdf" type="file" accept="application/pdf,.pdf" multiple hidden /><div class="v2-list"><div class="v2-pill" id="labelName">Label PDF: not selected</div></div></div>
     <div><h2 class="title">2. Invoice PDF</h2><label for="invoicePdf" class="btn gradient big">Invoice PDF</label><input id="invoicePdf" type="file" accept="application/pdf,.pdf" multiple hidden /><div class="v2-list"><div class="v2-pill" id="invoiceName">Invoice PDF: not selected</div></div></div>
@@ -31,6 +31,6 @@
   </div></section>
   <section class="card mt-3" id="reportBox" style="display:none"><h2 class="title">V2 Test Report</h2><div class="v2-report-grid" id="statGrid"></div><div class="small muted" id="reportNote"></div><div class="v2-table-wrap"><table class="v2-table"><thead><tr><th>Status</th><th>Confidence</th><th>Order</th><th>SKU Source</th><th>SKU</th><th>Bag Barcode</th><th>Label File</th><th>Label Page</th><th>Invoice</th><th>Score</th><th>Second</th><th>Common</th><th>Reason</th><th>Label Customer Text</th></tr></thead><tbody id="reportRows"></tbody></table></div></section>
 </main></div></main>
-<script src="/assets/ajio-v2-layout-loader-ex-test.js?v=20260813-v2-qty-sort-1"></script>
+<script src="/assets/ajio-v2-layout-loader-ex-test.js?v=20260814-robust-invoice-grouping-1"></script>
 </body>
 </html>
