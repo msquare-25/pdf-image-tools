@@ -1,7 +1,7 @@
 (async function(){
 'use strict';
-window.AJIO_V2_LAYOUT_VERSION='v2-test-generic-order-sku-courier-qty';
-const source='/assets/ajio-v2-final-v5.js?v=20260813-v2-qty-sort';
+window.AJIO_V2_LAYOUT_VERSION='v2-test-robust-invoice-grouping-qty-sort';
+const source='/assets/ajio-v2-final-v5.js?v=20260814-robust-invoice-grouping';
 const extractFnPatch=`function extractFn(t){
   const fix=v=>{let s=clean(v).toUpperCase().replace(/[\\u2013\\u2014]/g,'-').replace(/[^A-Z0-9]/g,'');s=s.replace(/^(ORDERNUMBER|ORDERNO|ORDER)/,'');const m=s.match(/^([A-Z]{1,8})([0-9O]{4,})/);if(!m)return'';if(m[1]==='AWB'||m[1]==='SF')return'';return m[1]+m[2].replace(/O/g,'0')};
   const raw=clean(t).toUpperCase().replace(/[\\u2013\\u2014]/g,'-');
@@ -15,15 +15,16 @@ const collectAmountPatch=`function collectAmount(t){
   m=u.match(/TOTAL\\s*:?\\s*\\d+\\s+[\\d.]+\\s+[\\d.]+\\s+[\\d.]+\\s+(\\d+(?:\\.\\d+)?)/);return m?m[1]:'';
 }`;
 const invoiceRecordsPatch=`async function invoiceRecords(files){
-  const pages=await pageTexts(files,'Invoice',8,30),out=[];
+  const pages=await pageTexts(files,'Invoice',8,30);
+  const out=[];
+  const isStart=p=>/Tax\\s*Invoice\\s*No\\s*:/i.test(p.text)||(/GSTIN\\s*:/i.test(p.text)&&/Original\\s+for\\s+Recipient/i.test(p.text));
   for(let i=0;i<pages.length;i++){
-    const pg=pages[i],txt=pg.text;
-    const pageOf=(txt.match(/Page\\s+(\\d+)\\s+of\\s+(\\d+)/i)||[]);
-    if(pageOf[1]&&Number(pageOf[1])>1)continue;
-    let group=[pg];
-    const total=Number(pageOf[2]||1);
-    for(let k=1;k<total && pages[i+k] && pages[i+k].source===pg.source;k++)group.push(pages[i+k]);
-    const text=group.map(p=>p.text).join(' '),fn=extractFn(text),awb=extractAwbStrict(text)||extractAwbCandidate(text),skuItems=invoiceSkuItems(text);
+    const pg=pages[i];
+    if(!isStart(pg))continue;
+    const group=[pg];
+    for(let j=i+1;j<pages.length&&pages[j].source===pg.source&&!isStart(pages[j]);j++)group.push(pages[j]);
+    const text=group.map(p=>p.text).join(' ');
+    const fn=extractFn(text),awb=extractAwbStrict(text)||extractAwbCandidate(text),skuItems=invoiceSkuItems(text);
     out.push({file:pg.file,source:pg.source,page:pg.page,pageIndex:pg.pageIndex,invoicePages:group.map(p=>({file:p.file,source:p.source,page:p.page,pageIndex:p.pageIndex})),text,fn,awb,skuItems,sku:skuText(skuItems),profile:profile(text,'invoice')});
   }
   return out;
@@ -82,6 +83,6 @@ try{
  const stamp=`function stampLabel(page,row,font){const {width,height}=page.getSize();let groups=[],orderLine='';if(row.stampData&&row.confidence!=='UNSAFE'){groups=lineGroups(row.stampData.skuItems).map(g=>g.map(cleanLine).filter(Boolean)).filter(g=>g.length);orderLine=cleanLine(row.bagBarcode||'')}else{groups=[['MANUAL CHECK']];orderLine=''}const rightAnchor=width*.935,minX=width*.30,bottomBase=height*.052,topLimit=height*.185,maxW=rightAnchor-minX,measure=(t,s)=>font.widthOfTextAtSize(t,s);const lines=groups.map(g=>cleanLine(g.join(' + '))).filter(Boolean).concat(orderLine?[orderLine]:[]).filter(Boolean);let fit=null;for(let size=7.8;size>=3.35;size-=.15){const lh=size+2.7,w=Math.max(25,...lines.map(t=>measure(t,size))),h=(lines.length-1)*lh+size;if(w<=maxW&&bottomBase+h<=topLimit){fit={lines,size,lh,w,h};break}}if(!fit){const size=3.3,lh=5.75;fit={lines,size,lh,w:Math.min(maxW,Math.max(25,...lines.map(t=>measure(t,size)))),h:(lines.length-1)*lh+size}}const x=Math.max(minX,rightAnchor-fit.w),yb=bottomBase;page.drawRectangle({x:x-3,y:yb-2,width:Math.min(maxW,fit.w)+6,height:fit.h+5,color:PDFLib.rgb(1,1,1),opacity:.97});fit.lines.forEach((t,i)=>page.drawText(t,{x,y:yb+(fit.lines.length-1-i)*fit.lh,size:fit.size,font,color:PDFLib.rgb(0,0,0)}))}`;
  code=code.replace(/function stampLabel\(page,row,font\)\{[\s\S]*?\}\nasync function createFinalPdf/,stamp+'\nasync function createFinalPdf');
  code=code.replace(/async function createFinalPdf\(rows\)\{[\s\S]*?\}\nfunction show/,createFinalPdfPatch+'\nfunction show');
- const s=document.createElement('script');s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v2-test-runtime.js';document.body.appendChild(s);const st=document.getElementById('status');if(st)st.textContent='V2 qty sort test loaded. Upload Label, Invoice and Excel files.';
+ const s=document.createElement('script');s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v2-test-robust-invoice-runtime.js';document.body.appendChild(s);const st=document.getElementById('status');if(st)st.textContent='V2 robust invoice grouping test loaded. Upload Label, Invoice and Excel files.';
 }catch(err){console.error(err);alert('AJIO V2 test engine failed to load.');}
 })();
