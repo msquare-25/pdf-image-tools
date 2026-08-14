@@ -1,7 +1,7 @@
 (async function(){
 'use strict';
-window.AJIO_V2_LAYOUT_VERSION='v2-test-robust-invoice-grouping-qty-sort';
-const source='/assets/ajio-v2-final-v5.js?v=20260814-robust-invoice-grouping';
+window.AJIO_V2_LAYOUT_VERSION='v2-test-manual-leftover-retry';
+const source='/assets/ajio-v2-final-v5.js?v=20260814-manual-leftover-retry';
 const extractFnPatch=`function extractFn(t){
   const fix=v=>{let s=clean(v).toUpperCase().replace(/[\\u2013\\u2014]/g,'-').replace(/[^A-Z0-9]/g,'');s=s.replace(/^(ORDERNUMBER|ORDERNO|ORDER)/,'');const m=s.match(/^([A-Z]{1,8})([0-9O]{4,})/);if(!m)return'';if(m[1]==='AWB'||m[1]==='SF')return'';return m[1]+m[2].replace(/O/g,'0')};
   const raw=clean(t).toUpperCase().replace(/[\\u2013\\u2014]/g,'-');
@@ -29,6 +29,37 @@ const invoiceRecordsPatch=`async function invoiceRecords(files){
   }
   return out;
 }`;
+const retryManualMatchesPatch=`function retryCourierText(t){const u=normalize(t);if(/SHADOWFAX/.test(u)||/SHIPMENT\\s*#\\s*S\\b/.test(u))return'S';if(/XPRESSBEES|XPRESS/.test(u)||/SHIPMENT\\s*#\\s*X\\b/.test(u))return'X';if(/DELHIVERY/.test(u)||/SHIPMENT\\s*#\\s*D\\b/.test(u))return'D';if(/BLUEDART|BLUE\\s*DART/.test(u)||/SHIPMENT\\s*#\\s*B\\b/.test(u))return'B';return''}
+function retryInvoiceKey(inv){return (inv.source||0)+':'+(inv.pageIndex||0)}
+function retryNum(v){const n=Number(String(v||'').replace(/[^0-9.]/g,''));return Number.isFinite(n)?n:0}
+function retryManualMatches(matches,invoices,excelData){
+  const used=new Set();
+  matches.forEach(m=>{if(m.invoice&&m.confidence!=='UNSAFE')used.add(retryInvoiceKey(m.invoice))});
+  return matches.map(m=>{
+    if(m.confidence!=='UNSAFE'||m.invoice)return m;
+    const label=m.label, lp=label.profile||{}, lPins=lp.pins||[], lCourier=retryCourierText(label.text||''), lPay=lp.pay||'', lAmt=retryNum(lp.amount);
+    const ranked=invoices.filter(inv=>!used.has(retryInvoiceKey(inv))).map(inv=>{
+      const ip=inv.profile||{}, pinOk=(ip.pins||[]).some(p=>lPins.includes(p));
+      const nameOk=!!(lp.name&&ip.full&&ip.full.includes(lp.name));
+      const cov=coverage(lp.tokens||new Set(),ip.fullTokens||new Set());
+      const commonUseful=cov.list.filter(x=>!/^\\d{6}$/.test(x)&&x!==lp.name).length;
+      const iCourier=retryCourierText(inv.text||''), courierOk=!!(lCourier&&iCourier&&lCourier===iCourier);
+      const payOk=!!(lPay&&ip.pay&&lPay===ip.pay);
+      const iAmt=retryNum(ip.amount), amountOk=!!(lAmt>0&&iAmt>0&&Math.abs(lAmt-iAmt)<=0.75);
+      let score=0;if(pinOk)score+=35;if(nameOk)score+=25;score+=Math.min(32,cov.count*8);if(commonUseful>=2)score+=10;if(courierOk)score+=12;if(payOk)score+=6;if(amountOk)score+=22;if(label.awb&&inv.awb&&label.awb===inv.awb)score+=45;
+      const safe=pinOk&&nameOk&&cov.count>=3&&(commonUseful>=2||amountOk)&&(courierOk||payOk||amountOk);
+      const parts=[];if(pinOk)parts.push('pincode');if(nameOk)parts.push('name');parts.push('common '+cov.count);if(courierOk)parts.push('courier');if(payOk)parts.push('payment');if(amountOk)parts.push('amount');
+      return{inv,score,safe,common:cov.list.slice(0,16).join(' '),parts:parts.join(' + ')}
+    }).sort((a,b)=>b.score-a.score);
+    const best=ranked[0],second=ranked[1];
+    const safeCount=ranked.filter(x=>x.safe&&x.score>=70).length;
+    if(best&&best.safe&&best.score>=70&&((best.score-(second?second.score:0))>=12||safeCount===1)){
+      used.add(retryInvoiceKey(best.inv));
+      return{...m,invoice:best.inv,matchedOrder:best.inv.fn||m.matchedOrder,confidence:'MANUAL_RETRY_VERIFIED',status:'WARN',score:best.score,second:second?second.score:0,common:best.common,reason:'Manual-check leftover matched unused invoice: '+best.parts};
+    }
+    return m;
+  })
+}`;
 const enrichRowsPatch=`function excelByInvoiceSku(invItems,excelData){
   const inv=(invItems||[]).map(i=>skuKey(i.sku)).filter(Boolean);if(!inv.length)return null;
   const recs=(excelData.records||[]).filter(r=>{const ex=(r.skuItems||[]).map(i=>skuKey(i.sku)).filter(Boolean);return ex.length===inv.length&&inv.every(k=>ex.includes(k))});
@@ -40,7 +71,7 @@ function enrichRows(matches,excelData){return matches.map(m=>{
   if(!ex&&invItems.length){const bySku=excelByInvoiceSku(invItems,excelData);if(bySku){ex=bySku;matchedOrder=bySku.orderId;}}
   const fallback=(!ex&&invItems.length&&m.confidence!=='UNSAFE')?{skuItems:invItems,sku:skuText(invItems),bagBarcode:'',source:'invoice'}:null;
   let status=m.status,notes=[m.reason],skuSource='excel';
-  if(ex){if(m.confidence==='UNSAFE'){m.confidence='EXACT_EXCEL';status='WARN';notes.push('Label/order matched Excel; invoice/customer match missing')}if(m.invoice&&m.invoice.fn&&matchedOrder===m.invoice.fn&&!m.matchedOrder)notes.push('Order number recovered from invoice ORDER NUMBER');if(!m.matchedOrder&&matchedOrder)notes.push('Order number recovered from unique Excel SKU match');if(!ex.bagBarcode)notes.push('Bag barcode missing')}
+  if(ex){if(m.confidence==='UNSAFE'){m.confidence='EXACT_EXCEL';status='WARN';notes.push('Label/order matched Excel; invoice/customer match missing')}if(m.invoice&&m.invoice.fn&&matchedOrder===m.invoice.fn&&!m.matchedOrder)notes.push('Order number recovered from invoice ORDER NUMBER');if(!m.matchedOrder&&matchedOrder)notes.push('Order number recovered from unique Excel SKU match');if(m.confidence==='MANUAL_RETRY_VERIFIED')notes.push('Manual-check leftover matched by name + address + pincode against unused invoice');if(!ex.bagBarcode)notes.push('Bag barcode missing')}
   else if(fallback){status='WARN';notes.push('Excel order not found; SKU used from invoice, bag barcode missing');skuSource='invoice'}
   else{status=m.confidence==='UNSAFE'?'ERROR':'WARN';notes.push('Excel order not found; invoice SKU not found');skuSource='missing'}
   const data=ex||fallback;return{...m,matchedOrder,excel:ex,stampData:data,status,sku:data?data.sku:'',skuItems:data?data.skuItems:[],bagBarcode:data?data.bagBarcode:'',skuSource,notes:notes.join(' | ')}
@@ -71,6 +102,7 @@ try{
  code=code.replace("function extractFn(t){const m=compact(t).match(/FN\\d{8,}/);return m?m[0]:''}",extractFnPatch);
  code=code.replace(/function collectAmount\(t\)\{[\s\S]*?\}\nfunction paymentType/,collectAmountPatch+'\nfunction paymentType');
  code=code.replace(/async function invoiceRecords\(files\)\{[\s\S]*?\}\nasync function labelRecords/,invoiceRecordsPatch+'\nasync function labelRecords');
+ code=code.replace(/function findHeaderIndex/,retryManualMatchesPatch+'\nfunction findHeaderIndex');
  code=code.replace(/function enrichRows\(matches,excelData\)\{[\s\S]*?\}\nfunction sortRows/,enrichRowsPatch+'\nfunction sortRows');
  code=code.replace(/function sortRows\(rows\)\{[\s\S]*?\}\nfunction lineGroups/,sortRowsPatch+'\nfunction lineGroups');
  code=code.replace(/function lineGroups\(items\)\{[\s\S]*?\}\nfunction cleanLine/,lineGroupsPatch+'\nfunction cleanLine');
@@ -80,9 +112,10 @@ try{
  code=code.replace("setStatus('Upload Label and Excel files. Invoice is optional but recommended.',0);","setStatus('Upload Label, Invoice and Excel files.',0);");
  code=code.replace("else setStatus('No invoice PDFs uploaded. Using label + Excel only…',8);","else throw new Error('Invoice PDF is required.');");
  code=code.replace(/qc=col\(h,\[[^\]]*Confirm Quantity[^\]]*\],17\)/,"qc=col(h,['*Confirm Quantity','Confirm Quantity'],20)");
+ code=code.replace("const sorted=sortRows(enrichRows(matchLabels(labels,invoices,excelData),excelData));","const sorted=sortRows(enrichRows(retryManualMatches(matchLabels(labels,invoices,excelData),invoices,excelData),excelData));");
  const stamp=`function stampLabel(page,row,font){const {width,height}=page.getSize();let groups=[],orderLine='';if(row.stampData&&row.confidence!=='UNSAFE'){groups=lineGroups(row.stampData.skuItems).map(g=>g.map(cleanLine).filter(Boolean)).filter(g=>g.length);orderLine=cleanLine(row.bagBarcode||'')}else{groups=[['MANUAL CHECK']];orderLine=''}const rightAnchor=width*.935,minX=width*.30,bottomBase=height*.052,topLimit=height*.185,maxW=rightAnchor-minX,measure=(t,s)=>font.widthOfTextAtSize(t,s);const lines=groups.map(g=>cleanLine(g.join(' + '))).filter(Boolean).concat(orderLine?[orderLine]:[]).filter(Boolean);let fit=null;for(let size=7.8;size>=3.35;size-=.15){const lh=size+2.7,w=Math.max(25,...lines.map(t=>measure(t,size))),h=(lines.length-1)*lh+size;if(w<=maxW&&bottomBase+h<=topLimit){fit={lines,size,lh,w,h};break}}if(!fit){const size=3.3,lh=5.75;fit={lines,size,lh,w:Math.min(maxW,Math.max(25,...lines.map(t=>measure(t,size)))),h:(lines.length-1)*lh+size}}const x=Math.max(minX,rightAnchor-fit.w),yb=bottomBase;page.drawRectangle({x:x-3,y:yb-2,width:Math.min(maxW,fit.w)+6,height:fit.h+5,color:PDFLib.rgb(1,1,1),opacity:.97});fit.lines.forEach((t,i)=>page.drawText(t,{x,y:yb+(fit.lines.length-1-i)*fit.lh,size:fit.size,font,color:PDFLib.rgb(0,0,0)}))}`;
  code=code.replace(/function stampLabel\(page,row,font\)\{[\s\S]*?\}\nasync function createFinalPdf/,stamp+'\nasync function createFinalPdf');
  code=code.replace(/async function createFinalPdf\(rows\)\{[\s\S]*?\}\nfunction show/,createFinalPdfPatch+'\nfunction show');
- const s=document.createElement('script');s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v2-test-robust-invoice-runtime.js';document.body.appendChild(s);const st=document.getElementById('status');if(st)st.textContent='V2 robust invoice grouping test loaded. Upload Label, Invoice and Excel files.';
+ const s=document.createElement('script');s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v2-test-manual-leftover-retry-runtime.js';document.body.appendChild(s);const st=document.getElementById('status');if(st)st.textContent='V2 manual leftover retry test loaded. Upload Label, Invoice and Excel files.';
 }catch(err){console.error(err);alert('AJIO V2 test engine failed to load.');}
 })();
