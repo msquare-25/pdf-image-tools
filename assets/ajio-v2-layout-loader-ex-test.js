@@ -1,48 +1,23 @@
 (async function(){
 'use strict';
-window.AJIO_V2_LAYOUT_VERSION='v2-test-label-ocr-fallback';
-const source='/assets/ajio-v2-final-v5.js?v=20260814-label-ocr-fallback';
+window.AJIO_V2_LAYOUT_VERSION='v2-test-robust-invoice-grouping-qty-sort';
+const source='/assets/ajio-v2-final-v5.js?v=20260814-robust-invoice-grouping';
 const extractFnPatch=`function extractFn(t){
-  const fix=v=>{let s=clean(v).toUpperCase().replace(/[\u2013\u2014]/g,'-').replace(/[^A-Z0-9]/g,'');s=s.replace(/^(ORDERNUMBER|ORDERNO|ORDER)/,'');s=s.replace(/^FNS(?=[0-9OISLB]{6,})/,'FN5').replace(/^FNI(?=[0-9OISLB]{6,})/,'FN1').replace(/^FNL(?=[0-9OISLB]{6,})/,'FN1').replace(/^EXO(?=[0-9OISLB]{6,})/,'EX0');const m=s.match(/^([A-Z]{1,8})([0-9OISLB]{4,})/);if(!m)return'';if(m[1]==='AWB'||m[1]==='SF')return'';const tail=m[2].replace(/O/g,'0').replace(/[IL]/g,'1').replace(/S/g,'5').replace(/B/g,'8');return m[1]+tail};
-  const raw=clean(t).toUpperCase().replace(/[\u2013\u2014]/g,'-');
-  let m=raw.match(/\bORDER\s*(?:NUMBER|NO|#)?\s*[:\-]?\s*([A-Z]{1,8}\s*[0-9OISLB]{4,})/i);if(m){const id=fix(m[1]);if(id)return id;}
-  const c=compact(t).replace(/EXO/g,'EX0').replace(/FNO/g,'FN0');m=c.match(/(?:FN|EX)[0-9OISLB]{6,}/);if(m)return fix(m[0]);m=c.match(/(?!SF)[A-Z]{2,4}[0-9OISLB]{6,}/);return m?fix(m[0]):'';
+  const fix=v=>{let s=clean(v).toUpperCase().replace(/[\\u2013\\u2014]/g,'-').replace(/[^A-Z0-9]/g,'');s=s.replace(/^(ORDERNUMBER|ORDERNO|ORDER)/,'');const m=s.match(/^([A-Z]{1,8})([0-9O]{4,})/);if(!m)return'';if(m[1]==='AWB'||m[1]==='SF')return'';return m[1]+m[2].replace(/O/g,'0')};
+  const raw=clean(t).toUpperCase().replace(/[\\u2013\\u2014]/g,'-');
+  let m=raw.match(/\\bORDER\\s*(?:NUMBER|NO|#)?\\s*[:\\-]?\\s*([A-Z]{1,8}\\s*[0-9O]{4,})/i);if(m){const id=fix(m[1]);if(id)return id;}
+  const c=compact(t).replace(/EXO/g,'EX0').replace(/FNO/g,'FN0');m=c.match(/(?:FN|EX)[0-9O]{6,}/);if(m)return fix(m[0]);m=c.match(/(?!SF)[A-Z]{2,4}[0-9O]{6,}/);return m?fix(m[0]):'';
 }`;
 const collectAmountPatch=`function collectAmount(t){
-  const u=normalize(t);let m=u.match(/COLLECT\s*(?:RS)?\s*(\d+(?:\.\d+)?)/);if(m)return m[1];
-  m=u.match(/COLLECT[\s\S]{0,90}\b(?:COD|NONCOD)\b\s*(?:RS)?\s*(\d+(?:\.\d+)?)\s*(?:RS)?/);if(m)return m[1];
-  m=u.match(/TOTAL\s+INVOICE\s+VALUE\s+(\d+(?:\.\d+)?)/);if(m)return m[1];
-  m=u.match(/TOTAL\s*:?\s*\d+\s+[\d.]+\s+[\d.]+\s+[\d.]+\s+(\d+(?:\.\d+)?)/);return m?m[1]:'';
-}`;
-const ocrLabelFnPatch=`async function ocrLabelFn(page){
-  try{
-    const worker=await getOcrWorker();
-    const canvas=await renderPage(page,6.2);
-    const zones=[
-      {name:'order-tight',x:.36,y:.37,w:.42,h:.075,psm:'7'},
-      {name:'order-wide',x:.20,y:.335,w:.68,h:.135,psm:'6'},
-      {name:'order-band',x:.05,y:.31,w:.90,h:.19,psm:'6'},
-      {name:'order-sparse',x:.05,y:.30,w:.90,h:.22,psm:'11'},
-      {name:'awb-tight',x:.08,y:.20,w:.52,h:.08,psm:'7'},
-      {name:'awb-wide',x:.03,y:.17,w:.94,h:.14,psm:'6'}
-    ];
-    for(const z of zones){
-      try{
-        await worker.setParameters({tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',tessedit_pageseg_mode:z.psm});
-        const c=prepOcrCanvas(cropCanvas(canvas,z));
-        const res=await worker.recognize(c);
-        const txt=res.data.text||'';
-        const fn=extractFn(txt);
-        if(fn)return fn;
-      }catch(inner){console.warn('OCR label zone failed',z.name,inner)}
-    }
-  }catch(e){console.warn('OCR label FN failed',e)}
-  return'';
+  const u=normalize(t);let m=u.match(/COLLECT\\s*(?:RS)?\\s*(\\d+(?:\\.\\d+)?)/);if(m)return m[1];
+  m=u.match(/COLLECT[\\s\\S]{0,90}\\b(?:COD|NONCOD)\\b\\s*(?:RS)?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:RS)?/);if(m)return m[1];
+  m=u.match(/TOTAL\\s+INVOICE\\s+VALUE\\s+(\\d+(?:\\.\\d+)?)/);if(m)return m[1];
+  m=u.match(/TOTAL\\s*:?\\s*\\d+\\s+[\\d.]+\\s+[\\d.]+\\s+[\\d.]+\\s+(\\d+(?:\\.\\d+)?)/);return m?m[1]:'';
 }`;
 const invoiceRecordsPatch=`async function invoiceRecords(files){
   const pages=await pageTexts(files,'Invoice',8,30);
   const out=[];
-  const isStart=p=>/Tax\s*Invoice\s*No\s*:/i.test(p.text)||(/GSTIN\s*:/i.test(p.text)&&/Original\s+for\s+Recipient/i.test(p.text));
+  const isStart=p=>/Tax\\s*Invoice\\s*No\\s*:/i.test(p.text)||(/GSTIN\\s*:/i.test(p.text)&&/Original\\s+for\\s+Recipient/i.test(p.text));
   for(let i=0;i<pages.length;i++){
     const pg=pages[i];
     if(!isStart(pg))continue;
@@ -70,7 +45,7 @@ function enrichRows(matches,excelData){return matches.map(m=>{
   else{status=m.confidence==='UNSAFE'?'ERROR':'WARN';notes.push('Excel order not found; invoice SKU not found');skuSource='missing'}
   const data=ex||fallback;return{...m,matchedOrder,excel:ex,stampData:data,status,sku:data?data.sku:'',skuItems:data?data.skuItems:[],bagBarcode:data?data.bagBarcode:'',skuSource,notes:notes.join(' | ')}
 })}`;
-const sortRowsPatch=`function courierCode(row){const t=normalize(((row.label&&row.label.text)||'')+' '+((row.invoice&&row.invoice.text)||''));if(/SHADOWFAX/.test(t)||/SHIPMENT\s*#\s*S\b/.test(t))return'S';if(/XPRESSBEES|XPRESS/.test(t)||/SHIPMENT\s*#\s*X\b/.test(t))return'X';if(/DELHIVERY/.test(t)||/SHIPMENT\s*#\s*D\b/.test(t))return'D';if(/BLUEDART|BLUE\s*DART/.test(t)||/SHIPMENT\s*#\s*B\b/.test(t))return'B';return'Z'}
+const sortRowsPatch=`function courierCode(row){const t=normalize(((row.label&&row.label.text)||'')+' '+((row.invoice&&row.invoice.text)||''));if(/SHADOWFAX/.test(t)||/SHIPMENT\\s*#\\s*S\\b/.test(t))return'S';if(/XPRESSBEES|XPRESS/.test(t)||/SHIPMENT\\s*#\\s*X\\b/.test(t))return'X';if(/DELHIVERY/.test(t)||/SHIPMENT\\s*#\\s*D\\b/.test(t))return'D';if(/BLUEDART|BLUE\\s*DART/.test(t)||/SHIPMENT\\s*#\\s*B\\b/.test(t))return'B';return'Z'}
 function courierRank(row){return {S:0,X:1,D:2,B:3}[courierCode(row)]??9}
 function totalRowQty(row){const items=row.skuItems||[];return Math.max(1,items.reduce((s,i)=>s+qty(i.qty),0))}
 function isComboRow(row){const items=row.skuItems||[];return items.length>1||totalRowQty(row)>1}
@@ -95,7 +70,6 @@ try{
  const res=await fetch(source,{cache:'no-store'});if(!res.ok)throw new Error('Cannot load AJIO V2 base engine');let code=await res.text();
  code=code.replace("function extractFn(t){const m=compact(t).match(/FN\\d{8,}/);return m?m[0]:''}",extractFnPatch);
  code=code.replace(/function collectAmount\(t\)\{[\s\S]*?\}\nfunction paymentType/,collectAmountPatch+'\nfunction paymentType');
- code=code.replace(/async function ocrLabelFn\(page\)\{[\s\S]*?\}\nasync function invoiceRecords/,ocrLabelFnPatch+'\nasync function invoiceRecords');
  code=code.replace(/async function invoiceRecords\(files\)\{[\s\S]*?\}\nasync function labelRecords/,invoiceRecordsPatch+'\nasync function labelRecords');
  code=code.replace(/function enrichRows\(matches,excelData\)\{[\s\S]*?\}\nfunction sortRows/,enrichRowsPatch+'\nfunction sortRows');
  code=code.replace(/function sortRows\(rows\)\{[\s\S]*?\}\nfunction lineGroups/,sortRowsPatch+'\nfunction lineGroups');
@@ -109,6 +83,6 @@ try{
  const stamp=`function stampLabel(page,row,font){const {width,height}=page.getSize();let groups=[],orderLine='';if(row.stampData&&row.confidence!=='UNSAFE'){groups=lineGroups(row.stampData.skuItems).map(g=>g.map(cleanLine).filter(Boolean)).filter(g=>g.length);orderLine=cleanLine(row.bagBarcode||'')}else{groups=[['MANUAL CHECK']];orderLine=''}const rightAnchor=width*.935,minX=width*.30,bottomBase=height*.052,topLimit=height*.185,maxW=rightAnchor-minX,measure=(t,s)=>font.widthOfTextAtSize(t,s);const lines=groups.map(g=>cleanLine(g.join(' + '))).filter(Boolean).concat(orderLine?[orderLine]:[]).filter(Boolean);let fit=null;for(let size=7.8;size>=3.35;size-=.15){const lh=size+2.7,w=Math.max(25,...lines.map(t=>measure(t,size))),h=(lines.length-1)*lh+size;if(w<=maxW&&bottomBase+h<=topLimit){fit={lines,size,lh,w,h};break}}if(!fit){const size=3.3,lh=5.75;fit={lines,size,lh,w:Math.min(maxW,Math.max(25,...lines.map(t=>measure(t,size)))),h:(lines.length-1)*lh+size}}const x=Math.max(minX,rightAnchor-fit.w),yb=bottomBase;page.drawRectangle({x:x-3,y:yb-2,width:Math.min(maxW,fit.w)+6,height:fit.h+5,color:PDFLib.rgb(1,1,1),opacity:.97});fit.lines.forEach((t,i)=>page.drawText(t,{x,y:yb+(fit.lines.length-1-i)*fit.lh,size:fit.size,font,color:PDFLib.rgb(0,0,0)}))}`;
  code=code.replace(/function stampLabel\(page,row,font\)\{[\s\S]*?\}\nasync function createFinalPdf/,stamp+'\nasync function createFinalPdf');
  code=code.replace(/async function createFinalPdf\(rows\)\{[\s\S]*?\}\nfunction show/,createFinalPdfPatch+'\nfunction show');
- const s=document.createElement('script');s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v2-test-label-ocr-runtime.js';document.body.appendChild(s);const st=document.getElementById('status');if(st)st.textContent='V2 label OCR fallback test loaded. Upload Label, Invoice and Excel files.';
+ const s=document.createElement('script');s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v2-test-robust-invoice-runtime.js';document.body.appendChild(s);const st=document.getElementById('status');if(st)st.textContent='V2 robust invoice grouping test loaded. Upload Label, Invoice and Excel files.';
 }catch(err){console.error(err);alert('AJIO V2 test engine failed to load.');}
 })();
