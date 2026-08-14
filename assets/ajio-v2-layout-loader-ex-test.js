@@ -1,7 +1,7 @@
 (async function(){
 'use strict';
-window.AJIO_V2_LAYOUT_VERSION='v2-test-robust-invoice-grouping-qty-sort';
-const source='/assets/ajio-v2-final-v5.js?v=20260814-robust-invoice-grouping';
+window.AJIO_V2_LAYOUT_VERSION='v2-test-manual-safe-ocr-fallback';
+const source='/assets/ajio-v2-final-v5.js?v=20260814-manual-safe-ocr';
 const extractFnPatch=`function extractFn(t){
   const fix=v=>{let s=clean(v).toUpperCase().replace(/[\\u2013\\u2014]/g,'-').replace(/[^A-Z0-9]/g,'');s=s.replace(/^(ORDERNUMBER|ORDERNO|ORDER)/,'');const m=s.match(/^([A-Z]{1,8})([0-9O]{4,})/);if(!m)return'';if(m[1]==='AWB'||m[1]==='SF')return'';return m[1]+m[2].replace(/O/g,'0')};
   const raw=clean(t).toUpperCase().replace(/[\\u2013\\u2014]/g,'-');
@@ -28,6 +28,43 @@ const invoiceRecordsPatch=`async function invoiceRecords(files){
     out.push({file:pg.file,source:pg.source,page:pg.page,pageIndex:pg.pageIndex,invoicePages:group.map(p=>({file:p.file,source:p.source,page:p.page,pageIndex:p.pageIndex})),text,fn,awb,skuItems,sku:skuText(skuItems),profile:profile(text,'invoice')});
   }
   return out;
+}`;
+const deepLabelOcrPatch=`async function ocrLabelFnDeep(page){
+  const cleanOcr=t=>clean(t).toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/FNO/g,'FN0').replace(/FNI/g,'FN1').replace(/FNL/g,'FN1').replace(/FNS/g,'FN5').replace(/FNB/g,'FN8').replace(/EXO/g,'EX0');
+  const pick=t=>{let c=cleanOcr(t),m=c.match(/(?:FN|EX)[0-9]{6,}/);if(m)return m[0];m=c.match(/(?!SF)[A-Z]{2,4}[0-9]{6,}/);return m?m[0]:''};
+  try{
+    const worker=await getOcrWorker();
+    const canvas=await renderPage(page,7.2);
+    const zones=[
+      {name:'order-text-tight',x:.315,y:.520,w:.390,h:.045,psm:'7'},
+      {name:'order-text-wide',x:.285,y:.505,w:.470,h:.065,psm:'7'},
+      {name:'order-row',x:.220,y:.485,w:.620,h:.110,psm:'6'},
+      {name:'order-row-sparse',x:.180,y:.475,w:.700,h:.135,psm:'11'}
+    ];
+    for(const z of zones){
+      try{
+        await worker.setParameters({tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',tessedit_pageseg_mode:z.psm});
+        const c=prepOcrCanvas(cropCanvas(canvas,z));
+        const res=await worker.recognize(c);
+        const txt=res.data.text||'';
+        let fn=extractFn(txt)||pick(txt);
+        if(fn)return fn;
+      }catch(inner){console.warn('Deep OCR label zone failed',z.name,inner)}
+    }
+  }catch(e){console.warn('Deep OCR label FN failed',e)}
+  return'';
+}`;
+const labelRecordsPatch=`async function labelRecords(files){
+  const pages=await pageTexts(files,'Label',35,60);
+  const out=[];
+  for(let i=0;i<pages.length;i++){
+    const pg=pages[i];let fn=extractFn(pg.text),fnSource=fn?'text':'';
+    if(!fn){setStatus(\`OCR label order ${i+1}/${pages.length}\`,60+(i/Math.max(1,pages.length))*8);fn=await ocrLabelFn(pg.pdfPage);fnSource=fn?'ocr':''}
+    if(!fn){setStatus(\`Deep OCR manual-key ${i+1}/${pages.length}\`,66+(i/Math.max(1,pages.length))*4);fn=await ocrLabelFnDeep(pg.pdfPage);fnSource=fn?'ocr-deep':''}
+    const awb=extractAwbCandidate(pg.text);
+    out.push({file:pg.file,source:pg.source,page:pg.page,pageIndex:pg.pageIndex,text:pg.text,fn,fnSource,awb,profile:profile(pg.text,'label')})
+  }
+  return out
 }`;
 const enrichRowsPatch=`function excelByInvoiceSku(invItems,excelData){
   const inv=(invItems||[]).map(i=>skuKey(i.sku)).filter(Boolean);if(!inv.length)return null;
@@ -71,6 +108,7 @@ try{
  code=code.replace("function extractFn(t){const m=compact(t).match(/FN\\d{8,}/);return m?m[0]:''}",extractFnPatch);
  code=code.replace(/function collectAmount\(t\)\{[\s\S]*?\}\nfunction paymentType/,collectAmountPatch+'\nfunction paymentType');
  code=code.replace(/async function invoiceRecords\(files\)\{[\s\S]*?\}\nasync function labelRecords/,invoiceRecordsPatch+'\nasync function labelRecords');
+ code=code.replace(/async function labelRecords\(files\)\{[\s\S]*?\}\nfunction samePinScore/,deepLabelOcrPatch+'\n'+labelRecordsPatch+'\nfunction samePinScore');
  code=code.replace(/function enrichRows\(matches,excelData\)\{[\s\S]*?\}\nfunction sortRows/,enrichRowsPatch+'\nfunction sortRows');
  code=code.replace(/function sortRows\(rows\)\{[\s\S]*?\}\nfunction lineGroups/,sortRowsPatch+'\nfunction lineGroups');
  code=code.replace(/function lineGroups\(items\)\{[\s\S]*?\}\nfunction cleanLine/,lineGroupsPatch+'\nfunction cleanLine');
@@ -83,6 +121,6 @@ try{
  const stamp=`function stampLabel(page,row,font){const {width,height}=page.getSize();let groups=[],orderLine='';if(row.stampData&&row.confidence!=='UNSAFE'){groups=lineGroups(row.stampData.skuItems).map(g=>g.map(cleanLine).filter(Boolean)).filter(g=>g.length);orderLine=cleanLine(row.bagBarcode||'')}else{groups=[['MANUAL CHECK']];orderLine=''}const rightAnchor=width*.935,minX=width*.30,bottomBase=height*.052,topLimit=height*.185,maxW=rightAnchor-minX,measure=(t,s)=>font.widthOfTextAtSize(t,s);const lines=groups.map(g=>cleanLine(g.join(' + '))).filter(Boolean).concat(orderLine?[orderLine]:[]).filter(Boolean);let fit=null;for(let size=7.8;size>=3.35;size-=.15){const lh=size+2.7,w=Math.max(25,...lines.map(t=>measure(t,size))),h=(lines.length-1)*lh+size;if(w<=maxW&&bottomBase+h<=topLimit){fit={lines,size,lh,w,h};break}}if(!fit){const size=3.3,lh=5.75;fit={lines,size,lh,w:Math.min(maxW,Math.max(25,...lines.map(t=>measure(t,size)))),h:(lines.length-1)*lh+size}}const x=Math.max(minX,rightAnchor-fit.w),yb=bottomBase;page.drawRectangle({x:x-3,y:yb-2,width:Math.min(maxW,fit.w)+6,height:fit.h+5,color:PDFLib.rgb(1,1,1),opacity:.97});fit.lines.forEach((t,i)=>page.drawText(t,{x,y:yb+(fit.lines.length-1-i)*fit.lh,size:fit.size,font,color:PDFLib.rgb(0,0,0)}))}`;
  code=code.replace(/function stampLabel\(page,row,font\)\{[\s\S]*?\}\nasync function createFinalPdf/,stamp+'\nasync function createFinalPdf');
  code=code.replace(/async function createFinalPdf\(rows\)\{[\s\S]*?\}\nfunction show/,createFinalPdfPatch+'\nfunction show');
- const s=document.createElement('script');s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v2-test-robust-invoice-runtime.js';document.body.appendChild(s);const st=document.getElementById('status');if(st)st.textContent='V2 robust invoice grouping test loaded. Upload Label, Invoice and Excel files.';
+ const s=document.createElement('script');s.textContent=code+'\n//# sourceURL=/assets/ajio-v2-final-v2-test-manual-safe-ocr-runtime.js';document.body.appendChild(s);const st=document.getElementById('status');if(st)st.textContent='V2 safe manual-label OCR test loaded. Upload Label, Invoice and Excel files.';
 }catch(err){console.error(err);alert('AJIO V2 test engine failed to load.');}
 })();
