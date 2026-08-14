@@ -36,26 +36,45 @@
 (function(){
   'use strict';
   const clean=v=>String(v==null?'':v).replace(/\s+/g,' ').trim();
-  const cell=(tr,i)=>tr.cells&&tr.cells[i]?clean(tr.cells[i].innerText):'';
+  const cell=(tr,i)=>i>=0&&tr.cells&&tr.cells[i]?clean(tr.cells[i].innerText):'';
+  const normal=v=>clean(v).toUpperCase();
   const dupEntries=map=>Array.from(map.entries()).filter(([,v])=>v.length>1);
+  const isOrderId=v=>/^[A-Z]{1,8}[0-9O]{4,}[A-Z0-9]*$/i.test(clean(v).replace(/[^A-Z0-9]/gi,''));
+  const isFullInvoiceRef=v=>/\.pdf\b|·|\bPAGE\s+\d+\s*·/i.test(clean(v));
+  function headerIndex(headers,name){return headers.findIndex(h=>h===name||h.includes(name));}
+  function tableIndexes(){
+    const table=document.querySelector('#reportRows')?.closest('table');
+    const headers=Array.from(table?.querySelectorAll('thead th')||[]).map(th=>normal(th.innerText));
+    return{
+      status:headerIndex(headers,'STATUS'),
+      confidence:headerIndex(headers,'CONFIDENCE'),
+      order:headers.findIndex(h=>h==='ORDER'),
+      labelFile:headerIndex(headers,'LABEL FILE'),
+      labelPage:headerIndex(headers,'LABEL PAGE'),
+      invoice:headers.findIndex(h=>h==='INVOICE'||h==='INVOICE PAGE'||h.includes('INVOICE'))
+    };
+  }
   function scanAjioV2Duplicates(){
     const tbody=document.getElementById('reportRows');
     if(!tbody)return{ok:true,message:''};
     const rows=Array.from(tbody.querySelectorAll('tr'));
     if(!rows.length)return{ok:true,message:''};
+    const ix=tableIndexes();
+    if(ix.order<0&&ix.invoice<0)return{ok:true,message:''};
     const byOrder=new Map(),byInvoice=new Map();
     const add=(map,key,val)=>{if(!key||key==='-')return;if(!map.has(key))map.set(key,[]);map.get(key).push(val)};
     rows.forEach((tr,idx)=>{
-      const status=cell(tr,0),confidence=cell(tr,1),order=cell(tr,2),labelFile=cell(tr,6),labelPage=cell(tr,7),invoice=cell(tr,8);
+      const status=cell(tr,ix.status),confidence=cell(tr,ix.confidence),orderRaw=cell(tr,ix.order),invoice=cell(tr,ix.invoice),labelFile=cell(tr,ix.labelFile),labelPage=cell(tr,ix.labelPage);
       if(status==='ERROR'||confidence==='UNSAFE')return;
-      const ref='row '+(idx+1)+' · label page '+(labelPage||'-')+' · '+(labelFile||'-');
-      add(byOrder,order,ref);
-      add(byInvoice,invoice,order?ref+' · order '+order:ref);
+      const ref='row '+(idx+1)+(labelPage?' · label page '+labelPage:'')+(labelFile?' · '+labelFile:'');
+      const orderKey=clean(orderRaw).replace(/[^A-Z0-9]/gi,'').toUpperCase();
+      if(isOrderId(orderKey))add(byOrder,orderKey,ref);
+      if(isFullInvoiceRef(invoice))add(byInvoice,invoice,orderKey?ref+' · order '+orderKey:ref);
     });
     const orderDups=dupEntries(byOrder),invoiceDups=dupEntries(byInvoice);
     if(!orderDups.length&&!invoiceDups.length)return{ok:true,message:''};
     const lines=['Duplicate safety check failed. PDF not generated.'];
-    if(orderDups.length){lines.push('', 'Duplicate matched order(s):');orderDups.slice(0,8).forEach(([k,v])=>lines.push('- '+k+': '+v.length+' rows'));}
+    if(orderDups.length){lines.push('', 'Duplicate matched order ID(s):');orderDups.slice(0,8).forEach(([k,v])=>lines.push('- '+k+': '+v.length+' rows'));}
     if(invoiceDups.length){lines.push('', 'Duplicate invoice page(s):');invoiceDups.slice(0,8).forEach(([k,v])=>lines.push('- '+k+': '+v.length+' rows'));}
     lines.push('', 'Please check duplicate uploaded files or ambiguous matching before printing.');
     return{ok:false,message:lines.join('\n')};
