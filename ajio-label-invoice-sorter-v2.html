@@ -32,5 +32,53 @@
   <section class="card mt-3" id="reportBox" style="display:none"><h2 class="title">V2 Test Report</h2><div class="v2-report-grid" id="statGrid"></div><div class="small muted" id="reportNote"></div><div class="v2-table-wrap"><table class="v2-table"><thead><tr><th>Status</th><th>Confidence</th><th>Order</th><th>SKU Source</th><th>SKU</th><th>Bag Barcode</th><th>Label File</th><th>Label Page</th><th>Invoice</th><th>Score</th><th>Second</th><th>Common</th><th>Reason</th><th>Label Customer Text</th></tr></thead><tbody id="reportRows"></tbody></table></div></section>
 </main></div></main>
 <script src="/assets/ajio-v2-layout-loader-ex-test.js?v=20260814-manual-leftover-retry-1"></script>
+<script>
+(function(){
+  'use strict';
+  const clean=v=>String(v==null?'':v).replace(/\s+/g,' ').trim();
+  const cell=(tr,i)=>tr.cells&&tr.cells[i]?clean(tr.cells[i].innerText):'';
+  const dupEntries=map=>Array.from(map.entries()).filter(([,v])=>v.length>1);
+  function scanAjioV2Duplicates(){
+    const tbody=document.getElementById('reportRows');
+    if(!tbody)return{ok:true,message:''};
+    const rows=Array.from(tbody.querySelectorAll('tr'));
+    if(!rows.length)return{ok:true,message:''};
+    const byOrder=new Map(),byInvoice=new Map();
+    const add=(map,key,val)=>{if(!key||key==='-')return;if(!map.has(key))map.set(key,[]);map.get(key).push(val)};
+    rows.forEach((tr,idx)=>{
+      const status=cell(tr,0),confidence=cell(tr,1),order=cell(tr,2),labelFile=cell(tr,6),labelPage=cell(tr,7),invoice=cell(tr,8);
+      if(status==='ERROR'||confidence==='UNSAFE')return;
+      const ref='row '+(idx+1)+' · label page '+(labelPage||'-')+' · '+(labelFile||'-');
+      add(byOrder,order,ref);
+      add(byInvoice,invoice,order?ref+' · order '+order:ref);
+    });
+    const orderDups=dupEntries(byOrder),invoiceDups=dupEntries(byInvoice);
+    if(!orderDups.length&&!invoiceDups.length)return{ok:true,message:''};
+    const lines=['Duplicate safety check failed. PDF not generated.'];
+    if(orderDups.length){lines.push('', 'Duplicate matched order(s):');orderDups.slice(0,8).forEach(([k,v])=>lines.push('- '+k+': '+v.length+' rows'));}
+    if(invoiceDups.length){lines.push('', 'Duplicate invoice page(s):');invoiceDups.slice(0,8).forEach(([k,v])=>lines.push('- '+k+': '+v.length+' rows'));}
+    lines.push('', 'Please check duplicate uploaded files or ambiguous matching before printing.');
+    return{ok:false,message:lines.join('\n')};
+  }
+  function showAjioV2DuplicateWarning(message){
+    const note=document.getElementById('reportNote');
+    if(note){note.textContent=message;note.style.color='#dc2626';note.style.fontWeight='800';note.style.whiteSpace='pre-line';}
+  }
+  const originalCreateObjectURL=URL.createObjectURL.bind(URL);
+  URL.createObjectURL=function(blob){
+    if(blob&&String(blob.type||'').toLowerCase().includes('application/pdf')){
+      const result=scanAjioV2Duplicates();
+      if(!result.ok){showAjioV2DuplicateWarning(result.message);alert(result.message);throw new Error('Duplicate safety check failed. PDF not generated.');}
+    }
+    return originalCreateObjectURL(blob);
+  };
+  const start=()=>{
+    const tbody=document.getElementById('reportRows');
+    if(!tbody)return;
+    new MutationObserver(()=>{const result=scanAjioV2Duplicates();if(!result.ok)showAjioV2DuplicateWarning(result.message);}).observe(tbody,{childList:true,subtree:true});
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+})();
+</script>
 </body>
 </html>
